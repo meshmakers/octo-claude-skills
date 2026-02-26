@@ -232,7 +232,7 @@ After context discovery, always indicate which environment is active when presen
 
 ### Script Location
 
-All scripts are in `~/.claude/skills/octo/scripts/`. They read connection info (endpoint URL, tenant, auth token) from `~/.octo-cli/settings.json` automatically.
+All scripts are in the `scripts/` subdirectory of this skill. They read connection info (endpoint URL, tenant, auth token) from `~/.octo-cli/settings.json` automatically.
 
 **Prerequisite:** The user must be authenticated (`octo-cli -c LogIn -i`). If a script fails with a 401/403 error, prompt the user to re-authenticate.
 

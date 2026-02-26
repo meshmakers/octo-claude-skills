@@ -2,7 +2,7 @@
 import os
 import sys
 
-SKILL = os.path.expanduser("~/.claude/skills/octo/SKILL.md")
+SKILL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "SKILL.md")
 
 print("=== Step 4 Verification: SKILL.md ===")
 print()
