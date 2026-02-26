@@ -9,7 +9,10 @@
       "name": "octo-claude-skills",
       "description": "OctoMesh platform skills for Claude Code: CLI natural language interface, data model exploration, runtime instance browsing, and GraphQL schema introspection",
       "version": "0.2.0",
-      "source": "./",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/reikla/octo-claude-skills.git"
+      },
       "author": {
         "name": "Meshmakers"
       }
