@@ -1,0 +1,13 @@
+{
+  "name": "octo-claude-skills",
+  "owner": {
+    "name": "Meshmakers"
+  },
+  "plugins": [
+    {
+      "name": "octo-claude-skills",
+      "source": ".",
+      "description": "OctoMesh platform skills for Claude Code"
+    }
+  ]
+}
