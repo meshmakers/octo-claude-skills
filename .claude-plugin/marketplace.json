@@ -1,13 +1,18 @@
 {
   "name": "octo-claude-skills",
+  "description": "OctoMesh platform skills for Claude Code",
   "owner": {
     "name": "Meshmakers"
   },
   "plugins": [
     {
       "name": "octo-claude-skills",
-      "source": ".",
-      "description": "OctoMesh platform skills for Claude Code"
+      "description": "OctoMesh platform skills for Claude Code: CLI natural language interface, data model exploration, runtime instance browsing, and GraphQL schema introspection",
+      "version": "0.1.0",
+      "source": "./",
+      "author": {
+        "name": "Meshmakers"
+      }
     }
   ]
 }
