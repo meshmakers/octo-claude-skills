@@ -74,7 +74,7 @@ These require a running OctoMesh environment and valid authentication.
 
 ## Versioning
 
-Bump the `version` field in `.claude-plugin/plugin.json` with every commit.
+Bump the `version` field in **both** `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` with every commit. These must stay in sync — Claude Code reads the version from `marketplace.json` to detect available updates.
 
 ## Naming Conventions
 
