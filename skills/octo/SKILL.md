@@ -4,7 +4,7 @@ description: Natural language interface for OctoMesh CLI (octo-cli), data model 
 allowed-tools:
   - "Read(~/.octo-cli/settings.json)"
   - "Read(${CLAUDE_PLUGIN_ROOT}/skills/octo/references/*)"
-  - "Bash(cd ${CLAUDE_PLUGIN_ROOT}:*)"
+  - "Bash(bash ${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh:*)"
   - "Bash(octo-cli:*)"
 ---
 
@@ -243,14 +243,13 @@ All scripts are in the `scripts/` subdirectory of this skill. They read connecti
 
 ### Script Invocation
 
-All Python scripts MUST be invoked through the virtual environment wrapper. Scripts live inside the `scripts/` subdirectory, so the path passed to the wrapper must include the `scripts/` prefix:
+All Python scripts MUST be invoked through the virtual environment wrapper using absolute paths via `$CLAUDE_PLUGIN_ROOT`. The wrapper automatically creates a Python virtual environment and installs dependencies on first use. Never invoke scripts directly with `python` or `python3`. Never use `cd` to change into the skill directory.
 
-    bash scripts/run_python.sh scripts/<script.py> [args...]
-
-Execute from the skill directory (`${CLAUDE_PLUGIN_ROOT}/skills/octo`). The wrapper automatically creates a Python virtual environment and installs dependencies on first use. Never invoke scripts directly with `python` or `python3`.
+    bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/<script.py>" [args...]
 
 **CRITICAL — correct path example:**
-- CORRECT: `bash scripts/run_python.sh scripts/ck_explorer.py models`
+- CORRECT: `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/ck_explorer.py" models`
+- WRONG:   `cd ... && bash scripts/run_python.sh scripts/ck_explorer.py models` (causes permission prompts!)
 - WRONG:   `bash scripts/run_python.sh ck_explorer.py models` (file not found!)
 
 ### Script Reference
@@ -259,15 +258,15 @@ Execute from the skill directory (`${CLAUDE_PLUGIN_ROOT}/skills/octo`). The wrap
 
 | Subcommand | Purpose | Example |
 |---|---|---|
-| `models` | List all CK models | `bash scripts/run_python.sh scripts/ck_explorer.py models` |
-| `model <name>` | Model detail + dependencies | `bash scripts/run_python.sh scripts/ck_explorer.py model Industry.Manufacturing-2.0.0` |
-| `types` | List all types | `bash scripts/run_python.sh scripts/ck_explorer.py types` |
-| `types --model X` | List types in a specific model | `bash scripts/run_python.sh scripts/ck_explorer.py types --model Basic-2.0.1` |
-| `type <fullName>` | Type detail: attrs, associations, derived types | `bash scripts/run_python.sh scripts/ck_explorer.py type System-2.0.2/Entity-1` |
-| `enums` | List all enums | `bash scripts/run_python.sh scripts/ck_explorer.py enums` |
-| `enums --model X` | List enums in a specific model | `bash scripts/run_python.sh scripts/ck_explorer.py enums --model System-2.0.2` |
-| `enum <fullName>` | Enum detail: values, flags | `bash scripts/run_python.sh scripts/ck_explorer.py enum System-2.0.2/AggregationTypes-1` |
-| `search <term>` | Search type/enum names (case-insensitive) | `bash scripts/run_python.sh scripts/ck_explorer.py search maintenance` |
+| `models` | List all CK models | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/ck_explorer.py" models` |
+| `model <name>` | Model detail + dependencies | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/ck_explorer.py" model Industry.Manufacturing-2.0.0` |
+| `types` | List all types | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/ck_explorer.py" types` |
+| `types --model X` | List types in a specific model | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/ck_explorer.py" types --model Basic-2.0.1` |
+| `type <fullName>` | Type detail: attrs, associations, derived types | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/ck_explorer.py" type System-2.0.2/Entity-1` |
+| `enums` | List all enums | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/ck_explorer.py" enums` |
+| `enums --model X` | List enums in a specific model | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/ck_explorer.py" enums --model System-2.0.2` |
+| `enum <fullName>` | Enum detail: values, flags | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/ck_explorer.py" enum System-2.0.2/AggregationTypes-1` |
+| `search <term>` | Search type/enum names (case-insensitive) | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/ck_explorer.py" search maintenance` |
 
 Flags: `--json` for raw JSON output, `--first N` for pagination limit, `--tenant <id>` to override tenant.
 
@@ -277,8 +276,8 @@ Safety valve for when field names change between server versions.
 
 | Subcommand | Purpose | Example |
 |---|---|---|
-| `top` | Show top-level query fields | `bash scripts/run_python.sh scripts/gql_introspect.py top` |
-| `type <name>` | Show fields of a GraphQL type | `bash scripts/run_python.sh scripts/gql_introspect.py type CkType` |
+| `top` | Show top-level query fields | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/gql_introspect.py" top` |
+| `type <name>` | Show fields of a GraphQL type | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/gql_introspect.py" type CkType` |
 
 Flags: `--json`, `--tenant <id>`
 
@@ -288,14 +287,14 @@ Browse, search, and inspect runtime entities (instances of CK types).
 
 | Subcommand | Purpose | Example |
 |---|---|---|
-| `list <ckId>` | List instances of a CK type | `bash scripts/run_python.sh scripts/rt_explorer.py list Industry.Basic/Machine` |
-| `list <ckId> --attrs` | List with all attributes | `bash scripts/run_python.sh scripts/rt_explorer.py list Industry.Basic/Machine --attrs --first 5` |
-| `get <ckId> <rtId>` | Get single entity with full detail | `bash scripts/run_python.sh scripts/rt_explorer.py get Industry.Basic/Machine 05eb...` |
-| `count <ckId>` | Count instances of a CK type | `bash scripts/run_python.sh scripts/rt_explorer.py count Industry.Basic/Machine` |
-| `search <ckId> <term>` | Search by attribute (LIKE match) | `bash scripts/run_python.sh scripts/rt_explorer.py search Industry.Basic/Machine DAR` |
-| `search <ckId> <term> --attr X` | Search on specific attribute | `bash scripts/run_python.sh scripts/rt_explorer.py search Industry.Basic/Machine 42 --attr machineState` |
-| `query <ckId> --columns c1,c2` | Transient query with specific columns | `bash scripts/run_python.sh scripts/rt_explorer.py query Industry.Basic/Machine --columns name,machineState` |
-| `filter <ckId> <attr> <op> <val>` | Filter by attribute value | `bash scripts/run_python.sh scripts/rt_explorer.py filter Industry.Basic/Machine machineState EQUALS 2` |
+| `list <ckId>` | List instances of a CK type | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/rt_explorer.py" list Industry.Basic/Machine` |
+| `list <ckId> --attrs` | List with all attributes | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/rt_explorer.py" list Industry.Basic/Machine --attrs --first 5` |
+| `get <ckId> <rtId>` | Get single entity with full detail | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/rt_explorer.py" get Industry.Basic/Machine 05eb...` |
+| `count <ckId>` | Count instances of a CK type | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/rt_explorer.py" count Industry.Basic/Machine` |
+| `search <ckId> <term>` | Search by attribute (LIKE match) | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/rt_explorer.py" search Industry.Basic/Machine DAR` |
+| `search <ckId> <term> --attr X` | Search on specific attribute | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/rt_explorer.py" search Industry.Basic/Machine 42 --attr machineState` |
+| `query <ckId> --columns c1,c2` | Transient query with specific columns | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/rt_explorer.py" query Industry.Basic/Machine --columns name,machineState` |
+| `filter <ckId> <attr> <op> <val>` | Filter by attribute value | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/rt_explorer.py" filter Industry.Basic/Machine machineState EQUALS 2` |
 
 Flags: `--json` for raw JSON output, `--first N` for pagination limit, `--tenant <id>` to override tenant, `--sort attr:asc|desc` for sorting (on list/search/filter/query).
 
@@ -323,22 +322,22 @@ Filter operators: `EQUALS`, `NOT_EQUALS`, `LESS_THAN`, `LESS_EQUAL_THAN`, `GREAT
 
 Use a progressive drill-down approach when the user asks about the data model:
 
-1. **Models** — `bash scripts/run_python.sh scripts/ck_explorer.py models` — see what CK models are loaded
-2. **Types in a model** — `bash scripts/run_python.sh scripts/ck_explorer.py types --model <name>` — see what types a model defines
-3. **Type detail** — `bash scripts/run_python.sh scripts/ck_explorer.py type <fullName>` — see attributes, associations, inheritance
-4. **Enums** — `bash scripts/run_python.sh scripts/ck_explorer.py enums --model <name>` — see available enumerations
-5. **Search** — `bash scripts/run_python.sh scripts/ck_explorer.py search <term>` — find types/enums by keyword
+1. **Models** — `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/ck_explorer.py" models` — see what CK models are loaded
+2. **Types in a model** — `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/ck_explorer.py" types --model <name>` — see what types a model defines
+3. **Type detail** — `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/ck_explorer.py" type <fullName>` — see attributes, associations, inheritance
+4. **Enums** — `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/ck_explorer.py" enums --model <name>` — see available enumerations
+5. **Search** — `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/ck_explorer.py" search <term>` — find types/enums by keyword
 6. **Runtime instances** — after understanding the schema, explore actual instances:
-   - `bash scripts/run_python.sh scripts/rt_explorer.py count <ckId>` — how many instances exist?
-   - `bash scripts/run_python.sh scripts/rt_explorer.py list <ckId> --first 5` — see some instances
-   - `bash scripts/run_python.sh scripts/rt_explorer.py get <ckId> <rtId>` — drill into a single entity
-   - `bash scripts/run_python.sh scripts/rt_explorer.py search <ckId> <term>` — search by name
-   - `bash scripts/run_python.sh scripts/rt_explorer.py query <ckId> --columns name,state --first 10` — tabular view of specific attributes
+   - `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/rt_explorer.py" count <ckId>` — how many instances exist?
+   - `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/rt_explorer.py" list <ckId> --first 5` — see some instances
+   - `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/rt_explorer.py" get <ckId> <rtId>` — drill into a single entity
+   - `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/rt_explorer.py" search <ckId> <term>` — search by name
+   - `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/rt_explorer.py" query <ckId> --columns name,state --first 10` — tabular view of specific attributes
 
 ### Schema Evolution Handling
 
 If a script fails with a GraphQL error about unknown fields, the schema may have changed between server versions. Use `gql_introspect.py` to discover the current field names:
 
-1. `bash scripts/run_python.sh scripts/gql_introspect.py top` — verify top-level fields still exist
-2. `bash scripts/run_python.sh scripts/gql_introspect.py type CkType` — check current CkType field names
+1. `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/gql_introspect.py" top` — verify top-level fields still exist
+2. `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/gql_introspect.py" type CkType` — check current CkType field names
 3. Update the failing query based on the introspection results
