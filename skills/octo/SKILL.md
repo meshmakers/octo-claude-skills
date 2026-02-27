@@ -1,6 +1,11 @@
 ---
 name: octo
 description: Natural language interface for OctoMesh CLI (octo-cli), data model exploration, and runtime instance browsing via GraphQL. Trigger on anything related to OctoMesh CLI operations — managing users, roles, tenants, clients, identity providers, service hooks, authentication, environment switching, or any platform administration task. Also trigger for data model exploration — Construction Kit models, CK types, enums, attributes, associations, GraphQL schema introspection, or any question about the tenant's data model. Also trigger for runtime instance queries — listing, counting, searching, filtering, or inspecting runtime entities/instances of any CK type. Trigger whenever the user mentions octo, OctoMesh, tenant management, user management, identity services, data model, construction kit, CK types, CK enums, runtime instances, show instances, list machines, count entities, or wants to interact with the mesh platform.
+allowed-tools:
+  - "Read(~/.octo-cli/settings.json)"
+  - "Read(${CLAUDE_PLUGIN_ROOT}/skills/octo/references/*)"
+  - "Bash(cd ${CLAUDE_PLUGIN_ROOT}:*)"
+  - "Bash(octo-cli:*)"
 ---
 
 # OctoMesh CLI Natural Language Interface
