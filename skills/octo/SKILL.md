@@ -296,9 +296,23 @@ Flags: `--json` for raw JSON output, `--first N` for pagination limit, `--tenant
 
 Filter operators: `EQUALS`, `NOT_EQUALS`, `LESS_THAN`, `LESS_EQUAL_THAN`, `GREATER_THAN`, `GREATER_EQUAL_THAN`, `IN`, `NOT_IN`, `LIKE`, `MATCH_REG_EX`, `ANY_EQ`, `ANY_LIKE`.
 
-### CRITICAL: Never Guess CK Type IDs
+### CRITICAL: CK Type ID Format Differences
 
-**NEVER invent or guess CK type IDs for `rt_explorer.py` commands.** Type IDs like `Basic/Organization` or `Industry.Basic/Machine` are examples only — the actual types loaded in a tenant vary. Always discover real type IDs first by running `ck_explorer.py models` and then `ck_explorer.py types --model <name>` before using any type ID in `rt_explorer.py`. Guessing wrong IDs wastes time on errors.
+`ck_explorer.py` and `rt_explorer.py` use **different ID formats**:
+
+| Tool | Format | Example |
+|---|---|---|
+| `ck_explorer.py` output | Versioned: `ModelName-Version/TypeName-Version` | `Industry.Basic-2.1.0/Machine-1` |
+| `rt_explorer.py` input | Unversioned: `ModelName/TypeName` | `Industry.Basic/Machine` |
+
+**To convert a CK type ID for use with `rt_explorer.py`:** strip the version suffixes from both the model part and the type part. Remove the `-X.Y.Z` or `-N` segments:
+- `Industry.Basic-2.1.0/Machine-1` → `Industry.Basic/Machine`
+- `Basic-2.0.1/Employee-1` → `Basic/Employee`
+- `System-2.0.2/Entity-1` → `System/Entity`
+
+**NEVER pass versioned CK type IDs (like `Industry.Basic-2.1.0/Machine-1` or `Industry.Basic-2.1.0/Machine`) to `rt_explorer.py`.** Always strip version numbers first.
+
+**NEVER invent or guess CK type IDs.** The actual types loaded in a tenant vary. Always discover real type IDs first by running `ck_explorer.py models` and then `ck_explorer.py types --model <name>` before using any type ID in `rt_explorer.py`.
 
 ### Exploration Workflow
 
