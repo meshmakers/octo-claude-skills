@@ -2,7 +2,19 @@
   "permissions": {
     "allow": [
       "Bash(gh repo:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(mkdir:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(python3:*)",
+      "WebFetch(domain:anthropic.com)",
+      "Bash(octo-cli:*)",
+      "Bash(bash:*)",
+      "Bash(xargs cat:*)",
+      "Bash(git push:*)",
+      "Bash(git fetch:*)",
+      "Bash(gh:*)",
+      "WebSearch"
     ]
   }
 }
