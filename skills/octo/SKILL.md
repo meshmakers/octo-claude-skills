@@ -334,6 +334,23 @@ Use a progressive drill-down approach when the user asks about the data model:
    - `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/rt_explorer.py" search <ckId> <term>` — search by name
    - `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/rt_explorer.py" query <ckId> --columns name,state --first 10` — tabular view of specific attributes
 
+### Deleting Runtime Entities via GraphQL
+
+There is no `octo-cli` command or script for deleting individual runtime entities. Use the Asset Repo GraphQL mutation directly via `curl`. The endpoint URL is `{AssetServiceUrl}tenants/{TenantId}/GraphQL`.
+
+```bash
+TOKEN=$(python3 -c "import json; print(json.load(open('$HOME/.octo-cli/settings.json'))['Authentication']['AccessToken'])")
+curl -sk "https://localhost:5001/tenants/maco/GraphQL" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"mutation { runtime { runtimeEntities { delete(entities: [{rtId: \"<RTID>\", ckTypeId: \"<UnversionedCkTypeId>\"}]) } } }"}'
+```
+
+- Multiple entities can be deleted in a single call by adding more objects to the `entities` array
+- Uses **unversioned** CK type IDs (e.g., `Industry.Manufacturing/Shift`, not `Industry.Manufacturing-2.0.0/Shift-1`)
+- Returns `{"data":{"runtime":{"runtimeEntities":{"delete":true}}}}`
+- This is a **mutating** operation — always confirm with the user before executing
+
 ### Schema Evolution Handling
 
 If a script fails with a GraphQL error about unknown fields, the schema may have changed between server versions. Use `gql_introspect.py` to discover the current field names:

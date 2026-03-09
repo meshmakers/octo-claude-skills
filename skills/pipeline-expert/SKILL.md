@@ -133,6 +133,7 @@ For a deeper explanation of context hierarchy, write modes, and field filters, r
 | `Project@1` | Include/exclude fields |
 | `Join@1` | Inner join two arrays |
 | `Math@1` | Add, Subtract, Multiply, Divide, Round |
+| `DateTime@1` | Now, StartOfDay, AddDays/Hours/Minutes/Seconds, DaysBetween, Format, CombineDateTime, ExtractDate/Time |
 | `SumAggregation@1` | Weighted sum with optional filter |
 | `FilterLatestUpdateInfo@1` | Deduplicate entity updates |
 | `Distinct@1` | Remove duplicates by property |
@@ -178,6 +179,21 @@ For a deeper explanation of context hierarchy, write modes, and field filters, r
 SAP nodes (SapLogin, GetProductionOrderList, GetProductionOrderDetails), Zenon nodes (SetZenonVariables, FromZenonAml, ReadZenonAmlMessages), and EDA energy nodes (EdaParseMessage, EdaStartProcess, etc.) are documented in `references/node-reference-mesh.md`.
 
 For full property documentation, read `references/node-reference-sdk.md` and `references/node-reference-mesh.md`.
+
+## RT Entity Data Structures
+
+`GetRtEntitiesByType@1` returns an **IResultSet object**, not a plain array:
+
+```json
+{ "TotalCount": 3, "Items": [ { "RtId": "...", "CkTypeId": "...", "RtWellKnownName": "...", "Attributes": { "Name": "value", "StartDateTime": "2026-01-01T06:00:00Z" } }, ... ] }
+```
+
+**Key rules:**
+- **Iterate with `.Items`**: `iterationPath: $.result.Items` (NOT `$.result`)
+- **Check count**: `$.result.TotalCount`
+- **Access attributes inside ForEach**: `$.key.Attributes.AttributeName` (short name, no CK prefix or version suffix)
+- **System properties**: `$.key.RtId`, `$.key.CkTypeId`, `$.key.RtWellKnownName`
+- All property names are **PascalCase**
 
 ## Common Patterns
 

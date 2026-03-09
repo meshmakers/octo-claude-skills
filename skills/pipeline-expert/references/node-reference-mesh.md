@@ -685,13 +685,20 @@ triggers:
 
 ### FromPipelineTriggerEvent@1
 
-Trigger pipeline on scheduled/event-based triggers.
+Trigger pipeline on scheduled/event-based triggers configured via the UI (cron-based pipeline triggers).
+
+**Important:** When a pipeline trigger with a cron expression is configured in the UI, the Communication Controller schedules it via Hangfire in the Bot Service. Hangfire sends a `PipelineTriggerSchedule` message to a pipeline-specific RabbitMQ queue. The pipeline **must** include `FromPipelineTriggerEvent@1` as a trigger — this registers the Mesh Adapter as a consumer on that queue. Without it, the scheduled message is sent but never consumed and the pipeline will not execute.
+
+Trigger schedules are only loaded at Communication Controller startup. Changes to cron expressions or new triggers require a service restart to take effect.
+
+The cron expression is interpreted in the **server's local timezone** (`TimeZoneInfo.Local`, e.g. `Europe/Vienna`).
 
 No additional properties.
 
 ```yaml
 triggers:
   - type: FromPipelineTriggerEvent@1
+  - type: FromExecutePipelineCommand@1  # optional: also allow manual runs
 ```
 
 ### FromEmail@1

@@ -16,5 +16,9 @@
       "Bash(gh:*)",
       "WebSearch"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "mongodb"
+  ],
+  "enableAllProjectMcpServers": true
 }
