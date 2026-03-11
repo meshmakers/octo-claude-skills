@@ -7,13 +7,10 @@
 
 set -euo pipefail
 
-# Resolve monorepo root from CLAUDE_PLUGIN_ROOT (plugin lives at <monorepo>/octo-claude-skills/)
-if [ -z "${CLAUDE_PLUGIN_ROOT:-}" ]; then
-    echo "ERROR: CLAUDE_PLUGIN_ROOT is not set" >&2
-    exit 1
-fi
-
-MONOREPO_ROOT="$(cd "$CLAUDE_PLUGIN_ROOT/.." && pwd)"
+# Self-locate: derive paths from this script's location
+# Script lives at <monorepo>/octo-claude-skills/skills/octo-devtools/scripts/run_pwsh.sh
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MONOREPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 PROFILE="$MONOREPO_ROOT/octo-tools/modules/profile.ps1"
 
 # Verify pwsh is available
