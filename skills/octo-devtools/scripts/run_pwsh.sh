@@ -7,10 +7,26 @@
 
 set -euo pipefail
 
-# Self-locate: derive paths from this script's location
-# Script lives at <monorepo>/octo-claude-skills/skills/octo-devtools/scripts/run_pwsh.sh
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MONOREPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
+# Find the monorepo root by walking up from the current working directory
+# looking for octo-tools/modules/profile.ps1. This works regardless of where
+# the script itself is located (e.g., plugin cache vs monorepo checkout).
+find_monorepo_root() {
+    local dir="$PWD"
+    while [ "$dir" != "/" ]; do
+        if [ -f "$dir/octo-tools/modules/profile.ps1" ]; then
+            echo "$dir"
+            return 0
+        fi
+        dir="$(dirname "$dir")"
+    done
+    return 1
+}
+
+MONOREPO_ROOT="$(find_monorepo_root)" || {
+    echo "ERROR: Could not find monorepo root (no octo-tools/modules/profile.ps1 found above $PWD)" >&2
+    echo "Ensure the working directory is within the OctoMesh monorepo workspace." >&2
+    exit 1
+}
 PROFILE="$MONOREPO_ROOT/octo-tools/modules/profile.ps1"
 
 # Verify pwsh is available
