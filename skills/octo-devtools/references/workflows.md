@@ -53,17 +53,23 @@ If frontend dependencies changed:
 
 ## 4. Build a Single Repo
 
-When working on just one service:
+**IMPORTANT:** `Invoke-Build` is ONLY safe for isolated changes within a single service repo that do NOT affect NuGet packages. If changes touch a library repo or affect NuGet packages, use `Invoke-BuildAll` with exclusion flags instead.
 
+**Safe — isolated service change (no NuGet impact):**
 ```
-1. Invoke-Build -repositoryPath ./octo-asset-repo-services -configuration DebugL
+Invoke-Build -repositoryPath ./octo-asset-repo-services -configuration DebugL
 ```
 
-If the repo produces NuGet packages consumed by others:
+**Changes affect NuGet packages — use Invoke-BuildAll with scope flags:**
 ```
-2. Copy-NuGetPackages -directory ./octo-asset-repo-services
-3. Invoke-Build -repositoryPath ./octo-dependent-service -configuration DebugL
+# Build base libraries + services (no frontend) — handles NuGet propagation automatically
+Invoke-BuildAll -configuration DebugL -excludeFrontend
+
+# Build only core libraries (no services, no frontend)
+Invoke-BuildAll -configuration DebugL -excludeFrontend -excludeAdditional
 ```
+
+**NEVER manually chain `Invoke-Build` + `Copy-NuGetPackages` to propagate NuGet changes — use `Invoke-BuildAll` instead.**
 
 ## 5. Create and Work on a Test Branch
 

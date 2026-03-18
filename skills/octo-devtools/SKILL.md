@@ -34,6 +34,49 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/octo-devtools/scripts/run_pwsh.sh" "<PowerShe
 - WRONG: `pwsh -Command "Get-AllGitRepStatus"` (profile not loaded!)
 - WRONG: `cd ... && bash scripts/run_pwsh.sh "..."` (causes permission prompts!)
 
+## Build Strategy — CRITICAL
+
+OctoMesh is a monorepo where repos produce NuGet packages consumed by downstream repos. The build system handles copying these NuGet packages between repos automatically — but ONLY when using `Invoke-BuildAll`.
+
+### When to use `Invoke-BuildAll` (DEFAULT CHOICE)
+
+**Use `Invoke-BuildAll` whenever building after code changes that could affect NuGet packages, or when unsure.** This is the safe default. It builds repos in dependency order AND copies NuGet packages to the shared `nuget/` folder between each step.
+
+```
+# Full build (all repos including frontends)
+Invoke-BuildAll -configuration DebugL
+
+# Backend only — skips Angular frontends (saves significant time)
+Invoke-BuildAll -configuration DebugL -excludeFrontend
+
+# Core repos only — skips optional/additional repos AND frontends
+Invoke-BuildAll -configuration DebugL -excludeFrontend -excludeAdditional
+```
+
+**Use `Invoke-BuildAll` for:**
+- After pulling latest changes (`Sync-AllGitRepos`)
+- After switching branches
+- When changes touch library repos (mm-common, octo-construction-kit-engine, octo-sdk, octo-common-services, octo-distributedEventHub, octo-construction-kit-engine-mongodb)
+- When unsure whether changes affect NuGet packages
+- Clean builds after deleting bin/obj folders
+- First build after clone
+
+### When `Invoke-Build` is safe (SINGLE REPO, NO NUGET IMPACT)
+
+`Invoke-Build` builds one repo in isolation. It does NOT handle NuGet package propagation.
+
+**`Invoke-Build` is ONLY appropriate when:**
+- Making changes within a single service repo (e.g., `octo-asset-repo-services`, `octo-identity-services`)
+- The changes do NOT affect any NuGet package produced by that repo
+- All upstream NuGet dependencies are already up-to-date in the `nuget/` folder
+
+```
+# Safe: editing a controller in asset repo services
+Invoke-Build -repositoryPath ./octo-asset-repo-services -configuration DebugL
+```
+
+**NEVER use `Invoke-Build` to propagate NuGet changes.** Do not attempt to manually chain `Invoke-Build` + `Copy-NuGetPackages` to replicate what `Invoke-BuildAll` does — use `Invoke-BuildAll` with the appropriate exclusion flags instead.
+
 ## Command Quick Reference
 
 For full parameter details, read `references/command-reference.md` in this skill directory.
@@ -43,8 +86,8 @@ For common multi-step workflows, read `references/workflows.md` in this skill di
 
 | Cmdlet | Description | Safety |
 |---|---|---|
-| `Invoke-BuildAll` | Build all repos in dependency order | Mutating (local) |
-| `Invoke-Build` | Build a single repo | Mutating (local) |
+| `Invoke-BuildAll` | Build repos in dependency order WITH NuGet propagation — **use this by default** | Mutating (local) |
+| `Invoke-Build` | Build a single repo WITHOUT NuGet handling — only for isolated service changes | Mutating (local) |
 | `Invoke-BuildFrontend` | Build Angular frontends | Mutating (local) |
 | `Invoke-Publish` | Publish a .NET project | Mutating (local) |
 | `Invoke-BuildAndStartOcto` | Build all + start services | **Interactive** |
@@ -162,7 +205,10 @@ For common multi-step workflows, read `references/workflows.md` in this skill di
 
 ### Natural language mapping
 - "build everything" / "build all" → `Invoke-BuildAll -configuration DebugL`
-- "build asset repo" → `Invoke-Build -repositoryPath ./octo-asset-repo-services -configuration DebugL`
+- "build without frontend" / "build backend" → `Invoke-BuildAll -configuration DebugL -excludeFrontend`
+- "build core only" / "build libraries" / "build base" → `Invoke-BuildAll -configuration DebugL -excludeFrontend -excludeAdditional`
+- "build asset repo" → `Invoke-Build -repositoryPath ./octo-asset-repo-services -configuration DebugL` (only if no NuGet changes!)
+- "rebuild after pull" / "sync and build" → `Sync-AllGitRepos` then `Invoke-BuildAll -configuration DebugL`
 - "git status" / "repo status" → `Get-AllGitRepStatus`
 - "pull latest" / "sync repos" → `Sync-AllGitRepos`
 - "push everything" → `Push-AllGitRepos` (confirm first!)
@@ -178,7 +224,7 @@ For common multi-step workflows, read `references/workflows.md` in this skill di
 Always use `-configuration DebugL` for build commands unless the user explicitly specifies a different configuration. This is the standard local development configuration.
 
 ### Build order awareness
-When the user asks to build a specific repo, check if it has upstream dependencies that might need rebuilding first. Refer to the build order in the monorepo CLAUDE.md for the dependency chain.
+When the user asks to build, default to `Invoke-BuildAll` with exclusion flags to limit scope — do NOT attempt to manually orchestrate `Invoke-Build` calls in dependency order or manually copy NuGet packages. The `Invoke-BuildAll` script already handles the correct build order and NuGet propagation. Only use `Invoke-Build` for a single service repo where no NuGet packages are affected.
 
 ### Workflow suggestions
 When the user describes a high-level goal (e.g., "set up a fresh dev environment"), suggest the appropriate multi-step workflow from `references/workflows.md` and offer to execute it step by step.

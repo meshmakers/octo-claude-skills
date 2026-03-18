@@ -5,18 +5,23 @@ Complete catalog of cmdlets available after loading `octo-tools/modules/profile.
 ## Build & Compilation
 
 ### `Invoke-BuildAll`
-Build all repositories in dependency order.
+Build repositories in dependency order with automatic NuGet package propagation between repos. **This is the default build command** — use it whenever changes might affect NuGet packages or when building after pull/branch switch.
 - `-configuration` (string): Build configuration — `DebugL` (local dev), `Debug`, `Release`. **Always use `DebugL` for local development.**
 - `-branch` (string): Branch name for NuGet package resolution
-- `-excludeAdditional` (switch): Skip additional/optional repos
-- `-excludeFrontend` (switch): Skip Angular frontend builds
+- `-excludeAdditional` (switch): Skip additional/optional repos — builds only the core dependency chain
+- `-excludeFrontend` (switch): Skip Angular frontend builds — significant time savings for backend-only work
 - **Safety:** Mutating (local) — modifies build outputs and NuGet cache
+- **Common patterns:**
+  - Full build: `Invoke-BuildAll -configuration DebugL`
+  - Backend only: `Invoke-BuildAll -configuration DebugL -excludeFrontend`
+  - Core libraries only: `Invoke-BuildAll -configuration DebugL -excludeFrontend -excludeAdditional`
 
 ### `Invoke-Build`
-Build a single repository.
+Build a single repository. **Does NOT handle NuGet package propagation between repos.** Only use for isolated changes within a single service repo where no NuGet packages are affected. If changes affect NuGet packages or touch library repos, use `Invoke-BuildAll` with exclusion flags instead.
 - `-configuration` (string): Build configuration (`DebugL`, `Debug`, `Release`)
 - `-repositoryPath` (string): Path to the repository to build (e.g., `./octo-asset-repo-services`)
 - **Safety:** Mutating (local)
+- **WARNING:** Never manually chain `Invoke-Build` + `Copy-NuGetPackages` — use `Invoke-BuildAll` for multi-repo builds
 
 ### `Invoke-BuildFrontend`
 Build Angular frontend applications.
