@@ -486,6 +486,12 @@ def main():
     ctx = get_context_info()
     original_context = ctx["active_context"]
 
+    # Safety check: don't run from a previous e2e context
+    if original_context.startswith("e2e-"):
+        print(f"  WARNING: Active context '{original_context}' looks like a leftover e2e context.")
+        print(f"  Run 'octo-cli -c UseContext -n local_meshtest' first to restore your normal context.")
+        sys.exit(1)
+
     tenant_id = timestamp_id()
     print(f"  Tenant ID: {tenant_id}")
 
