@@ -344,10 +344,11 @@ def phase_6_query_and_assert(tenant_id):
     entities = data.get("entities", [])
     assert_true(len(entities) == 10, f"Expected 10 entities in list, got {len(entities)}")
     for e in entities:
-        attrs = {item["attributeName"]: item.get("value") for item in (e.get("attributes") or {}).get("items", [])}
-        assert_true("Temperature" in attrs, f"Entity {e.get('rtId')} missing Temperature attribute")
-        assert_true("Humidity" in attrs, f"Entity {e.get('rtId')} missing Humidity attribute")
-        assert_true("Pressure" in attrs, f"Entity {e.get('rtId')} missing Pressure attribute")
+        # Attribute names come back lowercased from the GraphQL API
+        attrs = {item["attributeName"].lower(): item.get("value") for item in (e.get("attributes") or {}).get("items", [])}
+        assert_true("temperature" in attrs, f"Entity {e.get('rtId')} missing temperature attribute. Has: {sorted(attrs.keys())}")
+        assert_true("humidity" in attrs, f"Entity {e.get('rtId')} missing humidity attribute. Has: {sorted(attrs.keys())}")
+        assert_true("pressure" in attrs, f"Entity {e.get('rtId')} missing pressure attribute. Has: {sorted(attrs.keys())}")
     print("  \u2713 [2/6] All 10 sensors have Temperature, Humidity, Pressure attributes")
     passed += 1
 
@@ -355,7 +356,7 @@ def phase_6_query_and_assert(tenant_id):
     print()
     print("  [3/6] Filter sensors by Temperature > 50...")
     r = run_rt_explorer(
-        ["filter", "E2ETest/Sensor", "Temperature", "GREATER_THAN", "50"],
+        ["filter", "E2ETest/Sensor", "temperature", "GREATER_THAN", "50"],
         tenant_id, "Filter sensors"
     )
     data = json.loads(r.stdout)
@@ -368,7 +369,7 @@ def phase_6_query_and_assert(tenant_id):
     print()
     print("  [4/6] Transient query (Name, Temperature, Humidity)...")
     r = run_rt_explorer(
-        ["query", "E2ETest/Sensor", "--columns", "Name,Temperature,Humidity", "--first", "10"],
+        ["query", "E2ETest/Sensor", "--columns", "name,temperature,humidity", "--first", "10"],
         tenant_id, "Transient query"
     )
     data = json.loads(r.stdout)
@@ -376,8 +377,9 @@ def phase_6_query_and_assert(tenant_id):
     assert_true(len(items) > 0, "Transient query returned no items")
     columns = items[0].get("columns", [])
     col_paths = [c.get("attributePath", "") for c in columns]
-    assert_true("Name" in col_paths, f"Missing 'Name' column in {col_paths}")
-    assert_true("Temperature" in col_paths, f"Missing 'Temperature' column in {col_paths}")
+    col_paths_lower = [p.lower() for p in col_paths]
+    assert_true("name" in col_paths_lower, f"Missing 'name' column in {col_paths}")
+    assert_true("temperature" in col_paths_lower, f"Missing 'temperature' column in {col_paths}")
     rows = (items[0].get("rows") or {}).get("items") or []
     assert_true(len(rows) == 10, f"Expected 10 rows, got {len(rows)}")
     print(f"  \u2713 [4/6] Transient query: {len(col_paths)} columns \u00d7 {len(rows)} rows")
@@ -441,7 +443,7 @@ def phase_6_query_and_assert(tenant_id):
     print()
     print("  [6/6] Search sensors by name...")
     r = run_rt_explorer(
-        ["search", "E2ETest/Sensor", "Sensor"],
+        ["search", "E2ETest/Sensor", "Sensor", "--attr", "name"],
         tenant_id, "Search sensors"
     )
     data = json.loads(r.stdout)
