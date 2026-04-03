@@ -155,3 +155,78 @@ def phase_3_import_ck_model(tenant_id):
         f"E2ETest model not found in imported models: {model_names}",
     )
     print(f"  \u2713 CK model imported and verified (found E2ETest in {len(model_names)} models)")
+
+
+# ===================================================================
+# Phase 4: Import Seed Data
+# ===================================================================
+def phase_4_import_seed_data(tenant_id):
+    print()
+    print("=" * 60)
+    print("  Phase 4: Import Seed Data")
+    print("=" * 60)
+
+    seed_file = os.path.join(FIXTURES, "e2e-rt-seed.yaml")
+    assert_true(os.path.isfile(seed_file), f"Seed file not found: {seed_file}")
+
+    run_cli(["-c", "ImportRt", "-f", seed_file, "-r", "-w", "-tid", tenant_id], "Import seed data")
+
+    # Verify plant exists
+    r = run_rt_explorer(["count", "E2ETest/Plant"], tenant_id, "Count plants")
+    data = json.loads(r.stdout)
+    assert_true(data["totalCount"] == 1, f"Expected 1 plant, got {data['totalCount']}")
+
+    # Verify areas exist
+    r = run_rt_explorer(["count", "E2ETest/Area"], tenant_id, "Count areas")
+    data = json.loads(r.stdout)
+    assert_true(data["totalCount"] == 2, f"Expected 2 areas, got {data['totalCount']}")
+
+    print("  \u2713 Seed data imported: 1 Plant, 2 Areas")
+
+
+# ===================================================================
+# Phase 5: Create Sensors (pipeline trigger or fallback import)
+# ===================================================================
+def phase_5_create_sensors(tenant_id):
+    print()
+    print("=" * 60)
+    print("  Phase 5: Create Sensors")
+    print("=" * 60)
+
+    # Try importing pipeline infrastructure first
+    pipeline_file = os.path.join(FIXTURES, "e2e-rt-pipeline.yaml")
+    if os.path.isfile(pipeline_file):
+        print("  Importing pipeline infrastructure...")
+        result = run_cli(
+            ["-c", "ImportRt", "-f", pipeline_file, "-r", "-w", "-tid", tenant_id],
+            "Import pipeline", check=False
+        )
+        if result.returncode == 0:
+            print("  \u2713 Pipeline entities imported")
+            # Give the adapter a moment to pick up the pipeline
+            print("  Waiting 5s for adapter to register pipeline...")
+            time.sleep(5)
+
+            # Check if sensors were created by the pipeline
+            r = run_rt_explorer(["count", "E2ETest/Sensor"], tenant_id, "Count sensors", check=False)
+            if r.returncode == 0:
+                data = json.loads(r.stdout)
+                if data["totalCount"] >= 10:
+                    print(f"  \u2713 Pipeline created {data['totalCount']} sensors")
+                    return "pipeline"
+
+        print("  Pipeline did not produce sensors \u2014 using fallback import")
+
+    # Fallback: import pre-built sensor entities
+    sensors_file = os.path.join(FIXTURES, "e2e-rt-sensors.yaml")
+    assert_true(os.path.isfile(sensors_file), f"Sensors file not found: {sensors_file}")
+
+    run_cli(["-c", "ImportRt", "-f", sensors_file, "-r", "-w", "-tid", tenant_id], "Import sensors (fallback)")
+
+    # Verify sensors were created
+    r = run_rt_explorer(["count", "E2ETest/Sensor"], tenant_id, "Count sensors")
+    data = json.loads(r.stdout)
+    assert_true(data["totalCount"] == 10, f"Expected 10 sensors, got {data['totalCount']}")
+
+    print(f"  \u2713 Fallback import: {data['totalCount']} sensors created")
+    return "fallback"
