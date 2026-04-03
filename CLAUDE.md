@@ -17,7 +17,7 @@ skills/octo/
   scripts/
     run_python.sh             — Venv wrapper (creates .venv, installs deps, delegates to venv Python)
     requirements.txt          — Python dependencies (requests)
-    _octo_common.py           — Shared foundation: reads ~/.octo-cli/settings.json, builds auth headers, GraphQL helpers
+    _octo_common.py           — Shared foundation: reads active context from ~/.octo-cli/contexts.json, builds auth headers, GraphQL helpers
     ck_explorer.py            — CK model exploration via GraphQL (models, types, enums, search)
     rt_explorer.py            — Runtime instance browsing via GraphQL (list, count, get, search, filter, query)
     gql_introspect.py         — GraphQL schema introspection (top-level fields, type fields)
@@ -36,7 +36,7 @@ bash skills/octo/scripts/run_python.sh skills/octo/scripts/<script.py> [args...]
 The wrapper (`run_python.sh`) automatically creates a virtual environment in `scripts/.venv/`, installs dependencies from `requirements.txt`, and tracks an md5 hash to reinstall only when deps change. Status messages go to stderr so they don't corrupt `--json` output.
 
 All scripts share `_octo_common.py` which provides:
-- Reading `~/.octo-cli/settings.json` for endpoint URLs, tenant ID, and auth token
+- Reading the active context from `~/.octo-cli/contexts.json` for endpoint URLs, tenant ID, and auth token
 - Building HTTP headers with Bearer token
 - GraphQL query execution helpers
 

@@ -23,36 +23,51 @@ https://reporting-<suffix>.test-2.mm.cloud/
 ## Switching Environment Procedure
 
 Default tenant ID is `meshtest` unless the user specifies otherwise.
+Context naming convention: `{environment}_{tenantId}`.
+
+If the context already exists with a valid token, you can skip `LogIn` — just run `UseContext` and check `AuthStatus`.
 
 ### Switch to local
 ```bash
-octo-cli -c Config -isu "https://localhost:5003/" -asu "https://localhost:5001/" -bsu "https://localhost:5009/" -csu "https://localhost:5015/" -tid meshtest
+octo-cli -c AddContext -n local_meshtest -isu "https://localhost:5003/" -asu "https://localhost:5001/" -bsu "https://localhost:5009/" -csu "https://localhost:5015/" -tid meshtest
+octo-cli -c UseContext -n local_meshtest
 octo-cli -c LogIn -i
 ```
 
 ### Switch to test-2
 ```bash
-octo-cli -c Config -isu "https://connect.test-2.mm.cloud/" -asu "https://assets.test-2.mm.cloud/" -bsu "https://bots.test-2.mm.cloud/" -csu "https://communication.test-2.mm.cloud/" -tid meshtest
+octo-cli -c AddContext -n test2_meshtest -isu "https://connect.test-2.mm.cloud/" -asu "https://assets.test-2.mm.cloud/" -bsu "https://bots.test-2.mm.cloud/" -csu "https://communication.test-2.mm.cloud/" -tid meshtest
+octo-cli -c UseContext -n test2_meshtest
 octo-cli -c LogIn -i
 ```
 
 ### Switch to staging
 ```bash
-octo-cli -c Config -isu "https://connect.staging.meshmakers.cloud/" -asu "https://assets.staging.meshmakers.cloud/" -bsu "https://bots.staging.meshmakers.cloud/" -csu "https://communication.staging.meshmakers.cloud/" -tid meshtest
+octo-cli -c AddContext -n staging_meshtest -isu "https://connect.staging.meshmakers.cloud/" -asu "https://assets.staging.meshmakers.cloud/" -bsu "https://bots.staging.meshmakers.cloud/" -csu "https://communication.staging.meshmakers.cloud/" -tid meshtest
+octo-cli -c UseContext -n staging_meshtest
 octo-cli -c LogIn -i
 ```
 
 ### Switch to production
 ```bash
-octo-cli -c Config -isu "https://connect.meshmakers.cloud" -asu "https://assets.meshmakers.cloud/" -bsu "https://bots.meshmakers.cloud/" -csu "https://communication.meshmakers.cloud/" -tid meshtest
+octo-cli -c AddContext -n production_meshtest -isu "https://connect.meshmakers.cloud" -asu "https://assets.meshmakers.cloud/" -bsu "https://bots.meshmakers.cloud/" -csu "https://communication.meshmakers.cloud/" -tid meshtest
+octo-cli -c UseContext -n production_meshtest
 octo-cli -c LogIn -i
 ```
 
 ### Include reporting service
-Add `-rsu` flag to any Config command to also configure reporting:
+Add `-rsu` flag to the `AddContext` command:
 ```bash
 # Example for test-2 with reporting
-octo-cli -c Config -isu "https://connect.test-2.mm.cloud/" -asu "https://assets.test-2.mm.cloud/" -bsu "https://bots.test-2.mm.cloud/" -csu "https://communication.test-2.mm.cloud/" -rsu "https://reporting.test-2.mm.cloud/" -tid meshtest
+octo-cli -c AddContext -n test2_meshtest -isu "https://connect.test-2.mm.cloud/" -asu "https://assets.test-2.mm.cloud/" -bsu "https://bots.test-2.mm.cloud/" -csu "https://communication.test-2.mm.cloud/" -rsu "https://reporting.test-2.mm.cloud/" -tid meshtest
+octo-cli -c UseContext -n test2_meshtest
+```
+
+### Switch back to a previously authenticated context
+If you have already logged in to a context, just switch to it:
+```bash
+octo-cli -c UseContext -n local_meshtest
+octo-cli -c AuthStatus   # verify token is still valid
 ```
 
 ## Environment Detection from URLs

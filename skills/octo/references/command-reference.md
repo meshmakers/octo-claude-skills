@@ -2,22 +2,53 @@
 
 All flags use short form with `-` prefix. Required flags are marked with **(R)**.
 
-## General
+## Context Management
 
-### Config
-Configures the tool endpoints and tenant.
+### AddContext
+Create or update a named context with service URLs and tenant.
 ```
-octo-cli -c Config -isu <identityServicesUri> [-asu <assetServicesUri>] [-bsu <botServicesUri>] [-csu <communicationServicesUri>] [-rsu <reportingServicesUri>] [-apu <adminPanelUri>] [-tid <tenantId>]
+octo-cli -c AddContext -n <name> [-isu <identityServicesUri>] [-asu <assetServicesUri>] [-bsu <botServicesUri>] [-csu <communicationServicesUri>] [-rsu <reportingServicesUri>] [-apu <adminPanelUri>] [-tid <tenantId>]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
-| `-isu` | `identityServicesUri` | URI of identity services (e.g. `https://localhost:5003/`) | Yes |
+| `-n` | `name` | Name of the context (e.g. `local_meshtest`, `staging_customer1`) | Yes |
+| `-isu` | `identityServicesUri` | URI of identity services (e.g. `https://localhost:5003/`) | No |
 | `-asu` | `assetServicesUri` | URI of asset repository services (e.g. `https://localhost:5001/`) | No |
-| `-bsu` | `bobServicesUri` | URI of bot services (e.g. `https://localhost:5009/`) | No |
+| `-bsu` | `botServicesUri` | URI of bot services (e.g. `https://localhost:5009/`) | No |
 | `-csu` | `communicationServicesUri` | URI of communication services (e.g. `https://localhost:5015/`) | No |
 | `-rsu` | `reportingServicesUri` | URI of reporting services (e.g. `https://localhost:5007/`) | No |
 | `-apu` | `adminPanelUri` | URI of admin panel (e.g. `https://localhost:5005/`) | No |
 | `-tid` | `tenantId` | ID of tenant (e.g. `meshtest`) | No |
+
+Context naming convention: `{environment}_{tenantId}` (e.g., `local_meshtest`, `staging_meshtest`, `production_customer1`, `test2_v2_meshtest`).
+
+If this is the first context or no active context is set, it is automatically activated. Each context stores its own authentication tokens independently.
+
+### UseContext
+Switch the active context or list all available contexts.
+```
+octo-cli -c UseContext [-n <name>]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-n` | `name` | Name of the context to activate | No |
+
+Without `-n`: lists all contexts with their identity URL and tenant ID, marking the active one with `*`.
+
+### RemoveContext
+Remove a named context.
+```
+octo-cli -c RemoveContext -n <name>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-n` | `name` | Name of the context to remove | Yes |
+
+If the removed context was active, another context is automatically promoted.
+
+---
+
+## General
 
 ### LogIn
 Login to the configured identity services.

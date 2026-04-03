@@ -2,7 +2,7 @@
 name: octo
 description: Natural language interface for OctoMesh CLI (octo-cli), data model exploration, and runtime instance browsing via GraphQL. Trigger on anything related to OctoMesh CLI operations — managing users, roles, tenants, clients, identity providers, service hooks, authentication, environment switching, or any platform administration task. Also trigger for data model exploration — Construction Kit models, CK types, enums, attributes, associations, GraphQL schema introspection, or any question about the tenant's data model. Also trigger for runtime instance queries — listing, counting, searching, filtering, or inspecting runtime entities/instances of any CK type. Trigger whenever the user mentions octo, OctoMesh, tenant management, user management, identity services, data model, construction kit, CK types, CK enums, runtime instances, show instances, list machines, count entities, or wants to interact with the mesh platform.
 allowed-tools:
-  - "Read(~/.octo-cli/settings.json)"
+  - "Read(~/.octo-cli/contexts.json)"
   - "Read(${CLAUDE_PLUGIN_ROOT}/skills/octo/references/*)"
   - "Bash(bash ${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh:*)"
   - "Bash(octo-cli:*)"
@@ -19,7 +19,18 @@ Claude infers the correct `octo-cli` command from the user's intent, resolves co
 
 Run these checks once per session and cache the results. If any check has already been performed in this conversation, skip it.
 
-### 1. Authentication Check
+### 1. Active Context
+
+Read `~/.octo-cli/contexts.json` to extract:
+- `ActiveContext` — name of the currently active context (e.g., `local_meshtest`, `staging_meshtest`)
+- From the active context entry:
+  - `OctoToolOptions.TenantId` — configured tenant ID
+  - `OctoToolOptions.IdentityServiceUrl`, `OctoToolOptions.AssetServiceUrl`, `OctoToolOptions.BotServiceUrl`, `OctoToolOptions.CommunicationServiceUrl`, `OctoToolOptions.ReportingServiceUrl`, `OctoToolOptions.AdminPanelUrl` — service endpoints
+  - `Authentication.AccessToken` — current auth token (if logged in)
+
+To list all available contexts: `octo-cli -c UseContext` (no `-n` flag).
+
+### 2. Authentication Check
 
 Run `octo-cli -c AuthStatus` to determine:
 - Whether authenticated (token valid)
@@ -27,17 +38,6 @@ Run `octo-cli -c AuthStatus` to determine:
 - JWT claims: subject, roles, issuer, audience, expiration
 
 If not authenticated: inform the user and offer to run `octo-cli -c LogIn -i`.
-
-### 2. Settings File
-
-Read `~/.octo-cli/settings.json` to extract:
-- Configured tenant ID
-- Service endpoint URLs (identity, asset, bot, communication, reporting)
-
-The settings structure uses the `OctoToolOptions` section with keys:
-- `IdentityServiceUrl`, `AssetServiceUrl`, `BotServiceUrl`
-- `CommunicationServiceUrl`, `ReportingServiceUrl`, `AdminPanelUrl`
-- `TenantId`
 
 ### 3. Environment Detection from URLs
 
@@ -61,11 +61,19 @@ Flags use short form with `-` prefix: `-un userName`, `-e email`, `-tid tenantId
 For full flag details, read `references/command-reference.md` in this skill directory.
 For environment URLs, read `references/environments.md` in this skill directory.
 
+### Context Management
+
+| Command | Description | Type |
+|---|---|---|
+| `AddContext` | Create/update a named context (`-n`, `-isu`, `-asu`, `-bsu`, `-csu`, `-rsu`, `-apu`, `-tid`) | Mutating |
+| `UseContext -n` | Switch active context | Mutating |
+| `UseContext` | List all available contexts (no `-n`) | Read-only |
+| `RemoveContext` | Remove a named context (`-n`) | Mutating |
+
 ### General (no group)
 
 | Command | Description | Type |
 |---|---|---|
-| `Config` | Configures tool endpoints and tenant | Mutating |
 | `LogIn` | Login to identity services (`-i` for interactive/browser) | Mutating |
 | `AuthStatus` | Gets authentication status | Read-only |
 
@@ -186,19 +194,26 @@ For environment URLs, read `references/environments.md` in this skill directory.
 ## Safety Rules
 
 - **Read-only commands** (Get*, AuthStatus, Export*, Dump): execute directly, no confirmation needed
-- **Mutating commands** (Create*, Update*, Delete*, Add*, Remove*, Enable*, Disable*, Import*, Clean*, Reset*, Config, LogIn, Setup, Attach, Detach, Restore, RunFixupScripts): show command + summary, wait for user confirmation before executing
+- **Mutating commands** (Create*, Update*, Delete*, Add*, Remove*, Enable*, Disable*, Import*, Clean*, Reset*, AddContext, UseContext, RemoveContext, LogIn, Setup, Attach, Detach, Restore, RunFixupScripts): show command + summary, wait for user confirmation before executing
 - **Production environment**: add an explicit warning: "You are targeting PRODUCTION" and double-confirm
 - **Never** auto-execute tenant deletion (`Delete`), user deletion (`DeleteUser`), or clean operations (`Clean`) without confirmation
 - **Batch operations**: confirm the full batch plan before executing any individual command
 
 ## Environment Switching
 
+octo-cli uses **named contexts** (similar to kubectl) to manage multiple environments. Each context stores its own service URLs, tenant ID, and authentication tokens independently.
+
+Context naming convention: `{environment}_{tenantId}` (e.g., `local_meshtest`, `staging_customer1`, `test2_meshtest`).
+
 When the user says "switch to <env>" or "connect to <env>":
 
 1. Read `references/environments.md` for the URL mappings
-2. Run `octo-cli -c Config` with the appropriate URLs for the target environment
-3. Run `octo-cli -c LogIn -i` to authenticate
-4. Confirm the new environment with `octo-cli -c AuthStatus`
+2. Determine the context name: `{env}_{tenantId}` (default tenant is `meshtest`)
+3. Run `octo-cli -c AddContext -n {contextName}` with the appropriate URLs and tenant
+4. Run `octo-cli -c UseContext -n {contextName}` to activate it
+5. Run `octo-cli -c AuthStatus` — if the token is still valid, done. If not, run `octo-cli -c LogIn -i` to authenticate, then confirm with `AuthStatus`
+
+To list all available contexts: `octo-cli -c UseContext` (no `-n` flag).
 
 The default tenant ID is `meshtest` unless the user specifies otherwise.
 
@@ -237,7 +252,7 @@ After context discovery, always indicate which environment is active when presen
 
 ### Script Location
 
-All scripts are in the `scripts/` subdirectory of this skill. They read connection info (endpoint URL, tenant, auth token) from `~/.octo-cli/settings.json` automatically.
+All scripts are in the `scripts/` subdirectory of this skill. They read connection info (endpoint URL, tenant, auth token) from the active context in `~/.octo-cli/contexts.json` automatically.
 
 **Prerequisite:** The user must be authenticated (`octo-cli -c LogIn -i`). If a script fails with a 401/403 error, prompt the user to re-authenticate.
 
@@ -339,7 +354,7 @@ Use a progressive drill-down approach when the user asks about the data model:
 There is no `octo-cli` command or script for deleting individual runtime entities. Use the Asset Repo GraphQL mutation directly via `curl`. The endpoint URL is `{AssetServiceUrl}tenants/{TenantId}/GraphQL`.
 
 ```bash
-TOKEN=$(python3 -c "import json; print(json.load(open('$HOME/.octo-cli/settings.json'))['Authentication']['AccessToken'])")
+TOKEN=$(python3 -c "import json; c=json.load(open('$HOME/.octo-cli/contexts.json')); print(c['Contexts'][c['ActiveContext']]['Authentication']['AccessToken'])")
 curl -sk "https://localhost:5001/tenants/maco/GraphQL" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \

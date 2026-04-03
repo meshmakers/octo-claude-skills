@@ -117,7 +117,7 @@ Invoke-OctoCliLoginStaging
 Invoke-OctoCliLoginProduction
 ```
 
-Each login cmdlet runs `octo-cli -c Config` with the right URLs and then `octo-cli -c LogIn -i`.
+Each login cmdlet creates/updates a named context via `octo-cli -c AddContext`, activates it with `octo-cli -c UseContext`, and then authenticates with `octo-cli -c LogIn -i`. The context name follows the `{environment}_{tenantId}` convention (e.g., `local_meshtest`).
 
 ## 9. Push Changes
 
