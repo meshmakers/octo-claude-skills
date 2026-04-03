@@ -1,4 +1,4 @@
-"""End-to-end integration test -- full OctoMesh lifecycle.
+"""Data layer integration test -- CK import, RT import, and query validation.
 
 Creates a fresh tenant, imports a custom CK model, seeds entity data,
 attempts pipeline-driven simulation, and validates via 6 query types.

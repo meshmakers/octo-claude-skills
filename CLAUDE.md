@@ -58,7 +58,8 @@ bash skills/octo/scripts/run_python.sh skills/octo/scripts/_verify_step3.py   # 
 bash skills/octo/scripts/run_python.sh skills/octo/scripts/_verify_step4.py   # GraphQL introspection
 bash skills/octo/scripts/run_python.sh skills/octo/scripts/_verify_step5_e2e.py  # End-to-end
 bash skills/octo/scripts/run_python.sh skills/octo/scripts/_verify_rt_explorer.py  # RT explorer
-bash skills/octo/scripts/run_python.sh skills/octo/scripts/_verify_e2e_full.py   # Full lifecycle e2e
+bash skills/octo/scripts/run_python.sh skills/octo/scripts/_verify_data_layer.py  # Data layer integration
+bash skills/octo/scripts/run_python.sh skills/octo/scripts/_verify_e2e_real.py    # Real e2e with pipeline execution
 ```
 
 These require a running OctoMesh environment and valid authentication.
