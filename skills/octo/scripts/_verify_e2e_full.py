@@ -20,6 +20,24 @@ sys.path.insert(0, SCRIPTS)
 from _octo_common import load_settings, graphql_query, get_graphql_url, get_token
 
 
+def get_context_info():
+    """Read the active context name and service URLs from ~/.octo-cli/contexts.json."""
+    import json as _json
+    path = os.path.join(os.path.expanduser("~"), ".octo-cli", "contexts.json")
+    with open(path) as f:
+        config = _json.load(f)
+    active_name = config.get("ActiveContext", "default")
+    active = config.get("Contexts", {}).get(active_name, {})
+    opts = active.get("OctoToolOptions", {})
+    return {
+        "active_context": active_name,
+        "identity_url": opts.get("IdentityServiceUrl", ""),
+        "asset_url": opts.get("AssetServiceUrl", ""),
+        "bot_url": opts.get("BotServiceUrl", ""),
+        "comm_url": opts.get("CommunicationServiceUrl", ""),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -92,15 +110,33 @@ def phase_1_create_tenant(tenant_id):
     """Create a fresh tenant for the E2E test."""
     print()
     print("=" * 60)
-    print("  PHASE 1: Create Tenant")
+    print(f"  Phase 1: Create Tenant '{tenant_id}'")
     print("=" * 60)
+
+    # Read current context info for service URLs
+    ctx = get_context_info()
+
     # Convert hyphens to underscores for db name
     db_name = tenant_id.replace("-", "_")
     run_cli(
         ["-c", "Create", "-tid", tenant_id, "-db", db_name],
         "Create tenant",
     )
+
+    # Create a temporary CLI context for this tenant and switch to it
+    context_name = f"e2e-{tenant_id}"
+    add_args = ["-c", "AddContext", "-n", context_name, "-tid", tenant_id]
+    if ctx["identity_url"]:
+        add_args.extend(["-isu", ctx["identity_url"]])
+    if ctx["asset_url"]:
+        add_args.extend(["-asu", ctx["asset_url"]])
+    if ctx["bot_url"]:
+        add_args.extend(["-bsu", ctx["bot_url"]])
+    run_cli(add_args, "Create e2e context")
+    run_cli(["-c", "UseContext", "-n", context_name], "Switch to e2e context")
+
     print(f"  \u2713 Tenant '{tenant_id}' created (db: {db_name})")
+    print(f"  \u2713 CLI context '{context_name}' active")
 
 
 # ---------------------------------------------------------------------------
@@ -114,7 +150,7 @@ def phase_2_enable_communication(tenant_id):
     print("  PHASE 2: Enable Communication")
     print("=" * 60)
     run_cli(
-        ["-c", "EnableCommunication", "-tid", tenant_id],
+        ["-c", "EnableCommunication"],
         "Enable communication",
     )
     print(f"  \u2713 Communication enabled for tenant '{tenant_id}'")
@@ -133,7 +169,7 @@ def phase_3_import_ck_model(tenant_id):
     ck_file = os.path.join(FIXTURES, "e2e-ck-model.yaml")
     assert_true(os.path.isfile(ck_file), f"CK model file not found: {ck_file}")
     run_cli(
-        ["-c", "ImportCk", "-f", ck_file, "-w", "-tid", tenant_id],
+        ["-c", "ImportCk", "-f", ck_file, "-w"],
         "Import CK model",
     )
 
@@ -169,7 +205,7 @@ def phase_4_import_seed_data(tenant_id):
     seed_file = os.path.join(FIXTURES, "e2e-rt-seed.yaml")
     assert_true(os.path.isfile(seed_file), f"Seed file not found: {seed_file}")
 
-    run_cli(["-c", "ImportRt", "-f", seed_file, "-r", "-w", "-tid", tenant_id], "Import seed data")
+    run_cli(["-c", "ImportRt", "-f", seed_file, "-r", "-w"], "Import seed data")
 
     # Verify plant exists
     r = run_rt_explorer(["count", "E2ETest/Plant"], tenant_id, "Count plants")
@@ -198,7 +234,7 @@ def phase_5_create_sensors(tenant_id):
     if os.path.isfile(pipeline_file):
         print("  Importing pipeline infrastructure...")
         result = run_cli(
-            ["-c", "ImportRt", "-f", pipeline_file, "-r", "-w", "-tid", tenant_id],
+            ["-c", "ImportRt", "-f", pipeline_file, "-r", "-w"],
             "Import pipeline", check=False
         )
         if result.returncode == 0:
@@ -221,7 +257,7 @@ def phase_5_create_sensors(tenant_id):
     sensors_file = os.path.join(FIXTURES, "e2e-rt-sensors.yaml")
     assert_true(os.path.isfile(sensors_file), f"Sensors file not found: {sensors_file}")
 
-    run_cli(["-c", "ImportRt", "-f", sensors_file, "-r", "-w", "-tid", tenant_id], "Import sensors (fallback)")
+    run_cli(["-c", "ImportRt", "-f", sensors_file, "-r", "-w"], "Import sensors (fallback)")
 
     # Verify sensors were created
     r = run_rt_explorer(["count", "E2ETest/Sensor"], tenant_id, "Count sensors")
@@ -384,6 +420,10 @@ def main():
     settings = load_settings()
     print(f"  Active context loaded")
 
+    # Save original context name for restoration
+    ctx = get_context_info()
+    original_context = ctx["active_context"]
+
     tenant_id = timestamp_id()
     print(f"  Tenant ID: {tenant_id}")
 
@@ -399,7 +439,12 @@ def main():
         print("=" * 60)
         print(f"  E2E TEST FAILED \u2014 tenant '{tenant_id}' left for inspection")
         print("=" * 60)
+        # Restore original context
+        run_cli(["-c", "UseContext", "-n", original_context], "Restore context", check=False)
         sys.exit(1)
+
+    # Restore original context
+    run_cli(["-c", "UseContext", "-n", original_context], "Restore context", check=False)
 
     print()
     print("=" * 60)
