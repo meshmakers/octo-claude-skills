@@ -429,8 +429,13 @@ def phase_6_query_and_assert(tenant_id):
             node = entities[0]["node"]
             inbound_defs = (node.get("associations") or {}).get("definitions") or {}
             inbound_items = inbound_defs.get("items") or []
-            sensor_assocs = [a for a in inbound_items if a.get("targetCkTypeId", "").endswith("/Sensor")]
+            # CK type IDs may be versioned (e.g. E2ETest-1.0.0/Sensor-1) — match case-insensitively
+            sensor_assocs = [a for a in inbound_items if "sensor" in a.get("targetCkTypeId", "").lower()]
             total_sensors_via_assoc += len(sensor_assocs)
+            if not sensor_assocs and inbound_items:
+                print(f"    Debug: Area {area_rtId} has {len(inbound_items)} inbound assocs but none matched 'sensor':")
+                for a in inbound_items[:3]:
+                    print(f"      role={a.get('ckAssociationRoleId')} target={a.get('targetCkTypeId')}")
 
     assert_true(
         total_sensors_via_assoc == 10,
