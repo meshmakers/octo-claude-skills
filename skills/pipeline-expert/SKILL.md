@@ -1,6 +1,6 @@
 ---
 name: pipeline-expert
-description: Expert for OctoMesh ETL pipeline YAML — creation, reading, editing, debugging. Relevant when the user mentions pipeline YAML, pipeline creation, pipeline nodes, data context, ForEach iteration, ETL pipelines, mesh pipelines, edge pipelines, triggers, transformations, ApplyChanges, CreateUpdateInfo, data mapping, pipeline debugging, data flow, ToPipelineDataEvent, FromPipelineDataEvent, GetRtEntities, entity CRUD, association updates, field filters, switch cases, polling pipelines, HTTP triggers, watch entity triggers, Zenon integration, SAP integration, EDA processing, email notifications, time series, anomaly detection, AI queries, buffering, webhook, Base64 encoding, logging, debug output, pipeline config lookup, report generation.
+description: Expert for OctoMesh ETL pipeline YAML — creation, reading, editing, debugging, validation. This skill should be used when the user mentions pipeline YAML, YAML pipeline, pipeline creation, pipeline nodes, node configuration, DataContext, ForEach iteration, ETL pipelines, mesh pipelines, edge pipelines, triggers, transformations, ApplyChanges, CreateUpdateInfo, data mapping, pipeline debugging, pipeline error, data flow, ToPipelineDataEvent, FromPipelineDataEvent, GetRtEntities, entity CRUD, association updates, field filters, switch cases, polling pipelines, HTTP triggers, watch entity triggers, scheduled pipeline, cron trigger, email trigger, Zenon integration, SAP integration, EDA processing, email notifications, time series, anomaly detection, AI queries, buffering, webhook, Base64 encoding, logging, debug output, pipeline config lookup, report generation, pipeline schema, pipeline validation, CSV import, Excel import, SFTP upload, file hash, duplicate check, Grafana provisioning, Microsoft Teams, Microsoft Graph, simulation data, OCR, pipeline JSON schema, pipeline example.
 allowed-tools:
   - "Read(${CLAUDE_PLUGIN_ROOT}/skills/pipeline-expert/references/*)"
 ---
@@ -89,6 +89,7 @@ For a deeper explanation of context hierarchy, write modes, and field filters, r
 | `FromPipelineTriggerEvent@1` | Scheduled/event trigger |
 | `FromSendNotification@1` | Notification service message |
 | `FromEmail@1` | Incoming email via IMAP |
+| `FromMicrosoftGraph@1` | Poll Microsoft Teams channels via Graph API |
 
 ### Control Flow
 
@@ -152,7 +153,12 @@ For a deeper explanation of context hierarchy, write modes, and field filters, r
 | `StatisticalAnomalyDetection@1` | Z-Score/IQR anomaly detection |
 | `MachineLearningAnomalyDetection@1` | ML.NET spike/change detection |
 | `ImportFromExcel@1` | Excel data import |
+| `ImportFromCsv@1` | Import tabular data from CSV files |
 | `MinMax@1` | Find min/max in array |
+| `CheckDuplicate@1` | Check if entity with matching attribute already exists |
+| `ComputeFileHash@1` | SHA-256 hash of base64 file data |
+| `ReplyToTeamsChannel@1` | Send message card to Teams channel via webhook |
+| `Simulation@1` | Generate simulated data values (Bogus-based) |
 
 ### Load (Data Out)
 
@@ -166,17 +172,20 @@ For a deeper explanation of context hierarchy, write modes, and field filters, r
 | `SendEMail@1` | Send email (Markdown → HTML) |
 | `SendNotification@1` | Send notification via bot service |
 | `GenerateAndStoreReport@1` | Generate and store report |
+| `SftpUpload@1` | Upload file to SFTP server |
+| `GrafanaProvisionTenant@1` | Provision Grafana org and datasource for tenant |
+| `GrafanaDeprovisionTenant@1` | Deprovision Grafana org for tenant |
 
 ### Buffering (Edge)
 
 | Node | Purpose |
 |------|---------|
 | `BufferData@1` | Buffer with time-based flush |
-| `BufferRetrieval@1` | Retrieve buffered data |
+| `BufferRetrievalNode@1` | Retrieve buffered data |
 
 ### Domain-Specific
 
-SAP nodes (SapLogin, GetProductionOrderList, GetProductionOrderDetails), Zenon nodes (SetZenonVariables, FromZenonAml, ReadZenonAmlMessages), and EDA energy nodes (EdaParseMessage, EdaStartProcess, etc.) are documented in `references/node-reference-mesh.md`.
+SAP nodes (SapLogin, GetProductionOrderList, GetProductionOrderDetails), Zenon nodes (SetZenonVariables, FromZenonAml, ReadZenonAmlMessages), EDA energy nodes (EdaParseMessage, EdaStartProcess, etc.), Microsoft Teams nodes (FromMicrosoftGraph, ReplyToTeamsChannel), and Grafana nodes (GrafanaProvisionTenant, GrafanaDeprovisionTenant) are documented in `references/node-reference-mesh.md`.
 
 For full property documentation, read `references/node-reference-sdk.md` and `references/node-reference-mesh.md`.
 
@@ -261,6 +270,18 @@ Save high-frequency data to both time series and entity store:
   entityUpdatesPath: $._updates
 ```
 
+## Pipeline Validation
+
+When validating a pipeline YAML (user-written or generated), use the **build-time JSON Schema** as the authoritative source:
+
+1. **Locate the schema** at `octo-mesh-adapter/bin/DebugL/net10.0/pipeline-schema.json` (relative to monorepo root). If absent (adapter not built), fall back to the node reference docs.
+2. **Look up each node** by its `type` value (e.g., `CheckDuplicate@1`) in the schema's `$defs.TriggerNode.oneOf` or `$defs.TransformationNode.oneOf`.
+3. **Check required properties** — the `required` array lists mandatory keys.
+4. **Check property names** — any property not in the schema's `properties` object is invalid.
+5. **Check enum values** — enum-typed properties list valid values in their `$defs` entry.
+
+For schema structure details, extraction commands, and fallback rules, read `references/pipeline-schema-guide.md`.
+
 ## Pipeline Creation Workflow
 
 1. **Identify the trigger** — What starts this pipeline? (poll, HTTP, entity change, event, command)
@@ -275,7 +296,8 @@ For annotated real-world examples covering all these patterns, read `references/
 
 ## References
 
-- **SDK nodes** (control flow, transforms, extracts, loads, buffering): `references/node-reference-sdk.md`
+- **SDK nodes** (control flow, transforms, extracts, loads, buffering, simulation): `references/node-reference-sdk.md`
 - **Mesh adapter nodes** (entity CRUD, triggers, domain-specific): `references/node-reference-mesh.md`
 - **DataContext mechanics** (paths, write modes, field filters, iterations): `references/data-context-guide.md`
 - **Real examples** (annotated pipelines from deployments): `references/pipeline-examples.md`
+- **Pipeline JSON Schema** (authoritative property reference, validation workflow): `references/pipeline-schema-guide.md`

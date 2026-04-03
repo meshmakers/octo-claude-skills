@@ -623,10 +623,42 @@ Buffer incoming data with time-based flushing. Uses LiteDB edge buffer.
     - type: ToPipelineDataEvent@1
 ```
 
-### BufferRetrieval@1
+### BufferRetrievalNode@1
 
 Retrieve and process previously buffered data.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `keepDataAfterSending` | bool | false | Retain data after retrieval |
+
+---
+
+## Simulation
+
+### Simulation@1
+
+Generate simulated data values using the Bogus library. Useful for testing pipelines without real data sources.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `locale` | string | `en` | Locale for Bogus data generation |
+| `simulations` | array | required | List of simulation property configurations |
+
+Each simulation entry:
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `targetPath` | string | required | JSONPath where the generated value is written |
+| `simulatorKey` | string | `Increment` | Simulator type key (e.g., `Increment`, `Random`, `Name`) |
+| `configuration` | string | `{}` | JSON configuration string for the chosen simulator |
+
+```yaml
+- type: Simulation@1
+  locale: en
+  simulations:
+    - targetPath: $.sensor.Temperature
+      simulatorKey: Random
+      configuration: '{"min": 20.0, "max": 80.0}'
+    - targetPath: $.sensor.SerialNumber
+      simulatorKey: Increment
+      configuration: '{"start": 1000}'
+```

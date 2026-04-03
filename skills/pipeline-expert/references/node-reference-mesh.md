@@ -404,6 +404,108 @@ Each rule: `{placeholder, path}` — placeholder is the name without `${}`.
       path: $.Document.Attributes.Time
 ```
 
+### CheckDuplicate@1
+
+Check whether an entity with a given attribute value already exists in the database.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `ckTypeId` | string | required | CK type to search for duplicates |
+| `attributeName` | string | required | Attribute name to match against |
+| `valuePath` | string | required | JSONPath to the value to check |
+| `existingEntityPath` | string | optional | Where to write the existing entity if found |
+| `targetPath` | string | required | Where to write boolean result (`true` = duplicate found) |
+
+```yaml
+- type: CheckDuplicate@1
+  ckTypeId: Industry.Basic/Machine
+  attributeName: SerialNumber
+  valuePath: $.key.serial
+  existingEntityPath: $.key.existing
+  targetPath: $.key.isDuplicate
+```
+
+### ComputeFileHash@1
+
+Compute a SHA-256 hash of base64-encoded file data.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `path` | string | `$` | Source path for base64 file data |
+| `targetPath` | string | required | Where to write the hex hash string |
+
+```yaml
+- type: ComputeFileHash@1
+  path: $.fileData
+  targetPath: $.fileHash
+```
+
+### ImportFromCsv@1
+
+Parse a CSV file and produce an array of typed objects. The file is sourced from `$.files[]` (populated by `FromHttpRequest@1` for multipart uploads).
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `fileIndex` | int | 0 | Index in `$.files[]` array |
+| `delimiter` | string | `;` | Column delimiter character |
+| `encoding` | string | `utf-8` | File encoding |
+| `hasHeaderRow` | bool | true | Whether first data row is a header |
+| `skipRows` | int | 0 | Number of rows to skip before header/data |
+| `columnMappings` | array | required | Column-to-property mappings |
+| `targetPath` | string | required | Where to write the parsed array |
+
+Each `columnMapping`:
+| Property | Type | Description |
+|----------|------|-------------|
+| `sourceColumn` | string | Source column name (matches header) |
+| `sourceIndex` | int | Source column index (zero-based, alternative to name) |
+| `targetProperty` | string | Output JSON property name |
+| `dataType` | enum | `String`, `Int`, `Double`, `Boolean`, `DateTime` |
+| `dateFormat` | string | Date format for DateTime parsing (e.g., `dd.MM.yyyy`) |
+| `numberCulture` | string | Culture for number parsing (e.g., `de-AT`) |
+
+```yaml
+- type: ImportFromCsv@1
+  fileIndex: 0
+  delimiter: ";"
+  hasHeaderRow: true
+  targetPath: $.rows
+  columnMappings:
+    - sourceColumn: OrderNumber
+      targetProperty: OrderNumber
+      dataType: String
+    - sourceColumn: Quantity
+      targetProperty: Quantity
+      dataType: Double
+      numberCulture: de-AT
+    - sourceColumn: Date
+      targetProperty: Date
+      dataType: DateTime
+      dateFormat: "dd.MM.yyyy"
+```
+
+### ReplyToTeamsChannel@1
+
+Send a message card to a Microsoft Teams channel via an Incoming Webhook URL.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `webhookUrl` | string | optional | Static Incoming Webhook URL |
+| `webhookUrlPath` | string | optional | JSONPath to webhook URL |
+| `messageBody` | string | optional | Static message body (supports `${jsonPath}` placeholders) |
+| `messageBodyPath` | string | optional | JSONPath to message body |
+| `title` | string | optional | Card header title |
+| `themeColor` | string | `0076D7` | Card theme color (hex without `#`) |
+| `continueOnError` | bool | true | Continue pipeline if send fails |
+
+```yaml
+- type: ReplyToTeamsChannel@1
+  webhookUrlPath: $.config.teamsWebhookUrl
+  title: "New Alert"
+  messageBodyPath: $.alertMessage
+  themeColor: "FF0000"
+```
+
 ### QueryResultToMarkdownTable@1
 
 Convert QueryResult objects to Markdown table format.
@@ -620,6 +722,60 @@ Send emails with Markdown-to-HTML conversion and optional attachments.
   toPath: $.recipients
 ```
 
+### SftpUpload@1
+
+Upload a file to a remote SFTP server. The file content is referenced by RtId from MongoDB large binary storage.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `serverConfiguration` | string | required | Global config key for SFTP server credentials |
+| `remoteDirectory` | string | required | Target directory path on the SFTP server |
+| `fileName` | string | optional | Static file name for the upload |
+| `fileNamePath` | string | optional | JSONPath to file name |
+| `fileRtId` | string | optional | Static RtId of binary file in MongoDB storage |
+| `fileRtIdPath` | string | optional | JSONPath to binary file RtId |
+| `path` | string | `$` | Source data path |
+
+```yaml
+- type: SftpUpload@1
+  serverConfiguration: sftp-server
+  remoteDirectory: /exports/reports
+  fileNamePath: $.report.fileName
+  fileRtIdPath: $.report.fileRtId
+```
+
+### GrafanaProvisionTenant@1
+
+Provision a Grafana organization and OctoMesh datasource for the current tenant. Creates the org if it does not exist and configures the datasource.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `serverConfiguration` | string | required | Global config key for GrafanaConfiguration entity |
+| `tenantIdPath` | string | optional | JSONPath to tenant ID (defaults to pipeline's tenant) |
+| `targetPath` | string | required | Where to write the provisioning result |
+
+```yaml
+- type: GrafanaProvisionTenant@1
+  serverConfiguration: grafana-main
+  targetPath: $.grafanaResult
+```
+
+### GrafanaDeprovisionTenant@1
+
+Deprovision (delete) a Grafana organization for the current tenant, removing all datasources and dashboards.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `serverConfiguration` | string | required | Global config key for GrafanaConfiguration entity |
+| `tenantIdPath` | string | optional | JSONPath to tenant ID (defaults to pipeline's tenant) |
+| `targetPath` | string | required | Where to write the deprovision result |
+
+```yaml
+- type: GrafanaDeprovisionTenant@1
+  serverConfiguration: grafana-main
+  targetPath: $.grafanaResult
+```
+
 ---
 
 ## Trigger Nodes
@@ -724,6 +880,27 @@ triggers:
     senderFilter: notifications@example.com
 ```
 
+### FromMicrosoftGraph@1
+
+Poll Microsoft Teams channels for new messages via Microsoft Graph API.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `serverConfiguration` | string | required | Global config key for MicrosoftGraphConfiguration entity (OAuth2 settings) |
+| `teamId` | string | required | Microsoft Teams team ID (GUID) |
+| `channelId` | string | required | Microsoft Teams channel ID |
+| `pollingIntervalSeconds` | int | 120 | How often to check for new messages |
+| `senderFilter` | string | optional | Filter by sender display name (contains match) |
+
+```yaml
+triggers:
+  - type: FromMicrosoftGraph@1
+    serverConfiguration: ms-graph-config
+    teamId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    channelId: "19:xxxx@thread.tacv2"
+    pollingIntervalSeconds: 60
+```
+
 ---
 
 ## Domain-Specific Nodes
@@ -780,6 +957,18 @@ Each data point: `{variablePath, valuePath, valueType}`.
 **FilterEnergyData@1** — Filter energy data by criteria.
 
 **SearchExistingEnergyQuantities@1** — Search for existing energy quantity records.
+
+### Microsoft Teams Nodes
+
+**FromMicrosoftGraph@1** (trigger) — Poll Teams channels for new messages via Graph API. See Trigger Nodes section above.
+
+**ReplyToTeamsChannel@1** — Send message card to Teams via Incoming Webhook. See Transform Nodes section above.
+
+### Grafana Nodes
+
+**GrafanaProvisionTenant@1** — Provision Grafana org and datasource for tenant. See Load Nodes section above.
+
+**GrafanaDeprovisionTenant@1** — Deprovision Grafana org for tenant. See Load Nodes section above.
 
 ### Notification Nodes
 
