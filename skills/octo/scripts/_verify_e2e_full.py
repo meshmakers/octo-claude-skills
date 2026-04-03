@@ -230,3 +230,185 @@ def phase_5_create_sensors(tenant_id):
 
     print(f"  \u2713 Fallback import: {data['totalCount']} sensors created")
     return "fallback"
+
+
+# ===================================================================
+# Phase 6: Query & Assert
+# ===================================================================
+def phase_6_query_and_assert(tenant_id):
+    print()
+    print("=" * 60)
+    print("  Phase 6: Query & Assert")
+    print("=" * 60)
+
+    passed = 0
+    total = 6
+
+    # --- Test 1: Count sensors ---
+    print()
+    print("  [1/6] Count sensors...")
+    r = run_rt_explorer(["count", "E2ETest/Sensor"], tenant_id, "Count sensors")
+    data = json.loads(r.stdout)
+    assert_true(data["totalCount"] == 10, f"Expected 10 sensors, got {data['totalCount']}")
+    print(f"  \u2713 [1/6] Sensor count: {data['totalCount']} (expected 10)")
+    passed += 1
+
+    # --- Test 2: List with attributes ---
+    print()
+    print("  [2/6] List sensors with attributes...")
+    r = run_rt_explorer(["list", "E2ETest/Sensor", "--attrs", "--first", "10"], tenant_id, "List sensors")
+    data = json.loads(r.stdout)
+    entities = data.get("entities", [])
+    assert_true(len(entities) == 10, f"Expected 10 entities in list, got {len(entities)}")
+    for e in entities:
+        attrs = {item["attributeName"]: item.get("value") for item in (e.get("attributes") or {}).get("items", [])}
+        assert_true("Temperature" in attrs, f"Entity {e.get('rtId')} missing Temperature attribute")
+        assert_true("Humidity" in attrs, f"Entity {e.get('rtId')} missing Humidity attribute")
+        assert_true("Pressure" in attrs, f"Entity {e.get('rtId')} missing Pressure attribute")
+    print("  \u2713 [2/6] All 10 sensors have Temperature, Humidity, Pressure attributes")
+    passed += 1
+
+    # --- Test 3: Filter by attribute ---
+    print()
+    print("  [3/6] Filter sensors by Temperature > 50...")
+    r = run_rt_explorer(
+        ["filter", "E2ETest/Sensor", "Temperature", "GREATER_THAN", "50"],
+        tenant_id, "Filter sensors"
+    )
+    data = json.loads(r.stdout)
+    filtered_count = data.get("totalCount", 0)
+    assert_true(0 < filtered_count <= 10, f"Expected 1-10 filtered sensors, got {filtered_count}")
+    print(f"  \u2713 [3/6] Filter Temperature > 50: {filtered_count} sensors matched")
+    passed += 1
+
+    # --- Test 4: Transient query ---
+    print()
+    print("  [4/6] Transient query (Name, Temperature, Humidity)...")
+    r = run_rt_explorer(
+        ["query", "E2ETest/Sensor", "--columns", "Name,Temperature,Humidity", "--first", "10"],
+        tenant_id, "Transient query"
+    )
+    data = json.loads(r.stdout)
+    items = data.get("items", [])
+    assert_true(len(items) > 0, "Transient query returned no items")
+    columns = items[0].get("columns", [])
+    col_paths = [c.get("attributePath", "") for c in columns]
+    assert_true("Name" in col_paths, f"Missing 'Name' column in {col_paths}")
+    assert_true("Temperature" in col_paths, f"Missing 'Temperature' column in {col_paths}")
+    rows = (items[0].get("rows") or {}).get("items") or []
+    assert_true(len(rows) == 10, f"Expected 10 rows, got {len(rows)}")
+    print(f"  \u2713 [4/6] Transient query: {len(col_paths)} columns \u00d7 {len(rows)} rows")
+    passed += 1
+
+    # --- Test 5: Association traversal ---
+    # Note: Sensors link outbound TO Areas (AreaSensor role), so from the Area's
+    # perspective these are INBOUND associations. rt_explorer.py 'get' only shows
+    # outbound, so we use a direct GraphQL query with direction: INBOUND.
+    print()
+    print("  [5/6] Association traversal (Plant \u2192 Areas \u2192 Sensors)...")
+    settings = load_settings()
+
+    # Step A: Get plant's OUTBOUND associations -> should find 2 Areas
+    r = run_rt_explorer(["get", "E2ETest/Plant", "aaa000000000000000000001"], tenant_id, "Get plant")
+    plant = json.loads(r.stdout)
+    assoc_defs = (plant.get("associations") or {}).get("definitions") or {}
+    assoc_items = assoc_defs.get("items") or []
+    area_assocs = [a for a in assoc_items if a.get("targetCkTypeId", "").endswith("/Area")]
+    assert_true(len(area_assocs) == 2, f"Expected 2 area associations, got {len(area_assocs)}")
+
+    # Step B: For each area, query INBOUND associations to find sensors
+    Q_INBOUND_ASSOC = """
+    query($ckId: String!, $rtId: OctoObjectId!) {
+      runtime {
+        runtimeEntities(ckId: $ckId, rtId: $rtId, first: 1) {
+          edges { node {
+            rtId
+            associations { definitions(direction: INBOUND) {
+              items { ckAssociationRoleId targetRtId targetCkTypeId }
+            } }
+          } }
+        }
+      }
+    }"""
+
+    total_sensors_via_assoc = 0
+    for area_assoc in area_assocs:
+        area_rtId = area_assoc["targetRtId"]
+        data = graphql_query(
+            settings, Q_INBOUND_ASSOC,
+            variables={"ckId": "E2ETest/Area", "rtId": area_rtId},
+            tenant_override=tenant_id
+        )
+        entities = data.get("runtime", {}).get("runtimeEntities", {}).get("edges", [])
+        if entities:
+            node = entities[0]["node"]
+            inbound_defs = (node.get("associations") or {}).get("definitions") or {}
+            inbound_items = inbound_defs.get("items") or []
+            sensor_assocs = [a for a in inbound_items if a.get("targetCkTypeId", "").endswith("/Sensor")]
+            total_sensors_via_assoc += len(sensor_assocs)
+
+    assert_true(
+        total_sensors_via_assoc == 10,
+        f"Expected 10 sensors via association traversal, got {total_sensors_via_assoc}"
+    )
+    print(f"  \u2713 [5/6] Association traversal: Plant \u2192 2 Areas \u2192 {total_sensors_via_assoc} Sensors")
+    passed += 1
+
+    # --- Test 6: Search ---
+    print()
+    print("  [6/6] Search sensors by name...")
+    r = run_rt_explorer(
+        ["search", "E2ETest/Sensor", "Sensor"],
+        tenant_id, "Search sensors"
+    )
+    data = json.loads(r.stdout)
+    search_count = data.get("totalCount", 0)
+    assert_true(search_count > 0, f"Search for 'Sensor' returned 0 results")
+    print(f"  \u2713 [6/6] Search 'Sensor': {search_count} results")
+    passed += 1
+
+    print()
+    print(f"  All {passed}/{total} query assertions passed")
+    return passed, total
+
+
+# ===================================================================
+# Main
+# ===================================================================
+def main():
+    print("=" * 60)
+    print("  E2E INTEGRATION TEST \u2014 Full OctoMesh Lifecycle")
+    print("=" * 60)
+
+    # Check prerequisites
+    settings = load_settings()
+    print(f"  Active context loaded")
+
+    tenant_id = timestamp_id()
+    print(f"  Tenant ID: {tenant_id}")
+
+    try:
+        phase_1_create_tenant(tenant_id)
+        phase_2_enable_communication(tenant_id)
+        phase_3_import_ck_model(tenant_id)
+        phase_4_import_seed_data(tenant_id)
+        sensor_source = phase_5_create_sensors(tenant_id)
+        passed, total = phase_6_query_and_assert(tenant_id)
+    except SystemExit:
+        print()
+        print("=" * 60)
+        print(f"  E2E TEST FAILED \u2014 tenant '{tenant_id}' left for inspection")
+        print("=" * 60)
+        sys.exit(1)
+
+    print()
+    print("=" * 60)
+    print(f"  ALL 6 PHASES PASSED")
+    print(f"  Tenant: {tenant_id}")
+    print(f"  Sensors created via: {sensor_source}")
+    print(f"  Queries: {passed}/{total} passed")
+    print("=" * 60)
+
+
+if __name__ == "__main__":
+    main()
