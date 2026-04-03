@@ -166,11 +166,12 @@ def phase_1_create_tenant(tenant_id):
     print("  ──────────────────────────────────────────────────")
     print()
 
-    # Run login interactively — stdout/stderr go directly to terminal
-    # so the user can see the device code and URL.
+    # Run login with -i flag to auto-open browser for device code flow.
+    # stdout/stderr go directly to terminal so the user can see status.
+    # Timeout is 5 minutes to give the user time to complete the browser flow.
     login_result = subprocess.run(
-        ["octo-cli", "-c", "LogIn"],
-        timeout=120,
+        ["octo-cli", "-c", "LogIn", "-i"],
+        timeout=300,
     )
     assert_true(login_result.returncode == 0, "Login failed — cannot continue")
     print()
