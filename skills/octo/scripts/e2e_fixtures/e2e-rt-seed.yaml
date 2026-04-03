@@ -1,0 +1,37 @@
+$schema: https://schemas.meshmakers.cloud/runtime-model.schema.json
+dependencies:
+  - E2ETest-[1.0,2.0)
+entities:
+  # Plant: Berlin Factory
+  - rtId: aaa000000000000000000001
+    ckTypeId: E2ETest/Plant
+    associations:
+      - roleId: E2ETest/PlantArea
+        targetRtId: aaa000000000000000000002
+        targetCkTypeId: E2ETest/Area
+      - roleId: E2ETest/PlantArea
+        targetRtId: aaa000000000000000000003
+        targetCkTypeId: E2ETest/Area
+    attributes:
+      - id: System/Name
+        value: Berlin Factory
+      - id: E2ETest/Location
+        value: Berlin, Germany
+
+  # Area 1: Assembly Hall
+  - rtId: aaa000000000000000000002
+    ckTypeId: E2ETest/Area
+    attributes:
+      - id: System/Name
+        value: Assembly Hall
+      - id: E2ETest/AreaCode
+        value: AH-01
+
+  # Area 2: Warehouse
+  - rtId: aaa000000000000000000003
+    ckTypeId: E2ETest/Area
+    attributes:
+      - id: System/Name
+        value: Warehouse
+      - id: E2ETest/AreaCode
+        value: WH-01

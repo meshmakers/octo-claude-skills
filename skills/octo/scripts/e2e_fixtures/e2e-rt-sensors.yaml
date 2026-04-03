@@ -1,0 +1,205 @@
+$schema: https://schemas.meshmakers.cloud/runtime-model.schema.json
+dependencies:
+  - E2ETest-[1.0,2.0)
+entities:
+  # --- Assembly Hall sensors (5) ---
+  - rtId: ccc000000000000000000001
+    ckTypeId: E2ETest/Sensor
+    associations:
+      - roleId: E2ETest/AreaSensor
+        targetRtId: aaa000000000000000000002
+        targetCkTypeId: E2ETest/Area
+    attributes:
+      - id: System/Name
+        value: Temp Sensor AH-1
+      - id: E2ETest/SerialNumber
+        value: SN-1001
+      - id: E2ETest/Temperature
+        value: 22.5
+      - id: E2ETest/Humidity
+        value: 45.0
+      - id: E2ETest/Pressure
+        value: 1013.25
+      - id: E2ETest/SensorStatus
+        value: 0
+
+  - rtId: ccc000000000000000000002
+    ckTypeId: E2ETest/Sensor
+    associations:
+      - roleId: E2ETest/AreaSensor
+        targetRtId: aaa000000000000000000002
+        targetCkTypeId: E2ETest/Area
+    attributes:
+      - id: System/Name
+        value: Temp Sensor AH-2
+      - id: E2ETest/SerialNumber
+        value: SN-1002
+      - id: E2ETest/Temperature
+        value: 67.3
+      - id: E2ETest/Humidity
+        value: 38.2
+      - id: E2ETest/Pressure
+        value: 1005.80
+      - id: E2ETest/SensorStatus
+        value: 0
+
+  - rtId: ccc000000000000000000003
+    ckTypeId: E2ETest/Sensor
+    associations:
+      - roleId: E2ETest/AreaSensor
+        targetRtId: aaa000000000000000000002
+        targetCkTypeId: E2ETest/Area
+    attributes:
+      - id: System/Name
+        value: Temp Sensor AH-3
+      - id: E2ETest/SerialNumber
+        value: SN-1003
+      - id: E2ETest/Temperature
+        value: 55.1
+      - id: E2ETest/Humidity
+        value: 72.4
+      - id: E2ETest/Pressure
+        value: 998.50
+      - id: E2ETest/SensorStatus
+        value: 1
+
+  - rtId: ccc000000000000000000004
+    ckTypeId: E2ETest/Sensor
+    associations:
+      - roleId: E2ETest/AreaSensor
+        targetRtId: aaa000000000000000000002
+        targetCkTypeId: E2ETest/Area
+    attributes:
+      - id: System/Name
+        value: Temp Sensor AH-4
+      - id: E2ETest/SerialNumber
+        value: SN-1004
+      - id: E2ETest/Temperature
+        value: 31.8
+      - id: E2ETest/Humidity
+        value: 55.0
+      - id: E2ETest/Pressure
+        value: 1020.10
+      - id: E2ETest/SensorStatus
+        value: 0
+
+  - rtId: ccc000000000000000000005
+    ckTypeId: E2ETest/Sensor
+    associations:
+      - roleId: E2ETest/AreaSensor
+        targetRtId: aaa000000000000000000002
+        targetCkTypeId: E2ETest/Area
+    attributes:
+      - id: System/Name
+        value: Temp Sensor AH-5
+      - id: E2ETest/SerialNumber
+        value: SN-1005
+      - id: E2ETest/Temperature
+        value: 78.9
+      - id: E2ETest/Humidity
+        value: 28.6
+      - id: E2ETest/Pressure
+        value: 975.30
+      - id: E2ETest/SensorStatus
+        value: 2
+
+  # --- Warehouse sensors (5) ---
+  - rtId: ccc000000000000000000006
+    ckTypeId: E2ETest/Sensor
+    associations:
+      - roleId: E2ETest/AreaSensor
+        targetRtId: aaa000000000000000000003
+        targetCkTypeId: E2ETest/Area
+    attributes:
+      - id: System/Name
+        value: Temp Sensor WH-1
+      - id: E2ETest/SerialNumber
+        value: SN-1006
+      - id: E2ETest/Temperature
+        value: 18.2
+      - id: E2ETest/Humidity
+        value: 60.5
+      - id: E2ETest/Pressure
+        value: 1015.00
+      - id: E2ETest/SensorStatus
+        value: 0
+
+  - rtId: ccc000000000000000000007
+    ckTypeId: E2ETest/Sensor
+    associations:
+      - roleId: E2ETest/AreaSensor
+        targetRtId: aaa000000000000000000003
+        targetCkTypeId: E2ETest/Area
+    attributes:
+      - id: System/Name
+        value: Temp Sensor WH-2
+      - id: E2ETest/SerialNumber
+        value: SN-1007
+      - id: E2ETest/Temperature
+        value: 42.7
+      - id: E2ETest/Humidity
+        value: 51.3
+      - id: E2ETest/Pressure
+        value: 1008.40
+      - id: E2ETest/SensorStatus
+        value: 0
+
+  - rtId: ccc000000000000000000008
+    ckTypeId: E2ETest/Sensor
+    associations:
+      - roleId: E2ETest/AreaSensor
+        targetRtId: aaa000000000000000000003
+        targetCkTypeId: E2ETest/Area
+    attributes:
+      - id: System/Name
+        value: Temp Sensor WH-3
+      - id: E2ETest/SerialNumber
+        value: SN-1008
+      - id: E2ETest/Temperature
+        value: 59.4
+      - id: E2ETest/Humidity
+        value: 82.1
+      - id: E2ETest/Pressure
+        value: 990.20
+      - id: E2ETest/SensorStatus
+        value: 1
+
+  - rtId: ccc000000000000000000009
+    ckTypeId: E2ETest/Sensor
+    associations:
+      - roleId: E2ETest/AreaSensor
+        targetRtId: aaa000000000000000000003
+        targetCkTypeId: E2ETest/Area
+    attributes:
+      - id: System/Name
+        value: Temp Sensor WH-4
+      - id: E2ETest/SerialNumber
+        value: SN-1009
+      - id: E2ETest/Temperature
+        value: 25.0
+      - id: E2ETest/Humidity
+        value: 44.7
+      - id: E2ETest/Pressure
+        value: 1022.80
+      - id: E2ETest/SensorStatus
+        value: 0
+
+  - rtId: ccc00000000000000000000a
+    ckTypeId: E2ETest/Sensor
+    associations:
+      - roleId: E2ETest/AreaSensor
+        targetRtId: aaa000000000000000000003
+        targetCkTypeId: E2ETest/Area
+    attributes:
+      - id: System/Name
+        value: Temp Sensor WH-5
+      - id: E2ETest/SerialNumber
+        value: SN-1010
+      - id: E2ETest/Temperature
+        value: 73.6
+      - id: E2ETest/Humidity
+        value: 33.9
+      - id: E2ETest/Pressure
+        value: 962.50
+      - id: E2ETest/SensorStatus
+        value: 2

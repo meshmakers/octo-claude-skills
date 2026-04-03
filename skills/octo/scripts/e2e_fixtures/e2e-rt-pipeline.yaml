@@ -1,0 +1,131 @@
+$schema: https://schemas.meshmakers.cloud/runtime-model.schema.json
+dependencies:
+  - System.Communication-[2.0,3.0)
+  - E2ETest-[1.0,2.0)
+entities:
+  # Mesh Adapter
+  - rtId: bbb000000000000000000001
+    ckTypeId: System.Communication/MeshAdapter
+    attributes:
+      - id: System/Name
+        value: E2E Test Adapter
+
+  # Data Pipeline container
+  - rtId: bbb000000000000000000002
+    ckTypeId: System.Communication/DataPipeline
+    attributes:
+      - id: System/Name
+        value: E2E Sensor Simulation
+      - id: System/Description
+        value: Creates simulated sensor entities linked to areas
+
+  # Mesh Pipeline with simulation definition
+  - rtId: bbb000000000000000000003
+    ckTypeId: System.Communication/MeshPipeline
+    associations:
+      - roleId: System/ParentChild
+        targetRtId: bbb000000000000000000002
+        targetCkTypeId: System.Communication/DataPipeline
+      - roleId: System.Communication/Executes
+        targetRtId: bbb000000000000000000001
+        targetCkTypeId: System.Communication/MeshAdapter
+    attributes:
+      - id: System.Communication/DeploymentState
+        value: 0
+      - id: System/Name
+        value: E2E Sensor Simulation Pipeline
+      - id: System/Enabled
+        value: true
+      - id: System.Communication/PipelineDefinition
+        value: >-
+          triggers:
+            - type: FromExecutePipelineCommand@1
+          transformations:
+            - type: GetRtEntitiesByType@1
+              ckTypeId: E2ETest/Area
+              targetPath: $.areas
+            - type: ForEach@1
+              description: create sensors for each area
+              iterationPath: $.areas.Items
+              targetPath: $.result
+              mergePath: $.updates
+              transformations:
+                - type: For@1
+                  description: create 5 sensors per area
+                  count: 5
+                  targetPath: sensors
+                  transformations:
+                    - type: Simulation@1
+                      locale: en
+                      simulations:
+                        - targetPath: $.sensor.temperature
+                          simulatorKey: Math.DoubleRandom
+                          configuration: "{min:15.0, max:85.0}"
+                        - targetPath: $.sensor.humidity
+                          simulatorKey: Math.DoubleRandom
+                          configuration: "{min:20.0, max:95.0}"
+                        - targetPath: $.sensor.pressure
+                          simulatorKey: Math.DoubleRandom
+                          configuration: "{min:950.0, max:1050.0}"
+                        - targetPath: $.sensor.serialNumber
+                          simulatorKey: Text.Lorem.Word
+                          configuration: "{count:1}"
+                        - targetPath: $.sensor.name
+                          simulatorKey: Text.Lorem.Word
+                          configuration: "{count:2}"
+                        - targetPath: $.sensor.status
+                          simulatorKey: Math.IntRandom
+                          configuration: "{min:0, max:2}"
+                - type: ForEach@1
+                  description: create update infos for sensors
+                  iterationPath: $.sensors
+                  targetPath: $.updates
+                  mergePath: $.updates
+                  transformations:
+                    - type: CreateUpdateInfo@1
+                      targetPath: $.updates._sensorUpdate
+                      updateKind: INSERT
+                      ckTypeId: E2ETest/Sensor
+                      generateRtId: true
+                      attributeUpdates:
+                        - attributeName: Name
+                          attributeValueType: String
+                          valuePath: $.key.sensor.name
+                        - attributeName: SerialNumber
+                          attributeValueType: String
+                          valuePath: $.key.sensor.serialNumber
+                        - attributeName: Temperature
+                          attributeValueType: Double
+                          valuePath: $.key.sensor.temperature
+                        - attributeName: Humidity
+                          attributeValueType: Double
+                          valuePath: $.key.sensor.humidity
+                        - attributeName: Pressure
+                          attributeValueType: Double
+                          valuePath: $.key.sensor.pressure
+                        - attributeName: SensorStatus
+                          attributeValueType: Int
+                          valuePath: $.key.sensor.status
+                    - type: CreateAssociationUpdate@1
+                      targetPath: $.updates._assocUpdate
+                      targetValueKind: Array
+                      targetValueWriteMode: Append
+                      updateKind: CREATE
+                      originRtIdPath: $.updates._sensorUpdate.RtId
+                      originCkTypeIdPath: $.updates._sensorUpdate.CkTypeId
+                      targetRtIdPath: $.full.key.RtId
+                      targetCkTypeIdPath: $.full.key.CkTypeId
+                      associationRoleId: E2ETest/AreaSensor
+            - type: Flatten@1
+              path: $.result[*].sensors[*]._sensorUpdate
+              targetPath: $._updateItems
+              targetValueKind: Simple
+              targetValueWriteMode: Overwrite
+            - type: Flatten@1
+              path: $.result[*].sensors[*]._assocUpdate[*]
+              targetPath: $._assocUpdateItems
+              targetValueKind: Simple
+              targetValueWriteMode: Overwrite
+            - type: ApplyChanges@2
+              entityUpdatesPath: $._updateItems
+              associationUpdatesPath: $._assocUpdateItems

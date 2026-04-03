@@ -1,0 +1,77 @@
+$schema: https://schemas.meshmakers.cloud/construction-kit-compiled.schema.json
+modelId: E2ETest-1.0.0
+dependencies:
+- System-2.0.7
+types:
+- typeId: Plant
+  derivedFromCkTypeId: System-2.0.7/Entity-1
+  attributes:
+  - id: System-2.0.7/Name-1
+    name: Name
+  - id: E2ETest-1.0.0/Location-1
+    name: Location
+    isOptional: true
+- typeId: Area
+  derivedFromCkTypeId: System-2.0.7/Entity-1
+  attributes:
+  - id: System-2.0.7/Name-1
+    name: Name
+  - id: E2ETest-1.0.0/AreaCode-1
+    name: AreaCode
+    isOptional: true
+- typeId: Sensor
+  derivedFromCkTypeId: System-2.0.7/Entity-1
+  attributes:
+  - id: System-2.0.7/Name-1
+    name: Name
+  - id: E2ETest-1.0.0/SerialNumber-1
+    name: SerialNumber
+    isOptional: true
+  - id: E2ETest-1.0.0/Temperature-1
+    name: Temperature
+    isOptional: true
+  - id: E2ETest-1.0.0/Humidity-1
+    name: Humidity
+    isOptional: true
+  - id: E2ETest-1.0.0/Pressure-1
+    name: Pressure
+    isOptional: true
+  - id: E2ETest-1.0.0/SensorStatus-1
+    name: SensorStatus
+    isOptional: true
+associationRoles:
+- id: PlantArea
+  inboundName: Areas
+  outboundName: Plant
+  inboundMultiplicity: N
+  outboundMultiplicity: ZeroOrOne
+- id: AreaSensor
+  inboundName: Sensors
+  outboundName: Area
+  inboundMultiplicity: N
+  outboundMultiplicity: ZeroOrOne
+attributes:
+- id: Location
+  valueType: String
+- id: AreaCode
+  valueType: String
+- id: SerialNumber
+  valueType: String
+- id: Temperature
+  valueType: Double
+- id: Humidity
+  valueType: Double
+- id: Pressure
+  valueType: Double
+- id: SensorStatus
+  valueType: Enum
+  valueCkEnumId: E2ETest-1.0.0/SensorStatus-1
+enums:
+- enumId: SensorStatus
+  values:
+  - key: 0
+    name: Online
+  - key: 1
+    name: Offline
+  - key: 2
+    name: Maintenance
