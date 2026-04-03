@@ -201,7 +201,10 @@ def cmd_list(settings, args):
         variables["sortOrder"] = sort
 
     data = graphql_query(settings, query, variables=variables, tenant_override=args.tenant)
-    conn = data["runtime"]["runtimeEntities"]
+    conn = data.get("runtime", {}).get("runtimeEntities")
+    if conn is None:
+        print(f"Error: could not query instances of '{args.ckId}' (type may be abstract or invalid).", file=sys.stderr)
+        sys.exit(1)
     total = conn.get("totalCount", "?")
     entities = collect_connection(conn)
 
@@ -239,7 +242,11 @@ def cmd_get(settings, args):
     variables = {"ckId": args.ckId, "rtId": args.rtId}
 
     data = graphql_query(settings, Q_GET, variables=variables, tenant_override=args.tenant)
-    entities = collect_connection(data["runtime"]["runtimeEntities"])
+    conn = data.get("runtime", {}).get("runtimeEntities")
+    if conn is None:
+        print(f"Error: could not query '{args.ckId}' (type may be abstract or invalid).", file=sys.stderr)
+        sys.exit(1)
+    entities = collect_connection(conn)
 
     if not entities:
         print(f"Entity not found: ckId={args.ckId} rtId={args.rtId}", file=sys.stderr)
@@ -285,7 +292,11 @@ def cmd_count(settings, args):
     variables = {"ckId": args.ckId}
 
     data = graphql_query(settings, Q_COUNT, variables=variables, tenant_override=args.tenant)
-    total = data["runtime"]["runtimeEntities"]["totalCount"]
+    conn = data.get("runtime", {}).get("runtimeEntities")
+    if conn is None:
+        print(f"Error: could not count '{args.ckId}' (type may be abstract or invalid).", file=sys.stderr)
+        sys.exit(1)
+    total = conn["totalCount"]
 
     if args.json:
         print(json.dumps({"ckId": args.ckId, "totalCount": total}, indent=2))
@@ -307,7 +318,10 @@ def cmd_search(settings, args):
         variables["sortOrder"] = sort
 
     data = graphql_query(settings, Q_SEARCH, variables=variables, tenant_override=args.tenant)
-    conn = data["runtime"]["runtimeEntities"]
+    conn = data.get("runtime", {}).get("runtimeEntities")
+    if conn is None:
+        print(f"Error: could not search '{args.ckId}' (type may be abstract or invalid).", file=sys.stderr)
+        sys.exit(1)
     total = conn.get("totalCount", "?")
     entities = collect_connection(conn)
 
@@ -405,7 +419,10 @@ def cmd_filter(settings, args):
         variables["sortOrder"] = sort
 
     data = graphql_query(settings, Q_FILTER, variables=variables, tenant_override=args.tenant)
-    conn = data["runtime"]["runtimeEntities"]
+    conn = data.get("runtime", {}).get("runtimeEntities")
+    if conn is None:
+        print(f"Error: could not filter '{args.ckId}' (type may be abstract or invalid).", file=sys.stderr)
+        sys.exit(1)
     total = conn.get("totalCount", "?")
     entities = collect_connection(conn)
 

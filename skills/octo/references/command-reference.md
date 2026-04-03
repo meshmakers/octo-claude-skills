@@ -2,6 +2,8 @@
 
 All flags use short form with `-` prefix. Required flags are marked with **(R)**.
 
+> **Confirmation prompts:** Destructive commands (Delete, Clean, ClearCache, ResetPassword, RemoveUserFromRole) prompt for confirmation before executing. Add `-y` (`--yes`) to skip the prompt in scripts/CI.
+
 ## Context Management
 
 ### AddContext
@@ -109,20 +111,22 @@ octo-cli -c UpdateUser -un <userName> [-e <eMail>] [-nun <newUserName>]
 
 #### DeleteUser
 ```
-octo-cli -c DeleteUser -un <userName>
+octo-cli -c DeleteUser -un <userName> [-y]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-un` | `userName` | User name | Yes |
+| `-y` | `yes` | Skip confirmation prompt | No |
 
 #### ResetPassword
 ```
-octo-cli -c ResetPassword -un <userName> -p <password>
+octo-cli -c ResetPassword -un <userName> -p <password> [-y]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-un` | `userName` | User name | Yes |
 | `-p` | `password` | New password | Yes |
+| `-y` | `yes` | Skip confirmation prompt | No |
 
 #### AddUserToRole
 ```
@@ -135,12 +139,13 @@ octo-cli -c AddUserToRole -un <userName> [-r <role>]
 
 #### RemoveUserFromRole
 ```
-octo-cli -c RemoveUserFromRole -un <userName> [-r <role>]
+octo-cli -c RemoveUserFromRole -un <userName> [-r <role>] [-y]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-un` | `userName` | User name | Yes |
 | `-r` | `role` | Role name | No |
+| `-y` | `yes` | Skip confirmation prompt | No |
 
 ### Roles
 
@@ -169,11 +174,12 @@ octo-cli -c UpdateRole -n <name> [-nn <newRoleName>]
 
 #### DeleteRole
 ```
-octo-cli -c DeleteRole -n <name>
+octo-cli -c DeleteRole -n <name> [-y]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-n` | `name` | Name of role | Yes |
+| `-y` | `yes` | Skip confirmation prompt | No |
 
 ### Clients
 
@@ -237,11 +243,12 @@ octo-cli -c UpdateClient -id <clientId> [-n <name>] [-u <clientUri>] [-ru <redir
 
 #### DeleteClient
 ```
-octo-cli -c DeleteClient -id <clientId>
+octo-cli -c DeleteClient -id <clientId> [-y]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-id` | `clientId` | Client ID | Yes |
+| `-y` | `yes` | Skip confirmation prompt | No |
 
 #### AddScopeToClient
 ```
@@ -262,7 +269,7 @@ octo-cli -c GetIdentityProviders
 
 #### AddOAuthIdentityProvider
 ```
-octo-cli -c AddOAuthIdentityProvider -n <name> -e <enabled> -cid <clientId> -cs <clientSecret> -t <type>
+octo-cli -c AddOAuthIdentityProvider -n <name> -e <enabled> -cid <clientId> -cs <clientSecret> -t <type> [-asr <allowSelfRegistration>] [-dgid <defaultGroupRtId>]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
@@ -271,10 +278,12 @@ octo-cli -c AddOAuthIdentityProvider -n <name> -e <enabled> -cid <clientId> -cs 
 | `-cid` | `clientId` | Client ID from provider | Yes |
 | `-cs` | `clientSecret` | Client secret from provider | Yes |
 | `-t` | `type` | Provider type: `google`, `microsoft`, `facebook` | Yes |
+| `-asr` | `allowSelfRegistration` | Allow self-registration (`true`/`false`) | No |
+| `-dgid` | `defaultGroupRtId` | Default group RtId for new users | No |
 
 #### AddOpenLdapIdentityProvider
 ```
-octo-cli -c AddOpenLdapIdentityProvider -n <name> -e <enabled> -h <host> -p <port> -ubdn <userBaseDn> -uan <userAttributeName>
+octo-cli -c AddOpenLdapIdentityProvider -n <name> -e <enabled> -h <host> -p <port> -ubdn <userBaseDn> -uan <userAttributeName> [-asr <allowSelfRegistration>] [-dgid <defaultGroupRtId>]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
@@ -284,10 +293,12 @@ octo-cli -c AddOpenLdapIdentityProvider -n <name> -e <enabled> -h <host> -p <por
 | `-p` | `port` | Port | Yes |
 | `-ubdn` | `userBaseDn` | User base DN (e.g. `cn=users,dc=meshmakers,dc=cloud`) | Yes |
 | `-uan` | `userAttributeName` | User name attribute (e.g. `uid`) | Yes |
+| `-asr` | `allowSelfRegistration` | Allow self-registration (`true`/`false`) | No |
+| `-dgid` | `defaultGroupRtId` | Default group RtId for new users | No |
 
 #### AddAdIdentityProvider
 ```
-octo-cli -c AddAdIdentityProvider -n <name> -e <enabled> -h <host> -p <port>
+octo-cli -c AddAdIdentityProvider -n <name> -e <enabled> -h <host> -p <port> [-asr <allowSelfRegistration>] [-dgid <defaultGroupRtId>]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
@@ -295,10 +306,12 @@ octo-cli -c AddAdIdentityProvider -n <name> -e <enabled> -h <host> -p <port>
 | `-e` | `enabled` | `true` or `false` | Yes |
 | `-h` | `host` | Host | Yes |
 | `-p` | `port` | Port | Yes |
+| `-asr` | `allowSelfRegistration` | Allow self-registration (`true`/`false`) | No |
+| `-dgid` | `defaultGroupRtId` | Default group RtId for new users | No |
 
 #### AddAzureEntryIdIdentityProvider
 ```
-octo-cli -c AddAzureEntryIdIdentityProvider -n <name> -t <tenantId> -e <enabled> -cid <clientId> -cs <clientSecret>
+octo-cli -c AddAzureEntryIdIdentityProvider -n <name> -t <tenantId> -e <enabled> -cid <clientId> -cs <clientSecret> [-asr <allowSelfRegistration>] [-dgid <defaultGroupRtId>]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
@@ -307,26 +320,44 @@ octo-cli -c AddAzureEntryIdIdentityProvider -n <name> -t <tenantId> -e <enabled>
 | `-e` | `enabled` | `true` or `false` | Yes |
 | `-cid` | `clientId` | Client ID from Azure | Yes |
 | `-cs` | `clientSecret` | Client secret from Azure | Yes |
+| `-asr` | `allowSelfRegistration` | Allow self-registration (`true`/`false`) | No |
+| `-dgid` | `defaultGroupRtId` | Default group RtId for new users | No |
+
+#### AddOctoTenantIdentityProvider
+Cross-tenant authentication: allows users from a parent tenant to authenticate.
+```
+octo-cli -c AddOctoTenantIdentityProvider -n <name> -e <enabled> -ptid <parentTenantId> [-asr <allowSelfRegistration>] [-dgid <defaultGroupRtId>]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-n` | `name` | Name (unique) | Yes |
+| `-e` | `enabled` | `true` or `false` | Yes |
+| `-ptid` | `parentTenantId` | Parent tenant ID for cross-tenant auth | Yes |
+| `-asr` | `allowSelfRegistration` | Allow self-registration (`true`/`false`) | No |
+| `-dgid` | `defaultGroupRtId` | Default group RtId for new users | No |
 
 #### UpdateIdentityProvider
 ```
-octo-cli -c UpdateIdentityProvider -id <identifier> -n <name> -e <enabled> -cid <clientId> -cs <clientSecret>
+octo-cli -c UpdateIdentityProvider -id <identifier> [-n <name>] [-e <enabled>] [-cid <clientId>] [-cs <clientSecret>] [-asr <allowSelfRegistration>] [-dgid <defaultGroupRtId>]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-id` | `identifier` | ID of identity provider | Yes |
-| `-n` | `name` | Name (unique) | Yes |
-| `-e` | `enabled` | `true` or `false` | Yes |
-| `-cid` | `clientId` | Client ID | Yes |
-| `-cs` | `clientSecret` | Client secret | Yes |
+| `-n` | `name` | Name (unique) | No |
+| `-e` | `enabled` | `true` or `false` | No |
+| `-cid` | `clientId` | Client ID | No |
+| `-cs` | `clientSecret` | Client secret | No |
+| `-asr` | `allowSelfRegistration` | Allow self-registration (`true`/`false`) | No |
+| `-dgid` | `defaultGroupRtId` | Default group RtId for new users | No |
 
 #### DeleteIdentityProvider
 ```
-octo-cli -c DeleteIdentityProvider -id <identifier>
+octo-cli -c DeleteIdentityProvider -id <identifier> [-y]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-id` | `identifier` | ID of identity provider | Yes |
+| `-y` | `yes` | Skip confirmation prompt | No |
 
 ### API Scopes
 
@@ -361,11 +392,12 @@ octo-cli -c UpdateApiScope -n <name> [-nn <newName>] [-e <enabled>] [-dn <displa
 
 #### DeleteApiScope
 ```
-octo-cli -c DeleteApiScope -n <name>
+octo-cli -c DeleteApiScope -n <name> [-y]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-n` | `name` | Scope name | Yes |
+| `-y` | `yes` | Skip confirmation prompt | No |
 
 ### API Resources
 
@@ -399,11 +431,12 @@ octo-cli -c UpdateApiResource -n <name> [-dn <displayName>] [-d <description>] [
 
 #### DeleteApiResource
 ```
-octo-cli -c DeleteApiResource -n <name>
+octo-cli -c DeleteApiResource -n <name> [-y]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-n` | `name` | Resource name | Yes |
+| `-y` | `yes` | Skip confirmation prompt | No |
 
 ### API Secrets
 
@@ -467,21 +500,247 @@ octo-cli -c UpdateApiSecretClient -cid <clientId> -s <secretValue> [-e <expirati
 
 #### DeleteApiSecretApiResource
 ```
-octo-cli -c DeleteApiSecretApiResource -n <name> -s <secretValue>
+octo-cli -c DeleteApiSecretApiResource -n <name> -s <secretValue> [-y]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-n` | `name` | API resource name | Yes |
 | `-s` | `secretValue` | Secret value (sha256) | Yes |
+| `-y` | `yes` | Skip confirmation prompt | No |
 
 #### DeleteApiSecretClient
 ```
-octo-cli -c DeleteApiSecretClient -cid <clientId> -s <secretValue>
+octo-cli -c DeleteApiSecretClient -cid <clientId> -s <secretValue> [-y]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-cid` | `clientId` | Client ID | Yes |
 | `-s` | `secretValue` | Secret value (sha256) | Yes |
+| `-y` | `yes` | Skip confirmation prompt | No |
+
+### Groups
+
+#### GetGroups
+Lists all groups. No arguments.
+```
+octo-cli -c GetGroups
+```
+
+#### GetGroup
+```
+octo-cli -c GetGroup -id <identifier>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `identifier` | Group ID | Yes |
+
+#### CreateGroup
+```
+octo-cli -c CreateGroup -n <name> [-d <description>] [-rids <roleIds>]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-n` | `name` | Group name | Yes |
+| `-d` | `description` | Description | No |
+| `-rids` | `roleIds` | Comma-separated role IDs | No |
+
+#### UpdateGroup
+```
+octo-cli -c UpdateGroup -id <identifier> -n <name> [-d <description>]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `identifier` | Group ID | Yes |
+| `-n` | `name` | Group name | Yes |
+| `-d` | `description` | Description | No |
+
+#### DeleteGroup
+```
+octo-cli -c DeleteGroup -id <identifier>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `identifier` | Group ID | Yes |
+
+#### UpdateGroupRoles
+```
+octo-cli -c UpdateGroupRoles -id <identifier> -rids <roleIds>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `identifier` | Group ID | Yes |
+| `-rids` | `roleIds` | Comma-separated role IDs | Yes |
+
+#### AddUserToGroup
+```
+octo-cli -c AddUserToGroup -id <identifier> -uid <userId>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `identifier` | Group ID | Yes |
+| `-uid` | `userId` | User ID | Yes |
+
+#### RemoveUserFromGroup
+```
+octo-cli -c RemoveUserFromGroup -id <identifier> -uid <userId>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `identifier` | Group ID | Yes |
+| `-uid` | `userId` | User ID | Yes |
+
+#### AddGroupToGroup
+```
+octo-cli -c AddGroupToGroup -id <identifier> -cgid <childGroupId>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `identifier` | Parent group ID | Yes |
+| `-cgid` | `childGroupId` | Child group ID to add | Yes |
+
+#### RemoveGroupFromGroup
+```
+octo-cli -c RemoveGroupFromGroup -id <identifier> -cgid <childGroupId>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `identifier` | Parent group ID | Yes |
+| `-cgid` | `childGroupId` | Child group ID to remove | Yes |
+
+### Email Domain Group Rules
+
+#### GetEmailDomainGroupRules
+Lists all email domain group rules. No arguments.
+```
+octo-cli -c GetEmailDomainGroupRules
+```
+
+#### GetEmailDomainGroupRule
+```
+octo-cli -c GetEmailDomainGroupRule -id <identifier>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `identifier` | Rule ID | Yes |
+
+#### CreateEmailDomainGroupRule
+```
+octo-cli -c CreateEmailDomainGroupRule -edp <emailDomainPattern> -tgid <targetGroupRtId> [-d <description>]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-edp` | `emailDomainPattern` | Email domain pattern (e.g. `meshmakers.com`) | Yes |
+| `-tgid` | `targetGroupRtId` | Target group RtId | Yes |
+| `-d` | `description` | Description | No |
+
+#### UpdateEmailDomainGroupRule
+```
+octo-cli -c UpdateEmailDomainGroupRule -id <identifier> [-edp <emailDomainPattern>] [-tgid <targetGroupRtId>] [-d <description>]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `identifier` | Rule ID | Yes |
+| `-edp` | `emailDomainPattern` | Email domain pattern | No |
+| `-tgid` | `targetGroupRtId` | Target group RtId | No |
+| `-d` | `description` | Description | No |
+
+#### DeleteEmailDomainGroupRule
+```
+octo-cli -c DeleteEmailDomainGroupRule -id <identifier>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `identifier` | Rule ID | Yes |
+
+### External Tenant User Mappings
+
+#### GetExternalTenantUserMappings
+```
+octo-cli -c GetExternalTenantUserMappings -stid <sourceTenantId> [-skip <skip>] [-take <take>]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-stid` | `sourceTenantId` | Source tenant ID | Yes |
+| `-skip` | `skip` | Number of items to skip | No |
+| `-take` | `take` | Number of items to take | No |
+
+#### GetExternalTenantUserMapping
+```
+octo-cli -c GetExternalTenantUserMapping -id <identifier>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `identifier` | Mapping ID | Yes |
+
+#### CreateExternalTenantUserMapping
+```
+octo-cli -c CreateExternalTenantUserMapping -stid <sourceTenantId> -suid <sourceUserId> -sun <sourceUserName> [-rids <roleIds>]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-stid` | `sourceTenantId` | Source tenant ID | Yes |
+| `-suid` | `sourceUserId` | Source user ID | Yes |
+| `-sun` | `sourceUserName` | Source user name | Yes |
+| `-rids` | `roleIds` | Comma-separated role IDs | No |
+
+#### UpdateExternalTenantUserMapping
+```
+octo-cli -c UpdateExternalTenantUserMapping -id <identifier> [-rids <roleIds>]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `identifier` | Mapping ID | Yes |
+| `-rids` | `roleIds` | Comma-separated role IDs | No |
+
+#### DeleteExternalTenantUserMapping
+```
+octo-cli -c DeleteExternalTenantUserMapping -id <identifier>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `identifier` | Mapping ID | Yes |
+
+### Admin Provisioning
+
+Run from the **system tenant** context (e.g. `local_octosystem`).
+
+#### GetAdminProvisioningMappings
+```
+octo-cli -c GetAdminProvisioningMappings -ttid <targetTenantId>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-ttid` | `targetTenantId` | Target tenant ID | Yes |
+
+#### CreateAdminProvisioningMapping
+```
+octo-cli -c CreateAdminProvisioningMapping -ttid <targetTenantId> -stid <sourceTenantId> -suid <sourceUserId> -sun <sourceUserName> [-rids <roleIds>]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-ttid` | `targetTenantId` | Target tenant ID | Yes |
+| `-stid` | `sourceTenantId` | Source tenant ID | Yes |
+| `-suid` | `sourceUserId` | Source user ID | Yes |
+| `-sun` | `sourceUserName` | Source user name | Yes |
+| `-rids` | `roleIds` | Comma-separated role IDs | No |
+
+#### ProvisionCurrentUser
+Provisions the current user as admin in the target tenant.
+```
+octo-cli -c ProvisionCurrentUser -ttid <targetTenantId>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-ttid` | `targetTenantId` | Target tenant ID | Yes |
+
+#### DeleteAdminProvisioningMapping
+```
+octo-cli -c DeleteAdminProvisioningMapping -ttid <targetTenantId> -mid <mappingId>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-ttid` | `targetTenantId` | Target tenant ID | Yes |
+| `-mid` | `mappingId` | Mapping ID | Yes |
 
 ---
 
@@ -489,23 +748,32 @@ octo-cli -c DeleteApiSecretClient -cid <clientId> -s <secretValue>
 
 ### Tenants
 
-#### Create
+#### GetTenants
+Lists all child tenants. No arguments.
 ```
-octo-cli -c Create -tid <tenantId> -db <database>
+octo-cli -c GetTenants
+```
+
+#### Create
+Creates a new tenant and automatically provisions the current user as admin.
+```
+octo-cli -c Create -tid <tenantId> -db <database> [-np]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-tid` | `tenantId` | Tenant ID | Yes |
 | `-db` | `database` | Database name | Yes |
+| `-np` | `no-provision` | Skip admin provisioning of the current user (flag, no value) | No |
 
 #### Clean
 Resets tenant to factory defaults by deleting CK and RT model.
 ```
-octo-cli -c Clean -tid <tenantId>
+octo-cli -c Clean -tid <tenantId> [-y]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-tid` | `tenantId` | Tenant ID | Yes |
+| `-y` | `yes` | Skip confirmation prompt | No |
 
 #### Attach
 ```
@@ -526,19 +794,21 @@ octo-cli -c Detach -tid <tenantId>
 
 #### Delete
 ```
-octo-cli -c Delete -tid <tenantId>
+octo-cli -c Delete -tid <tenantId> [-y]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-tid` | `tenantId` | Tenant ID | Yes |
+| `-y` | `yes` | Skip confirmation prompt | No |
 
 #### ClearCache
 ```
-octo-cli -c ClearCache -tid <tenantId>
+octo-cli -c ClearCache -tid <tenantId> [-y]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-tid` | `tenantId` | Tenant ID | Yes |
+| `-y` | `yes` | Skip confirmation prompt | No |
 
 #### UpdateSystemCkModel
 ```
