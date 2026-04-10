@@ -148,8 +148,8 @@ For environment URLs, read `references/environments.md` in this skill directory.
 | `Delete` | Delete a tenant (`-tid`) | Mutating |
 | `ClearCache` | Clear tenant cache (`-tid`) | Mutating |
 | `UpdateSystemCkModel` | Update system CK model to latest (`-tid`) | Mutating |
-| `ImportCk` | Import construction kit model (`-f`) | Mutating |
-| `ImportRt` | Import runtime model (`-f`, `-r` for replace) | Mutating |
+| `ImportCk` | Import construction kit model (`-f`, `-w` to wait for completion) | Mutating |
+| `ImportRt` | Import runtime model (`-f`, `-r` for replace, `-w` to wait for completion) | Mutating |
 | `ExportRtByQuery` | Export runtime model by query (`-f`, `-q`) | Read-only |
 | `ExportRtByDeepGraph` | Export runtime model by deep graph (`-f`, `-id`, `-t`) | Read-only |
 | `EnableStreamData` | Enable stream data for current tenant | Mutating |
@@ -165,8 +165,8 @@ For environment URLs, read `references/environments.md` in this skill directory.
 | `UpdateServiceHook` | Update service hook (`-id`, `-e`, `-n`, `-ck`, `-f`, `-u`, `-a`, `-k`) | Mutating |
 | `DeleteServiceHook` | Delete service hook (`-id`) | Mutating |
 | `Dump` | Dump tenant to file (`-tid`, `-f`) | Read-only |
-| `Restore` | Restore tenant from dump (`-tid`, `-db`, `-f`, `-oldDb`) | Mutating |
-| `RunFixupScripts` | Run fixup scripts for current tenant | Mutating |
+| `Restore` | Restore tenant from dump (`-tid`, `-db`, `-f`, `-oldDb`, `-w` to wait) | Mutating |
+| `RunFixupScripts` | Run fixup scripts for current tenant (`-w` to wait) | Mutating |
 
 ### Communication Services (group: "Communication Services")
 
@@ -202,6 +202,20 @@ For environment URLs, read `references/environments.md` in this skill directory.
 4. **Build command** — Assemble full `octo-cli -c <CommandValue> <flags>`
 5. **Confirm if mutating** — For mutating ops, show the command + a human-readable summary, wait for user confirmation
 6. **Execute** — Run the command and present results clearly
+
+### Import and Job-Based Operations
+
+**Always use `-w` when running import or background-job commands:**
+
+```
+octo-cli -c ImportCk -f <file> -w
+octo-cli -c ImportRt -f <file> -w
+octo-cli -c ImportRt -f <file> -r -w
+octo-cli -c Restore -tid <tenantId> -db <database> -f <file> -w
+octo-cli -c RunFixupScripts -w
+```
+
+Without `-w`, these commands schedule a Hangfire background job and return immediately with a job ID. The CLI reports "started" but does **not** report whether the job succeeded or failed. Errors (e.g., duplicate key, missing dependencies) are only visible in `BotServices.log`. With `-w`, the CLI waits for the job to complete and surfaces success or failure directly.
 
 ## Safety Rules
 

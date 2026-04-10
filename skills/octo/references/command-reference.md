@@ -821,23 +821,25 @@ octo-cli -c UpdateSystemCkModel -tid <tenantId>
 ### Models
 
 #### ImportCk
-Schedules import job for construction kit files.
+Schedules import job for construction kit files. To wait for the job to complete, use `-w`.
 ```
-octo-cli -c ImportCk -f <file>
+octo-cli -c ImportCk -f <file> [-w]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-f` | `file` | File to import | Yes |
+| `-w` | `wait` | Wait for import job to complete | No |
 
 #### ImportRt
-Schedules import job for runtime model files.
+Schedules import job for runtime model files. To wait for the job to complete, use `-w`.
 ```
-octo-cli -c ImportRt -f <file> [-r]
+octo-cli -c ImportRt -f <file> [-r] [-w]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-f` | `file` | File to import | Yes |
 | `-r` | `replace` | Replace existing entities (flag, no value) | No |
+| `-w` | `wait` | Wait for import job to complete | No |
 
 #### ExportRtByQuery
 ```
@@ -948,9 +950,9 @@ octo-cli -c Dump -tid <tenantId> -f <file>
 | `-f` | `file` | Backup file (*.tar.gz) | Yes |
 
 #### Restore
-Restores a tenant from a dump file.
+Restores a tenant from a dump file. To wait for the job to complete, use `-w`.
 ```
-octo-cli -c Restore -tid <tenantId> -db <database> -f <file> [-oldDb <oldDatabaseName>]
+octo-cli -c Restore -tid <tenantId> -db <database> -f <file> [-oldDb <oldDatabaseName>] [-w]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
@@ -958,12 +960,16 @@ octo-cli -c Restore -tid <tenantId> -db <database> -f <file> [-oldDb <oldDatabas
 | `-db` | `database` | Database name | Yes |
 | `-f` | `file` | Backup file (*.tar.gz) | Yes |
 | `-oldDb` | `oldDatabaseName` | Old database name (if different) | No |
+| `-w` | `wait` | Wait for restore job to complete | No |
 
 #### RunFixupScripts
-Runs fixup scripts for current tenant. No arguments.
+Runs fixup scripts for current tenant. To wait for the job to complete, use `-w`.
 ```
-octo-cli -c RunFixupScripts
+octo-cli -c RunFixupScripts [-w]
 ```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-w` | `wait` | Wait for fixup scripts job to complete | No |
 
 ---
 
