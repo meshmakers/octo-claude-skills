@@ -230,6 +230,10 @@ Enrich entity update info with current MongoDB entity data.
 
 Create `EntityUpdateInfo` objects for database operations (Insert/Update/Delete).
 
+> **WARNING: Attribute Name Casing** — `attributeName` must match the CK model's exact casing (typically camelCase: `name`, `machineState`, `operatingHours`). Do NOT assume PascalCase. Use `ck_explorer.py preflight <type>` to discover correct names.
+
+> **Note: generateRtId behavior** — When `generateRtId: true`, the RtId is generated at `ApplyChanges` time and is NOT available in the EntityUpdateInfo output. Use static `rtId` values when you need to reference the entity's ID in `CreateAssociationUpdate` nodes.
+
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `updateKind` | enum | optional | Insert, Update, or Delete |
@@ -277,6 +281,8 @@ Each `attributeUpdate`:
 ### CreateAssociationUpdate@1
 
 Create `AssociationUpdateInfo` for creating or deleting associations between entities.
+
+> **Best practice:** When creating new entities and their associations in the same pipeline, prefer static `originRtId`/`targetRtId` over path-based references (`originRtIdPath`/`targetRtIdPath`). This is because `generateRtId: true` in `CreateUpdateInfo` does not expose the generated ID in the EntityUpdateInfo output, making path-based references resolve to null.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
