@@ -1,6 +1,6 @@
 # Mesh Adapter Node Reference
 
-All nodes from `octo-mesh-adapter`. Use `NodeName@Version` syntax in YAML (e.g., `GetRtEntitiesByType@1`).
+Nodes provided by the **Mesh Adapter** (`octo-mesh-adapter`) — one of several adapter implementations sharing the unified `System.Communication/Adapter` CK type. These nodes are available on any adapter that includes the Mesh Adapter SDK. Use `NodeName@Version` syntax in YAML (e.g., `GetRtEntitiesByType@1`).
 
 ## Extract Nodes
 
@@ -825,7 +825,7 @@ triggers:
 
 ### FromExecutePipelineCommand@1
 
-Trigger pipeline on manual execution command (via service API or UI). The pipeline must belong to a DataFlow. The adapter listens on a DataFlow-scoped message queue for `ExecuteMeshPipelineRequest`.
+Trigger pipeline on manual execution command (via service API or UI). The pipeline must belong to a DataFlow. The adapter listens on a DataFlow-scoped message queue for execution requests.
 
 No additional properties.
 

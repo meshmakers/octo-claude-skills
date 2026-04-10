@@ -108,13 +108,13 @@ transformations:
 
 ---
 
-## 2. Edge-to-Mesh Pipeline (Zenon Variable Sync)
+## 2. Cross-Adapter DataFlow (Zenon Variable Sync)
 
-Two-part pipeline: mesh side watches for entity changes and sends data to the edge via the event hub; edge side receives and writes to Zenon PLC variables.
+Two-part DataFlow with cross-adapter communication: a pipeline on the Mesh Adapter watches for entity changes and sends data via the event hub; a pipeline on the Zenon Adapter receives it and writes to PLC variables. Both pipelines belong to the same DataFlow.
 
 **Source:** `maco-deployment/data/pipelines/rt-zenon-ATSA-sync-article-quantity.yaml`
 
-### Mesh Side (sends to edge)
+### Mesh Adapter Pipeline (sends data)
 
 ```yaml
 triggers:
@@ -162,12 +162,12 @@ transformations:
         operator: Like
         comparisonValue: StandardDaten.AktArtikel
 
-  # Send entire context to edge adapter (both pipelines must be in the same DataFlow)
+  # Send entire context to the Zenon Adapter pipeline (both pipelines must be in the same DataFlow)
   - type: ToPipelineDataEvent@1
-    targetPipelineRtId: <edge-pipeline-rtId>
+    targetPipelineRtId: <zenon-pipeline-rtId>
 ```
 
-### Edge Side (receives from mesh)
+### Zenon Adapter Pipeline (receives data)
 
 ```yaml
 triggers:
@@ -191,11 +191,11 @@ transformations:
 
 ## 3. Polling Pipeline with SAP Import and ForEach
 
-Polls SAP for production orders, iterates with conditional processing, creates entities and associations on the mesh side.
+Cross-adapter DataFlow: one pipeline polls SAP for production orders, iterates with conditional processing, and sends data to a second pipeline that creates entities and associations.
 
 **Source:** `maco-deployment/data/pipelines/rt-sap-sbg-import-production-orders.yaml`
 
-### Edge Side (polling SAP)
+### SAP Polling Pipeline (data extraction)
 
 ```yaml
 triggers:
@@ -251,12 +251,12 @@ transformations:
     path: $.orders[*].result
     targetPath: $.orders
 
-  # Send to mesh pipeline (both must be in the same DataFlow)
+  # Send to entity-creation pipeline (both must be in the same DataFlow)
   - type: ToPipelineDataEvent@1
-    targetPipelineRtId: <mesh-pipeline-rtId>
+    targetPipelineRtId: <entity-creation-pipeline-rtId>
 ```
 
-### Mesh Side (entity creation)
+### Entity Creation Pipeline (receives data)
 
 ```yaml
 triggers:
@@ -398,9 +398,9 @@ transformations:
 
 ---
 
-## 4. Edge Variable Import with Type Switch
+## 4. Variable Import with Type Switch
 
-Receives Zenon variable data from the event hub, looks up each variable, switches on data type to create type-specific updates, saves to both time series and MongoDB.
+Receives Zenon variable data via inter-pipeline communication (DataFlow event hub), looks up each variable, switches on data type to create type-specific updates, saves to both time series and MongoDB.
 
 **Source:** `maco-deployment/data/pipelines/rt-zenon-ATSA-import-variables.yaml`
 

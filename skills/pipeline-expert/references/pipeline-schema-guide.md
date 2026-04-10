@@ -10,14 +10,14 @@ Each adapter generates its schema at build time via an MSBuild target that runs 
 
 | Adapter | Schema Path (relative to monorepo root) | Typical Use |
 |---------|----------------------------------------|-------------|
-| **Mesh Adapter** | `octo-mesh-adapter/bin/DebugL/net10.0/pipeline-schema.json` | Server-side pipelines (most common) |
+| **Mesh Adapter** | `octo-mesh-adapter/bin/DebugL/net10.0/pipeline-schema.json` | Most common; richest node set |
 | **EDA Adapter** | `octo-adapter-eda/bin/DebugL/net10.0/pipeline-schema.json` | Energy data pipelines |
-| **Zenon Edge Adapter** | `octo-plug-zenon/src/Octo.Edge.Adapter.Zenon.WindowsService/bin/DebugL/net10.0/pipeline-schema.json` | SCADA edge pipelines |
+| **Zenon Adapter** | `octo-plug-zenon/src/Octo.Edge.Adapter.Zenon.WindowsService/bin/DebugL/net10.0/pipeline-schema.json` | SCADA integration pipelines |
 | **Simulation Adapter** | `octo-sdk/src/Sdk.Plug.Simulation/bin/DebugL/net10.0/pipeline-schema.json` | Test/simulation pipelines |
 
-**Which schema to use:** Pick the adapter that will execute the pipeline. For server-side pipelines, use the mesh adapter schema. For adapter-specific nodes (EDA, Zenon, Simulation), use that adapter's schema.
+**Which schema to use:** Pick the adapter implementation that will execute the pipeline. The Mesh Adapter schema is the most common choice as it has the richest set of nodes. For adapter-specific nodes (EDA, Zenon, Simulation), use that adapter's schema.
 
-**If the schema file does not exist**, fall back to the hand-maintained node reference docs (`node-reference-mesh.md` and `node-reference-sdk.md`).
+**If the schema file does not exist**, fall back to the hand-maintained node reference docs (`node-reference-sdk.md` for shared SDK nodes and `node-reference-mesh.md` for Mesh Adapter nodes).
 
 ## Schema Structure
 
@@ -83,7 +83,7 @@ Either casing is accepted. The reference docs use PascalCase.
 
 When validating a pipeline YAML that a user has written or that you generated:
 
-1. **Read the schema file** — because it is minified single-line JSON (~47k tokens), use `Bash` with a targeted `python3` or `jq` command to extract specific node definitions rather than reading the whole file. Use the schema path for the target adapter (see Schema Locations above). For example, using the mesh adapter schema:
+1. **Read the schema file** — because it is minified single-line JSON (~47k tokens), use `Bash` with a targeted `python3` or `jq` command to extract specific node definitions rather than reading the whole file. Use the schema path for the target adapter (see Schema Locations above). For example, using the Mesh Adapter schema:
 
    ```bash
    cat octo-mesh-adapter/bin/DebugL/net10.0/pipeline-schema.json | python3 -c "
@@ -130,4 +130,4 @@ Schema generation is a **shared SDK capability** that all adapters inherit autom
 5. Integer-backed enums are converted to string enums with both PascalCase and CONSTANT_CASE values
 6. Individual node schemas are composited into a single document with `TriggerNode.oneOf` and `TransformationNode.oneOf` discriminated unions
 
-Each adapter's schema covers **all nodes it has registered** — shared SDK nodes (control flow, transforms, buffering) plus adapter-specific nodes (e.g., mesh adapter adds entity CRUD and domain nodes, EDA adapter adds energy protocol nodes, Zenon adds SCADA nodes).
+Each adapter's schema covers **all nodes it has registered** — shared SDK nodes (control flow, transforms, buffering) plus adapter-specific nodes (e.g., the Mesh Adapter adds entity CRUD and domain nodes, the EDA Adapter adds energy protocol nodes, the Zenon Adapter adds SCADA nodes).

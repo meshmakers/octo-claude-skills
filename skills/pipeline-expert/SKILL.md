@@ -1,6 +1,6 @@
 ---
 name: pipeline-expert
-description: Expert for OctoMesh ETL pipeline YAML — creation, reading, editing, debugging, validation. This skill should be used when the user mentions pipeline YAML, YAML pipeline, pipeline creation, pipeline nodes, node configuration, DataContext, ForEach iteration, ETL pipelines, mesh pipelines, edge pipelines, triggers, transformations, ApplyChanges, CreateUpdateInfo, data mapping, pipeline debugging, pipeline error, data flow, DataFlow, dataflow, pipeline chaining, inter-pipeline communication, PipelineTrigger, pipeline trigger, cron schedule, ToPipelineDataEvent, FromPipelineDataEvent, FromPipelineTriggerEvent, FromExecutePipelineCommand, targetPipelineRtId, GetRtEntities, entity CRUD, association updates, field filters, switch cases, polling pipelines, HTTP triggers, watch entity triggers, scheduled pipeline, cron trigger, email trigger, Zenon integration, SAP integration, EDA processing, email notifications, time series, anomaly detection, AI queries, buffering, webhook, Base64 encoding, logging, debug output, pipeline config lookup, report generation, pipeline schema, pipeline validation, CSV import, Excel import, SFTP upload, file hash, duplicate check, Grafana provisioning, Microsoft Teams, Microsoft Graph, simulation data, OCR, pipeline JSON schema, pipeline example.
+description: Expert for OctoMesh ETL pipeline YAML — creation, reading, editing, debugging, validation. This skill should be used when the user mentions pipeline YAML, YAML pipeline, pipeline creation, pipeline nodes, node configuration, DataContext, ForEach iteration, ETL pipelines, adapter pipelines, triggers, transformations, ApplyChanges, CreateUpdateInfo, data mapping, pipeline debugging, pipeline error, data flow, DataFlow, dataflow, pipeline chaining, inter-pipeline communication, cross-adapter communication, PipelineTrigger, pipeline trigger, cron schedule, ToPipelineDataEvent, FromPipelineDataEvent, FromPipelineTriggerEvent, FromExecutePipelineCommand, targetPipelineRtId, GetRtEntities, entity CRUD, association updates, field filters, switch cases, polling pipelines, HTTP triggers, watch entity triggers, scheduled pipeline, cron trigger, email trigger, Zenon integration, SAP integration, EDA processing, email notifications, time series, anomaly detection, AI queries, buffering, webhook, Base64 encoding, logging, debug output, pipeline config lookup, report generation, pipeline schema, pipeline validation, CSV import, Excel import, SFTP upload, file hash, duplicate check, Grafana provisioning, Microsoft Teams, Microsoft Graph, simulation data, OCR, pipeline JSON schema, pipeline example.
 allowed-tools:
   - "Read(${CLAUDE_PLUGIN_ROOT}/skills/pipeline-expert/references/*)"
 ---
@@ -9,15 +9,17 @@ allowed-tools:
 
 ## Overview
 
-OctoMesh pipelines are YAML-defined ETL data flows executed by the mesh adapter (server-side) or edge adapters (device-side). Each pipeline has **triggers** that start execution and **transformations** (an ordered list of nodes) that process data through a shared **DataContext** — a mutable JSON document accessed via JSONPath.
+OctoMesh pipelines are YAML-defined ETL data flows executed by adapters. Each pipeline has **triggers** that start execution and **transformations** (an ordered list of nodes) that process data through a shared **DataContext** — a mutable JSON document accessed via JSONPath.
 
-Pipelines handle: entity CRUD, edge-to-mesh synchronization, data import/export, notifications, report generation, AI queries, anomaly detection, and more.
+An **Adapter** (`System.Communication/Adapter`) is a unified runtime that executes pipelines. Different adapter implementations exist (Mesh Adapter, Zenon Adapter, Simulation Adapter, etc.) but they all share the same CK type and pipeline execution model. Each adapter registers the pipeline nodes it supports — SDK-shared nodes plus adapter-specific ones.
+
+Pipelines handle: entity CRUD, cross-adapter data synchronization, data import/export, notifications, report generation, AI queries, anomaly detection, and more.
 
 ## DataFlows and Pipeline Triggers
 
 A **DataFlow** (`System.Communication/DataFlow`) is a logical grouping of related pipelines that work together as part of a single data processing workflow. It serves as the parent container for Pipeline and PipelineTrigger instances.
 
-> **Migration note:** DataFlow replaces the old `DataPipeline` type from Communication-2. Similarly, `PipelineTrigger` replaces the old `DataPipelineTrigger`. CK migrations `3.0.1→3.0.2` and `3.1.0→3.1.1` handle the rename automatically (`ChangeCkType` transforms). If working with pre-migration data, the CK type IDs are `System.Communication/DataPipeline` → `System.Communication/DataFlow` and `System.Communication/DataPipelineTrigger` → `System.Communication/PipelineTrigger`.
+> **Migration note:** CK migration `3.1.0→3.1.1` unified the old `EdgeAdapter`/`MeshAdapter` into a single `Adapter` type, and `EdgePipeline`/`MeshPipeline` into a single `Pipeline` type. Earlier migrations renamed `DataPipeline` → `DataFlow` and `DataPipelineTrigger` → `PipelineTrigger`. These are handled automatically by `ChangeCkType` transforms.
 
 **Key concepts:**
 - Pipelines belong to a DataFlow via `System/ParentChild` association
@@ -199,7 +201,7 @@ For a deeper explanation of context hierarchy, write modes, and field filters, r
 | `GrafanaProvisionTenant@1` | Provision Grafana org and datasource for tenant |
 | `GrafanaDeprovisionTenant@1` | Deprovision Grafana org for tenant |
 
-### Buffering (Edge)
+### Buffering
 
 | Node | Purpose |
 |------|---------|
@@ -376,7 +378,7 @@ Query entities, create update operations, apply to database:
 
 ### Inter-Pipeline Communication (DataFlow)
 
-Pipelines within the same DataFlow can chain data to each other — even across different adapters (e.g., edge → mesh). The sender uses `ToPipelineDataEvent@1` with the target pipeline's runtime ID; the receiver uses `FromPipelineDataEvent@1` as its trigger.
+Pipelines within the same DataFlow can chain data to each other — even across different adapter instances (e.g., Zenon Adapter → Mesh Adapter). The sender uses `ToPipelineDataEvent@1` with the target pipeline's runtime ID; the receiver uses `FromPipelineDataEvent@1` as its trigger.
 
 ```yaml
 # Producer pipeline (sends data to consumer)
@@ -419,10 +421,10 @@ When validating a pipeline YAML (user-written or generated), use the **build-tim
 |---------|------------|
 | Mesh Adapter | `octo-mesh-adapter/bin/DebugL/net10.0/pipeline-schema.json` |
 | EDA Adapter | `octo-adapter-eda/bin/DebugL/net10.0/pipeline-schema.json` |
-| Zenon Edge Adapter | `octo-plug-zenon/src/Octo.Edge.Adapter.Zenon.WindowsService/bin/DebugL/net10.0/pipeline-schema.json` |
+| Zenon Adapter | `octo-plug-zenon/src/Octo.Edge.Adapter.Zenon.WindowsService/bin/DebugL/net10.0/pipeline-schema.json` |
 | Simulation Adapter | `octo-sdk/src/Sdk.Plug.Simulation/bin/DebugL/net10.0/pipeline-schema.json` |
 
-**Which schema to use:** Pick the adapter that will execute the pipeline. The mesh adapter schema is the most common choice for server-side pipelines. If the adapter hasn't been built locally, fall back to the node reference docs.
+**Which schema to use:** Pick the adapter implementation that will execute the pipeline. The Mesh Adapter schema is the most common choice as it has the richest set of nodes. If the adapter hasn't been built locally, fall back to the node reference docs.
 
 **Validation steps:**
 1. **Look up each node** by its `type` value (e.g., `CheckDuplicate@1`) in the schema's `$defs.TriggerNode.oneOf` or `$defs.TransformationNode.oneOf`.
@@ -478,7 +480,7 @@ To hand off to the `octo` skill for any of these operational commands, tell the 
 
 ### Silent failures: adapter returns HTTP 200 on error
 
-The mesh adapter returns **HTTP 200** for `FromHttpRequest`-triggered pipelines **even when the pipeline fails internally**. The `GetLatestPipelineExecution` may also show `Status: null` and `DurationMs: null` on failure.
+The Mesh Adapter returns **HTTP 200** for `FromHttpRequest`-triggered pipelines **even when the pipeline fails internally**. The `GetLatestPipelineExecution` may also show `Status: null` and `DurationMs: null` on failure.
 
 **Always check the adapter log after unexpected results:**
 
@@ -500,14 +502,14 @@ logFiles/MeshAdapter.log
 
 1. **Trigger the pipeline** (HTTP, ExecutePipeline, or scheduled)
 2. **Check execution:** `octo-cli -c GetLatestPipelineExecution --identifier <pipelineId> --json`
-3. **If Status is null:** the pipeline failed — check `logFiles/MeshAdapter.log` for `ERROR` entries
+3. **If Status is null:** the pipeline failed — check the adapter log (e.g., `logFiles/MeshAdapter.log`) for `ERROR` entries
 4. **Check debug tree:** `octo-cli -c GetPipelineDebugPoints` — nodes missing from the tree never executed (pipeline stopped before reaching them)
 5. **The last node in the tree** is usually where the error occurred
 
 ## References
 
-- **SDK nodes** (control flow, transforms, extracts, loads, buffering, simulation): `references/node-reference-sdk.md`
-- **Mesh adapter nodes** (entity CRUD, triggers, domain-specific): `references/node-reference-mesh.md`
+- **SDK nodes** (control flow, transforms, extracts, loads, buffering, simulation — shared across all adapters): `references/node-reference-sdk.md`
+- **Mesh Adapter nodes** (entity CRUD, triggers, domain-specific — provided by the `octo-mesh-adapter` implementation): `references/node-reference-mesh.md`
 - **DataContext mechanics** (paths, write modes, field filters, iterations): `references/data-context-guide.md`
 - **Real examples** (annotated pipelines from deployments): `references/pipeline-examples.md`
 - **Pipeline JSON Schema** (authoritative property reference, validation workflow): `references/pipeline-schema-guide.md`

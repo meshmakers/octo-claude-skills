@@ -209,7 +209,7 @@ Inject raw JSON from a string.
 
 ### FromPipelineDataEvent@1
 
-Receive data from another pipeline within the same DataFlow. The pipeline automatically binds to the DataFlow's shared topic exchange using its own RtId as routing key. Pairs with `ToPipelineDataEvent@1` on the sending pipeline. Works across adapters (e.g., edge → mesh).
+Receive data from another pipeline within the same DataFlow. The pipeline automatically binds to the DataFlow's shared topic exchange using its own RtId as routing key. Pairs with `ToPipelineDataEvent@1` on the sending pipeline. Works across different adapter instances.
 
 No additional configuration properties.
 
@@ -609,7 +609,7 @@ Execute dynamic C# code.
 
 ### BufferData@1
 
-Buffer incoming data with time-based flushing. Uses LiteDB edge buffer.
+Buffer incoming data with time-based flushing. Uses LiteDB local buffer for offline/slow-connection scenarios.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
