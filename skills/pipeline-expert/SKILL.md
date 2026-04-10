@@ -1,6 +1,6 @@
 ---
 name: pipeline-expert
-description: Expert for OctoMesh ETL pipeline YAML — creation, reading, editing, debugging, validation. This skill should be used when the user mentions pipeline YAML, YAML pipeline, pipeline creation, pipeline nodes, node configuration, DataContext, ForEach iteration, ETL pipelines, mesh pipelines, edge pipelines, triggers, transformations, ApplyChanges, CreateUpdateInfo, data mapping, pipeline debugging, pipeline error, data flow, ToPipelineDataEvent, FromPipelineDataEvent, GetRtEntities, entity CRUD, association updates, field filters, switch cases, polling pipelines, HTTP triggers, watch entity triggers, scheduled pipeline, cron trigger, email trigger, Zenon integration, SAP integration, EDA processing, email notifications, time series, anomaly detection, AI queries, buffering, webhook, Base64 encoding, logging, debug output, pipeline config lookup, report generation, pipeline schema, pipeline validation, CSV import, Excel import, SFTP upload, file hash, duplicate check, Grafana provisioning, Microsoft Teams, Microsoft Graph, simulation data, OCR, pipeline JSON schema, pipeline example.
+description: Expert for OctoMesh ETL pipeline YAML — creation, reading, editing, debugging, validation. This skill should be used when the user mentions pipeline YAML, YAML pipeline, pipeline creation, pipeline nodes, node configuration, DataContext, ForEach iteration, ETL pipelines, mesh pipelines, edge pipelines, triggers, transformations, ApplyChanges, CreateUpdateInfo, data mapping, pipeline debugging, pipeline error, data flow, DataFlow, dataflow, pipeline chaining, inter-pipeline communication, PipelineTrigger, pipeline trigger, cron schedule, ToPipelineDataEvent, FromPipelineDataEvent, FromPipelineTriggerEvent, FromExecutePipelineCommand, targetPipelineRtId, GetRtEntities, entity CRUD, association updates, field filters, switch cases, polling pipelines, HTTP triggers, watch entity triggers, scheduled pipeline, cron trigger, email trigger, Zenon integration, SAP integration, EDA processing, email notifications, time series, anomaly detection, AI queries, buffering, webhook, Base64 encoding, logging, debug output, pipeline config lookup, report generation, pipeline schema, pipeline validation, CSV import, Excel import, SFTP upload, file hash, duplicate check, Grafana provisioning, Microsoft Teams, Microsoft Graph, simulation data, OCR, pipeline JSON schema, pipeline example.
 allowed-tools:
   - "Read(${CLAUDE_PLUGIN_ROOT}/skills/pipeline-expert/references/*)"
 ---
@@ -12,6 +12,30 @@ allowed-tools:
 OctoMesh pipelines are YAML-defined ETL data flows executed by the mesh adapter (server-side) or edge adapters (device-side). Each pipeline has **triggers** that start execution and **transformations** (an ordered list of nodes) that process data through a shared **DataContext** — a mutable JSON document accessed via JSONPath.
 
 Pipelines handle: entity CRUD, edge-to-mesh synchronization, data import/export, notifications, report generation, AI queries, anomaly detection, and more.
+
+## DataFlows and Pipeline Triggers
+
+A **DataFlow** (`System.Communication/DataFlow`) is a logical grouping of related pipelines that work together as part of a single data processing workflow. It serves as the parent container for Pipeline and PipelineTrigger instances.
+
+> **Migration note:** DataFlow replaces the old `DataPipeline` type from Communication-2. Similarly, `PipelineTrigger` replaces the old `DataPipelineTrigger`. CK migrations `3.0.1→3.0.2` and `3.1.0→3.1.1` handle the rename automatically (`ChangeCkType` transforms). If working with pre-migration data, the CK type IDs are `System.Communication/DataPipeline` → `System.Communication/DataFlow` and `System.Communication/DataPipelineTrigger` → `System.Communication/PipelineTrigger`.
+
+**Key concepts:**
+- Pipelines belong to a DataFlow via `System/ParentChild` association
+- A DataFlow establishes a **shared topic exchange** in the event hub, enabling inter-pipeline communication
+- Pipelines within the same DataFlow can send data to each other using `ToPipelineDataEvent@1` (with `targetPipelineRtId`) and `FromPipelineDataEvent@1`
+
+A **PipelineTrigger** (`System.Communication/PipelineTrigger`) is a child of a DataFlow that triggers pipeline execution on a cron schedule via the Bot Service:
+- Has `Enabled` and `CronExpression` attributes
+- Has a `Triggers` association linking to one or more Pipeline entities
+- The target pipelines must use `FromPipelineTriggerEvent@1` as their trigger node
+- Cron format: `minute hour dayOfMonth month dayOfWeek year` (6 fields)
+
+**Entity relationships:**
+```
+DataFlow
+  ├── Pipeline (child, via ParentChild) ── executes on ── Adapter
+  └── PipelineTrigger (child, via ParentChild) ── triggers ── Pipeline(s)
+```
 
 ## Pipeline YAML Structure
 
@@ -84,9 +108,9 @@ For a deeper explanation of context hierarchy, write modes, and field filters, r
 | `FromPolling@1` | Poll at interval (e.g., `00:05:00`) |
 | `FromHttpRequest@1` | HTTP endpoint (method + path) |
 | `FromWatchRtEntity@1` | Entity change stream (Insert/Update/Delete) |
-| `FromPipelineDataEvent@1` | Event hub message (edge-mesh communication) |
-| `FromExecutePipelineCommand@1` | Explicit service command |
-| `FromPipelineTriggerEvent@1` | Scheduled/event trigger |
+| `FromPipelineDataEvent@1` | Receive data from another pipeline in the same DataFlow |
+| `FromExecutePipelineCommand@1` | Manual execution command (via service or UI) |
+| `FromPipelineTriggerEvent@1` | Scheduled execution via PipelineTrigger entity (cron) |
 | `FromSendNotification@1` | Notification service message |
 | `FromEmail@1` | Incoming email via IMAP |
 | `FromMicrosoftGraph@1` | Poll Microsoft Teams channels via Graph API |
@@ -167,10 +191,9 @@ For a deeper explanation of context hierarchy, write modes, and field filters, r
 | `ApplyChanges@1` | Apply entity updates to MongoDB |
 | `ApplyChanges@2` | Apply entity + association updates (preferred) |
 | `SaveInTimeSeries@1` | Save to CrateDB time series |
-| `ToPipelineDataEvent@1` | Publish to event hub |
+| `ToPipelineDataEvent@1` | Send data to another pipeline in the same DataFlow (requires `targetPipelineRtId`) |
 | `ToWebhook@1` | HTTP POST to external endpoint |
 | `SendEMail@1` | Send email (Markdown → HTML) |
-| `SendNotification@1` | Send notification via bot service |
 | `GenerateAndStoreReport@1` | Generate and store report |
 | `SftpUpload@1` | Upload file to SFTP server |
 | `GrafanaProvisionTenant@1` | Provision Grafana org and datasource for tenant |
@@ -241,18 +264,24 @@ Query entities, create update operations, apply to database:
   entityUpdatesPath: $.entityUpdates
 ```
 
-### Edge-to-Mesh Communication
+### Inter-Pipeline Communication (DataFlow)
 
-Send data from edge to mesh (or vice versa) via the distributed event hub:
+Pipelines within the same DataFlow can chain data to each other — even across different adapters (e.g., edge → mesh). The sender uses `ToPipelineDataEvent@1` with the target pipeline's runtime ID; the receiver uses `FromPipelineDataEvent@1` as its trigger.
 
 ```yaml
-# Edge side: send to mesh
-- type: ToPipelineDataEvent@1
+# Producer pipeline (sends data to consumer)
+transformations:
+  - type: ToPipelineDataEvent@1
+    path: $.sensor
+    targetPath: $.input
+    targetPipelineRtId: aa0000000000000000000003  # RtId of the consumer pipeline
 
-# Mesh side: receive from edge
+# Consumer pipeline (receives data)
 triggers:
   - type: FromPipelineDataEvent@1
 ```
+
+Both pipelines must belong to the **same DataFlow** (linked via `System/ParentChild` association). The DataFlow's shared topic exchange routes messages by `targetPipelineRtId`.
 
 ### Dual Store (Time Series + MongoDB)
 
@@ -272,25 +301,37 @@ Save high-frequency data to both time series and entity store:
 
 ## Pipeline Validation
 
-When validating a pipeline YAML (user-written or generated), use the **build-time JSON Schema** as the authoritative source:
+When validating a pipeline YAML (user-written or generated), use the **build-time JSON Schema** as the authoritative source. Every OctoMesh adapter generates its own `pipeline-schema.json` at build time, containing all nodes it supports (SDK nodes + adapter-specific nodes).
 
-1. **Locate the schema** at `octo-mesh-adapter/bin/DebugL/net10.0/pipeline-schema.json` (relative to monorepo root). If absent (adapter not built), fall back to the node reference docs.
-2. **Look up each node** by its `type` value (e.g., `CheckDuplicate@1`) in the schema's `$defs.TriggerNode.oneOf` or `$defs.TransformationNode.oneOf`.
-3. **Check required properties** — the `required` array lists mandatory keys.
-4. **Check property names** — any property not in the schema's `properties` object is invalid.
-5. **Check enum values** — enum-typed properties list valid values in their `$defs` entry.
+**Schema locations** (relative to monorepo root):
+
+| Adapter | Schema Path |
+|---------|------------|
+| Mesh Adapter | `octo-mesh-adapter/bin/DebugL/net10.0/pipeline-schema.json` |
+| EDA Adapter | `octo-adapter-eda/bin/DebugL/net10.0/pipeline-schema.json` |
+| Zenon Edge Adapter | `octo-plug-zenon/src/Octo.Edge.Adapter.Zenon.WindowsService/bin/DebugL/net10.0/pipeline-schema.json` |
+| Simulation Adapter | `octo-sdk/src/Sdk.Plug.Simulation/bin/DebugL/net10.0/pipeline-schema.json` |
+
+**Which schema to use:** Pick the adapter that will execute the pipeline. The mesh adapter schema is the most common choice for server-side pipelines. If the adapter hasn't been built locally, fall back to the node reference docs.
+
+**Validation steps:**
+1. **Look up each node** by its `type` value (e.g., `CheckDuplicate@1`) in the schema's `$defs.TriggerNode.oneOf` or `$defs.TransformationNode.oneOf`.
+2. **Check required properties** — the `required` array lists mandatory keys.
+3. **Check property names** — any property not in the schema's `properties` object is invalid.
+4. **Check enum values** — enum-typed properties list valid values in their `$defs` entry.
 
 For schema structure details, extraction commands, and fallback rules, read `references/pipeline-schema-guide.md`.
 
 ## Pipeline Creation Workflow
 
-1. **Identify the trigger** — What starts this pipeline? (poll, HTTP, entity change, event, command)
-2. **Plan the data flow** — What data comes in? What entities need to be read/created/updated?
-3. **Choose nodes** — Select from the node reference tables above
-4. **Define DataContext paths** — Plan `$.path` names for each step's input and output
-5. **Handle iterations** — Use ForEach for arrays; plan `$.full`/`$.key` access patterns
-6. **Build update operations** — Use CreateUpdateInfo + CreateAssociationUpdate for entity CRUD
-7. **Persist with ApplyChanges@2** — Always Flatten updates before applying; use Append for collecting
+1. **Plan the DataFlow** — Will this pipeline work alone or chain with others? If chaining, group all related pipelines under a single DataFlow entity.
+2. **Identify the trigger** — What starts this pipeline? Manual command (`FromExecutePipelineCommand@1`), cron schedule (`FromPipelineTriggerEvent@1` + PipelineTrigger entity), data from another pipeline (`FromPipelineDataEvent@1`), polling, HTTP, entity change watch, or email?
+3. **Plan the data flow** — What data comes in? What entities need to be read/created/updated?
+4. **Choose nodes** — Select from the node reference tables above
+5. **Define DataContext paths** — Plan `$.path` names for each step's input and output
+6. **Handle iterations** — Use ForEach for arrays; plan `$.full`/`$.key` access patterns
+7. **Build update operations** — Use CreateUpdateInfo + CreateAssociationUpdate for entity CRUD
+8. **Persist with ApplyChanges@2** — Always Flatten updates before applying; use Append for collecting
 
 For annotated real-world examples covering all these patterns, read `references/pipeline-examples.md`.
 

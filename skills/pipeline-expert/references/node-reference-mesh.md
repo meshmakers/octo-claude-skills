@@ -819,9 +819,9 @@ triggers:
 
 ### FromExecutePipelineCommand@1
 
-Trigger pipeline on explicit execute command from a service.
+Trigger pipeline on manual execution command (via service API or UI). The pipeline must belong to a DataFlow. The adapter listens on a DataFlow-scoped message queue for `ExecuteMeshPipelineRequest`.
 
-No additional properties. Listens on message queue for `ExecuteMeshPipelineRequest`.
+No additional properties.
 
 ```yaml
 triggers:
@@ -841,13 +841,11 @@ triggers:
 
 ### FromPipelineTriggerEvent@1
 
-Trigger pipeline on scheduled/event-based triggers configured via the UI (cron-based pipeline triggers).
+Trigger pipeline on a cron schedule via a **PipelineTrigger** entity. The PipelineTrigger is a child of the pipeline's DataFlow and has a `CronExpression` attribute and a `Triggers` association linking to one or more target pipelines.
 
-**Important:** When a pipeline trigger with a cron expression is configured in the UI, the Communication Controller schedules it via Hangfire in the Bot Service. Hangfire sends a `PipelineTriggerSchedule` message to a pipeline-specific RabbitMQ queue. The pipeline **must** include `FromPipelineTriggerEvent@1` as a trigger — this registers the Mesh Adapter as a consumer on that queue. Without it, the scheduled message is sent but never consumed and the pipeline will not execute.
+**How it works:** The Bot Service evaluates the cron expression and sends a `PipelineTriggerSchedule` message to a pipeline-specific RabbitMQ queue. The pipeline **must** include `FromPipelineTriggerEvent@1` as a trigger — this registers the adapter as a consumer on that queue. Without it, the scheduled message is sent but never consumed.
 
-Trigger schedules are only loaded at Communication Controller startup. Changes to cron expressions or new triggers require a service restart to take effect.
-
-The cron expression is interpreted in the **server's local timezone** (`TimeZoneInfo.Local`, e.g. `Europe/Vienna`).
+The cron expression is interpreted in the **server's local timezone** (`TimeZoneInfo.Local`, e.g. `Europe/Vienna`). Cron format: `minute hour dayOfMonth month dayOfWeek year` (6 fields).
 
 No additional properties.
 
@@ -971,7 +969,5 @@ Each data point: `{variablePath, valuePath, valueType}`.
 **GrafanaDeprovisionTenant@1** — Deprovision Grafana org for tenant. See Load Nodes section above.
 
 ### Notification Nodes
-
-**SendNotification@1** — Send notification via the bot service.
 
 **SendEMail@1** — See Load Nodes section above.

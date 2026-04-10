@@ -1,7 +1,7 @@
 {
   "name": "octo-claude-skills",
   "description": "OctoMesh platform skills for Claude Code: CLI natural language interface, data model exploration, runtime instance browsing, GraphQL schema introspection, and ETL pipeline YAML authoring",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "author": {
     "name": "Meshmakers"
   }

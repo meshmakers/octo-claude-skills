@@ -209,7 +209,7 @@ Inject raw JSON from a string.
 
 ### FromPipelineDataEvent@1
 
-Listen for pipeline data events on the distributed event hub. Used for edge-to-mesh and mesh-to-edge communication.
+Receive data from another pipeline within the same DataFlow. The pipeline automatically binds to the DataFlow's shared topic exchange using its own RtId as routing key. Pairs with `ToPipelineDataEvent@1` on the sending pipeline. Works across adapters (e.g., edge → mesh).
 
 No additional configuration properties.
 
@@ -239,16 +239,20 @@ triggers:
 
 ### ToPipelineDataEvent@1
 
-Publish data to the distributed event hub. Pairs with `FromPipelineDataEvent@1` for cross-adapter communication.
+Send data to another pipeline within the same DataFlow. Routes via the DataFlow's shared topic exchange using the target pipeline's runtime ID. Pairs with `FromPipelineDataEvent@1` on the receiving pipeline.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `path` | string | `$` | Source data path |
-| `targetPath` | string | `$` | Where to place in output |
+| `targetPath` | string | `$` | Where to place data in the receiver's DataContext |
+| `targetPipelineRtId` | string | required | RtId of the target pipeline (must be in the same DataFlow) |
 
 ```yaml
 - type: ToPipelineDataEvent@1
-  description: Send to mesh
+  description: Send sensor data to consumer pipeline
+  path: $.sensor
+  targetPath: $.input
+  targetPipelineRtId: aa0000000000000000000003
 ```
 
 ### ToWebhook@1

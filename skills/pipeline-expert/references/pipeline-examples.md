@@ -162,8 +162,9 @@ transformations:
         operator: Like
         comparisonValue: StandardDaten.AktArtikel
 
-  # Send entire context to edge adapter
+  # Send entire context to edge adapter (both pipelines must be in the same DataFlow)
   - type: ToPipelineDataEvent@1
+    targetPipelineRtId: <edge-pipeline-rtId>
 ```
 
 ### Edge Side (receives from mesh)
@@ -250,7 +251,9 @@ transformations:
     path: $.orders[*].result
     targetPath: $.orders
 
+  # Send to mesh pipeline (both must be in the same DataFlow)
   - type: ToPipelineDataEvent@1
+    targetPipelineRtId: <mesh-pipeline-rtId>
 ```
 
 ### Mesh Side (entity creation)
