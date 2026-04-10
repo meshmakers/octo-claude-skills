@@ -232,7 +232,7 @@ Create `EntityUpdateInfo` objects for database operations (Insert/Update/Delete)
 
 > **WARNING: Attribute Name Casing** — `attributeName` must match the CK model's exact casing (typically camelCase: `name`, `machineState`, `operatingHours`). Do NOT assume PascalCase. Use `ck_explorer.py preflight <type>` to discover correct names.
 
-> **Note: generateRtId behavior** — When `generateRtId: true`, the RtId is generated at `ApplyChanges` time and is NOT available in the EntityUpdateInfo output. Use static `rtId` values when you need to reference the entity's ID in `CreateAssociationUpdate` nodes.
+> **Intended workflow:** Use `GetOrCreateRtEntitiesByType@1` or `GetRtEntitiesByWellKnownName@1` upstream to resolve/generate RtIds (via `rtIdTargetPath`), then pass the ID here via `rtIdPath`. This makes the RtId available for `CreateAssociationUpdate` path references downstream. Avoid `generateRtId: true` when you need to reference the ID in associations.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -282,7 +282,7 @@ Each `attributeUpdate`:
 
 Create `AssociationUpdateInfo` for creating or deleting associations between entities.
 
-> **RtId referencing:** Path-based references (`originRtIdPath`/`targetRtIdPath`) work well when the RtId comes from `GetOrCreateRtEntitiesByType@1` or `GetRtEntitiesByWellKnownName@1` (both expose IDs via `rtIdTargetPath`). However, when creating brand-new entities with `CreateUpdateInfo@1` + `generateRtId: true`, the generated ID is NOT available in the output — use static `originRtId`/`targetRtId` in that case.
+> **RtId referencing:** Use `originRtIdPath`/`targetRtIdPath` to read RtIds that were resolved upstream by `GetOrCreateRtEntitiesByType@1` or `GetRtEntitiesByWellKnownName@1` (via their `rtIdTargetPath`). Only create associations on INSERT (check the `modOperationPath` value from the upstream GetOrCreate node).
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
