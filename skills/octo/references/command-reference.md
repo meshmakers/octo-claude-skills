@@ -975,6 +975,8 @@ octo-cli -c RunFixupScripts [-w]
 
 ## Communication Services
 
+All communication commands accept plain runtime object IDs — the SDK handles composite RtEntityId construction internally.
+
 #### EnableCommunication
 Enables communication controller for current tenant. No arguments.
 ```
@@ -986,6 +988,163 @@ Disables communication controller for current tenant. No arguments.
 ```
 octo-cli -c DisableCommunication
 ```
+
+### Adapters
+
+#### GetAdapters
+List all adapters for the tenant.
+```
+octo-cli -c GetAdapters [--json]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `--json` | `json` | Output in JSON format | No |
+
+#### GetAdapter
+Get adapter configuration, including linked pipelines.
+```
+octo-cli -c GetAdapter --identifier <rtId> [--json]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `--identifier` | `identifier` | Runtime object ID of the adapter | Yes |
+| `--json` | `json` | Output in JSON format | No |
+
+#### GetAdapterNodes
+List all available pipeline node types from connected adapters.
+```
+octo-cli -c GetAdapterNodes
+```
+No flags.
+
+#### GetPipelineSchema
+Get the JSON Schema describing valid pipeline YAML for an adapter. The schema defines all available node types and their configuration properties.
+```
+octo-cli -c GetPipelineSchema --adapterId <rtId> [--outputFile <path>]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `--adapterId` | `adapterId` | Runtime object ID of the adapter | Yes |
+| `--outputFile` | `outputFile` | File path to write the schema to | No |
+
+#### DeployAdapter
+Push configuration update to an adapter.
+```
+octo-cli -c DeployAdapter --identifier <rtId>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `--identifier` | `identifier` | Runtime object ID of the adapter | Yes |
+
+### Pipelines
+
+#### GetPipelineStatus
+Get the deployment state of a pipeline.
+```
+octo-cli -c GetPipelineStatus --identifier <rtId> [--json]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `--identifier` | `identifier` | Runtime object ID of the pipeline | Yes |
+| `--json` | `json` | Output in JSON format | No |
+
+#### DeployPipeline
+Deploy pipeline YAML to an adapter.
+```
+octo-cli -c DeployPipeline --adapterId <rtId> --pipelineId <rtId> --file <path>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `--adapterId` | `adapterId` | Runtime object ID of the adapter | Yes |
+| `--pipelineId` | `pipelineId` | Runtime object ID of the pipeline | Yes |
+| `--file` | `file` | Path to the pipeline YAML file | Yes |
+
+#### ExecutePipeline
+Execute a pipeline. Returns an execution ID and metadata.
+```
+octo-cli -c ExecutePipeline --identifier <rtId> [--inputFile <path>]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `--identifier` | `identifier` | Runtime object ID of the pipeline | Yes |
+| `--inputFile` | `inputFile` | Path to JSON file with input data for the execution | No |
+
+#### GetPipelineExecutions
+List execution history for a pipeline (status, duration, errors).
+```
+octo-cli -c GetPipelineExecutions --identifier <rtId> [--json]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `--identifier` | `identifier` | Runtime object ID of the pipeline | Yes |
+| `--json` | `json` | Output in JSON format | No |
+
+#### GetLatestPipelineExecution
+Get the most recent execution for a pipeline.
+```
+octo-cli -c GetLatestPipelineExecution --identifier <rtId> [--json]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `--identifier` | `identifier` | Runtime object ID of the pipeline | Yes |
+| `--json` | `json` | Output in JSON format | No |
+
+#### GetPipelineDebugPoints
+Get the debug node tree for a specific pipeline execution.
+```
+octo-cli -c GetPipelineDebugPoints --identifier <rtId> --executionId <guid> [--json]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `--identifier` | `identifier` | Runtime object ID of the pipeline | Yes |
+| `--executionId` | `executionId` | GUID of the execution to inspect | Yes |
+| `--json` | `json` | Output in JSON format | No |
+
+### Triggers
+
+#### DeployTriggers
+Deploy all pipeline triggers for the tenant.
+```
+octo-cli -c DeployTriggers
+```
+No flags.
+
+#### UndeployTriggers
+Undeploy all pipeline triggers for the tenant.
+```
+octo-cli -c UndeployTriggers
+```
+No flags.
+
+### Data Flows
+
+#### DeployDataFlow
+Deploy a data flow.
+```
+octo-cli -c DeployDataFlow --identifier <rtId>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `--identifier` | `identifier` | Runtime object ID of the data flow | Yes |
+
+#### UndeployDataFlow
+Undeploy a data flow.
+```
+octo-cli -c UndeployDataFlow --identifier <rtId>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `--identifier` | `identifier` | Runtime object ID of the data flow | Yes |
+
+#### GetDataFlowStatus
+Get aggregated status of a data flow, including state, pipeline states, and statistics.
+```
+octo-cli -c GetDataFlowStatus --identifier <rtId> [--json]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `--identifier` | `identifier` | Runtime object ID of the data flow | Yes |
+| `--json` | `json` | Output in JSON format | No |
 
 ---
 

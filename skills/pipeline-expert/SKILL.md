@@ -335,6 +335,35 @@ For schema structure details, extraction commands, and fallback rules, read `ref
 
 For annotated real-world examples covering all these patterns, read `references/pipeline-examples.md`.
 
+## Deploying and Testing Pipelines
+
+After writing pipeline YAML, use the **`octo` skill** to deploy and test it. This skill handles YAML authoring; the `octo` skill handles all operational commands (deployment, execution, status, debugging).
+
+### Typical deployment workflow
+
+1. **Create runtime entities** via `octo-cli -c ImportRt -f <file> -w`:
+   - A `System.Communication/DataFlow` entity (logical grouping)
+   - A `System.Communication/Pipeline` entity with `ParentChild` association to the DataFlow and `Executes` association to the target Adapter
+   - Optionally a `System.Communication/PipelineTrigger` with `ParentChild` to the DataFlow and `Triggers` association to the Pipeline(s)
+
+2. **Deploy the pipeline YAML** — `octo-cli -c DeployPipeline --adapterId <id> --pipelineId <id> --file <yaml-path>`
+
+3. **Verify deployment** — `octo-cli -c GetPipelineStatus --identifier <pipelineId> --json` → confirm state = Deployed
+
+4. **Execute** — `octo-cli -c ExecutePipeline --identifier <pipelineId>` → returns execution ID
+
+5. **Check execution** — `octo-cli -c GetLatestPipelineExecution --identifier <pipelineId> --json` → status, duration, errors
+
+6. **Inspect debug points** — `octo-cli -c GetPipelineDebugPoints --identifier <pipelineId> --executionId <guid> --json` → shows which nodes ran and their data
+
+7. **Activate triggers** (if using cron) — `octo-cli -c DeployTriggers`
+
+### Discovering available nodes at runtime
+
+`octo-cli -c GetPipelineSchema --adapterId <rtId>` returns a JSON Schema (draft/2020-12) that describes all pipeline nodes available on a specific adapter. This complements the build-time schema files — use it when you need to discover what's available in the target environment, especially if the adapter has custom plugins loaded.
+
+To hand off to the `octo` skill for any of these operational commands, tell the user to invoke `/octo <their intent>` (e.g., `/octo deploy this pipeline`, `/octo run pipeline X`).
+
 ## References
 
 - **SDK nodes** (control flow, transforms, extracts, loads, buffering, simulation): `references/node-reference-sdk.md`

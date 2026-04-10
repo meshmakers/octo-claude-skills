@@ -23,9 +23,11 @@ This skill is the hub for all OctoMesh tasks. Before doing any work, check if th
 |---|---|
 | Building repos, `dotnet build`, starting/stopping services, Docker compose, git sync, NuGet packages, clean builds, dev environment setup, PowerShell cmdlets (`Invoke-Build`, `Start-Octo`, etc.) | `Skill("octo-devtools", args: "<user's request>")` |
 | Debugging bugs, investigating failures, CK model errors (`ResolveFailed`, `modelState`), inspecting MongoDB, selective builds to isolate issues, database backup/restore, service health checks, error logs, cascade failures | `Skill("octo-agent", args: "<user's request>")` |
-| Pipeline YAML creation/editing/debugging, pipeline nodes, DataContext, DataFlow, ForEach, triggers, transformations, `ApplyChanges`, `CreateUpdateInfo`, `PipelineTrigger`, cron schedules, ETL pipelines | `Skill("pipeline-expert", args: "<user's request>")` |
+| Pipeline **YAML creation/editing/debugging**, pipeline node configuration, DataContext, ForEach, transformations, `ApplyChanges`, `CreateUpdateInfo`, writing ETL pipelines — anything about *authoring pipeline YAML* | `Skill("pipeline-expert", args: "<user's request>")` |
 
-Only continue with this skill if the request is about: CLI commands (`octo-cli`), data model exploration (CK models/types/enums), runtime instance browsing, GraphQL introspection, or environment/auth management.
+**Routing rule for Communication / Pipelines:** If the user wants to *write or understand pipeline YAML*, route to `pipeline-expert`. If they want to *deploy, run, inspect status, or debug executions*, handle it here in `octo`. For end-to-end workflows ("set up a new data flow"), `octo` orchestrates and routes to `pipeline-expert` only for the YAML authoring step.
+
+Only continue with this skill if the request is about: CLI commands (`octo-cli`), data model exploration (CK models/types/enums), runtime instance browsing, GraphQL introspection, environment/auth management, or **communication operations** (adapters, pipeline deployment/execution/status, data flows, triggers).
 
 ## Context Discovery
 
@@ -170,10 +172,48 @@ For environment URLs, read `references/environments.md` in this skill directory.
 
 ### Communication Services (group: "Communication Services")
 
+All communication commands accept plain runtime object IDs — the SDK handles composite RtEntityId construction internally.
+
 | Command | Description | Type |
 |---|---|---|
 | `EnableCommunication` | Enable communication for current tenant | Mutating |
 | `DisableCommunication` | Disable communication for current tenant | Mutating |
+
+#### Adapters
+
+| Command | Description | Type |
+|---|---|---|
+| `GetAdapters` | List all adapters for the tenant (`--json`) | Read-only |
+| `GetAdapter` | Get adapter configuration (`--identifier <rtId>`, `--json`) | Read-only |
+| `GetAdapterNodes` | List all available pipeline node types from connected adapters | Read-only |
+| `GetPipelineSchema` | Get JSON Schema for valid pipeline YAML (`--adapterId <rtId>`, `--outputFile <path>`) | Read-only |
+| `DeployAdapter` | Push configuration update to an adapter (`--identifier <rtId>`) | Mutating |
+
+#### Pipelines
+
+| Command | Description | Type |
+|---|---|---|
+| `GetPipelineStatus` | Get deployment state of a pipeline (`--identifier <rtId>`, `--json`) | Read-only |
+| `DeployPipeline` | Deploy pipeline YAML to an adapter (`--adapterId <rtId>`, `--pipelineId <rtId>`, `--file <path>`) | Mutating |
+| `ExecutePipeline` | Execute a pipeline, returns execution ID (`--identifier <rtId>`, `--inputFile <path>`) | Mutating |
+| `GetPipelineExecutions` | List execution history (`--identifier <rtId>`, `--json`) | Read-only |
+| `GetLatestPipelineExecution` | Get most recent execution (`--identifier <rtId>`, `--json`) | Read-only |
+| `GetPipelineDebugPoints` | Get debug node tree for an execution (`--identifier <rtId>`, `--executionId <guid>`, `--json`) | Read-only |
+
+#### Triggers
+
+| Command | Description | Type |
+|---|---|---|
+| `DeployTriggers` | Deploy all pipeline triggers for the tenant | Mutating |
+| `UndeployTriggers` | Undeploy all pipeline triggers | Mutating |
+
+#### Data Flows
+
+| Command | Description | Type |
+|---|---|---|
+| `DeployDataFlow` | Deploy a data flow (`--identifier <rtId>`) | Mutating |
+| `UndeployDataFlow` | Undeploy a data flow (`--identifier <rtId>`) | Mutating |
+| `GetDataFlowStatus` | Get aggregated status: state, pipeline states, statistics (`--identifier <rtId>`, `--json`) | Read-only |
 
 ### Reporting Services (group: "Reporting Services")
 
@@ -262,6 +302,99 @@ Always use the configured tenant from the active context. Never require `-tid` o
 
 ### Environment-aware prompts
 After context discovery, always indicate which environment is active when presenting commands for confirmation. Example: "**[test-2]** This will create a new user..."
+
+## Communication Entity Relationships
+
+Understanding how Communication entities relate allows intelligent resolution of references when executing workflows.
+
+```
+Adapter (connects to communication service via SignalR)
+  └── executes → Pipeline(s)
+
+DataFlow (logical grouping)
+  ├── child → Pipeline(s)          [via ParentChild association]
+  └── child → PipelineTrigger(s)   [via ParentChild association]
+
+Pipeline
+  ├── parent → DataFlow            [via ParentChild]
+  ├── executedBy → Adapter         [via Executes association]
+  └── pipelineDefinition           [YAML string attribute]
+
+PipelineTrigger
+  ├── parent → DataFlow            [via ParentChild]
+  ├── triggers → Pipeline(s)       [via Triggers association]
+  ├── cronExpression                [cron string]
+  └── enabled                       [boolean]
+```
+
+CK types for use with `rt_explorer.py`:
+- `System.Communication/Adapter`
+- `System.Communication/Pipeline`
+- `System.Communication/DataFlow`
+- `System.Communication/PipelineTrigger`
+- `System.Communication/PipelineExecution`
+- `System.Communication/PipelineStatistics`
+
+## Communication Workflows
+
+These multi-step workflows handle common user intents. When the user expresses one of these intents, follow the steps to resolve IDs, execute commands, and present results.
+
+### "What adapters are available?"
+1. `octo-cli -c GetAdapters --json` — list all adapters
+2. Present a summary: adapter name, rtId, online/offline, configuration state
+
+### "What pipeline nodes can I use?" / "What nodes does the adapter support?"
+1. Discover adapters: `octo-cli -c GetAdapters --json`
+2. If one adapter: `octo-cli -c GetAdapterNodes` directly
+3. If multiple: ask which adapter, or show all
+4. Present the node list grouped by category (Trigger vs Transform)
+5. For detailed configuration schema: `octo-cli -c GetPipelineSchema --adapterId <rtId>` to get the full JSON Schema
+
+### "Deploy this pipeline" (user provides YAML or file path)
+1. Discover adapters: `octo-cli -c GetAdapters --json` → find the adapter rtId
+2. Discover pipelines: `rt_explorer.py list System.Communication/Pipeline` → find the pipeline rtId
+3. If there's only one adapter and one pipeline, use those. If multiple, ask the user.
+4. Write the YAML to a temp file if provided inline
+5. `octo-cli -c DeployPipeline --adapterId <id> --pipelineId <id> --file <path>`
+6. Verify: `octo-cli -c GetPipelineStatus --identifier <pipelineId> --json` → confirm state = Deployed
+
+### "Run this pipeline" / "Execute pipeline X"
+1. Resolve pipeline by name or rtId (use `rt_explorer.py search System.Communication/Pipeline <name>`)
+2. `octo-cli -c ExecutePipeline --identifier <rtId>` — capture the execution ID from the response
+3. Wait briefly, then `octo-cli -c GetLatestPipelineExecution --identifier <rtId> --json` — check status
+4. Report: execution ID, status (Completed/Failed/Running), duration, error message if any
+5. If failed, suggest checking debug points
+
+### "Show me what happened" / "Debug the last execution"
+1. `octo-cli -c GetLatestPipelineExecution --identifier <pipelineId> --json` — get execution ID + status
+2. If the execution has debug data: `octo-cli -c GetPipelineDebugPoints --identifier <pipelineId> --executionId <guid> --json`
+3. Present the node tree showing which transformations ran
+4. Offer to drill into specific debug points
+
+### "Set up a new data flow end-to-end"
+This is the full lifecycle — combines `pipeline-expert` knowledge (YAML) with `octo` operational commands:
+1. Ask what the data flow should do (what trigger, what transformations)
+2. Route to `pipeline-expert` via `Skill("pipeline-expert", args: ...)` to generate the pipeline YAML
+3. Create runtime entities via `octo-cli -c ImportRt -f <file> -w`: DataFlow, Pipeline (with association to DataFlow + Adapter), optionally PipelineTrigger
+4. Deploy: `octo-cli -c DeployPipeline --adapterId <id> --pipelineId <id> --file <yaml>`
+5. Verify: `octo-cli -c GetPipelineStatus --identifier <pipelineId> --json` → confirm Deployed
+6. Test: `octo-cli -c ExecutePipeline --identifier <rtId>` → verify execution completes
+7. If using triggers: `octo-cli -c DeployTriggers` to activate cron schedules
+
+### "What's the status of my data flows?"
+1. Discover data flows: `rt_explorer.py list System.Communication/DataFlow`
+2. For each: `octo-cli -c GetDataFlowStatus --identifier <rtId> --json`
+3. Present summary: data flow name, state, pipeline states, last execution time, statistics
+
+### Pipeline Schema as Node Discovery
+
+`GetPipelineSchema --adapterId <rtId>` returns a JSON Schema (draft/2020-12) describing the complete set of available pipeline nodes for an adapter. This is valuable because the available nodes depend on which adapter is running and what plugins it has loaded. The schema defines every node's configuration properties with types, descriptions, enums, and defaults.
+
+Use `GetPipelineSchema` when:
+- The user asks "what nodes are available?" (at runtime, as opposed to the build-time schema files)
+- The user asks about a specific node's configuration options
+- Before writing pipeline YAML, to discover what's available in the target environment
+- The schema can be saved to a file with `--outputFile <path>` for reuse
 
 ## Data Model Exploration
 
