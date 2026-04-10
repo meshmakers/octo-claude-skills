@@ -10,6 +10,17 @@ VENV_DIR="$SCRIPT_DIR/.venv"
 REQ_FILE="$SCRIPT_DIR/requirements.txt"
 MARKER="$VENV_DIR/.installed"
 
+# Detect platform: Windows venvs use Scripts/, Unix uses bin/
+if [[ "$(uname -s)" == MINGW* ]] || [[ "$(uname -s)" == MSYS* ]] || [[ "$(uname -s)" == CYGWIN* ]]; then
+    PYTHON_CMD="$VENV_DIR/Scripts/python.exe"
+    PIP_CMD="$VENV_DIR/Scripts/pip.exe"
+    SYS_PYTHON="python"
+else
+    PYTHON_CMD="$VENV_DIR/bin/python"
+    PIP_CMD="$VENV_DIR/bin/pip"
+    SYS_PYTHON="python3"
+fi
+
 # Portable md5: macOS uses `md5 -q`, Linux uses `md5sum`
 _md5() {
     if command -v md5 >/dev/null 2>&1; then
@@ -23,17 +34,17 @@ _md5() {
 }
 
 # Create venv if it doesn't exist
-if [ ! -x "$VENV_DIR/bin/python" ]; then
+if [ ! -f "$PYTHON_CMD" ]; then
     echo "Creating Python virtual environment..." >&2
-    python3 -m venv "$VENV_DIR"
+    $SYS_PYTHON -m venv "$VENV_DIR"
 fi
 
 # Install/update dependencies if requirements changed
 REQ_HASH="$(_md5 "$REQ_FILE")"
 if [ ! -f "$MARKER" ] || [ "$REQ_HASH" != "$(cat "$MARKER")" ]; then
     echo "Installing dependencies..." >&2
-    "$VENV_DIR/bin/pip" install --quiet --disable-pip-version-check -r "$REQ_FILE"
+    "$PIP_CMD" install --quiet --disable-pip-version-check -r "$REQ_FILE"
     echo "$REQ_HASH" > "$MARKER"
 fi
 
-exec "$VENV_DIR/bin/python" "$@"
+exec "$PYTHON_CMD" "$@"
