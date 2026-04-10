@@ -282,7 +282,7 @@ Each `attributeUpdate`:
 
 Create `AssociationUpdateInfo` for creating or deleting associations between entities.
 
-> **Best practice:** When creating new entities and their associations in the same pipeline, prefer static `originRtId`/`targetRtId` over path-based references (`originRtIdPath`/`targetRtIdPath`). This is because `generateRtId: true` in `CreateUpdateInfo` does not expose the generated ID in the EntityUpdateInfo output, making path-based references resolve to null.
+> **RtId referencing:** Path-based references (`originRtIdPath`/`targetRtIdPath`) work well when the RtId comes from `GetOrCreateRtEntitiesByType@1` or `GetRtEntitiesByWellKnownName@1` (both expose IDs via `rtIdTargetPath`). However, when creating brand-new entities with `CreateUpdateInfo@1` + `generateRtId: true`, the generated ID is NOT available in the output — use static `originRtId`/`targetRtId` in that case.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|

@@ -260,7 +260,7 @@ When `CreateUpdateInfo@1` writes to the DataContext, it produces this JSON struc
 
 **CRITICAL:** The `RtId` field is **only populated when you provide a static `rtId` value** in the CreateUpdateInfo configuration. When using `generateRtId: true`, the RtId is generated internally at `ApplyChanges` time and is **NOT available** in the EntityUpdateInfo output for path-based references.
 
-**Consequence for associations:** To reference a newly-created entity's RtId in `CreateAssociationUpdate`, you **MUST** use static `rtId` values in CreateUpdateInfo, then use the same values as static `originRtId`/`targetRtId` in CreateAssociationUpdate. Do NOT use `originRtIdPath`/`targetRtIdPath` with `generateRtId`.
+**Consequence for associations:** When using `CreateUpdateInfo@1` with `generateRtId: true`, you MUST use static `rtId` values instead, then reference those same values as static `originRtId`/`targetRtId` in `CreateAssociationUpdate`. Path-based references (`originRtIdPath`/`targetRtIdPath`) DO work with nodes that expose RtIds via `rtIdTargetPath` — specifically `GetOrCreateRtEntitiesByType@1` and `GetRtEntitiesByWellKnownName@1`. These nodes write the resolved or generated RtId to a path you can reference downstream.
 
 ## Mandatory Associations
 
