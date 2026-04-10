@@ -16,7 +16,7 @@ import sys
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from _octo_common import load_settings, graphql_query, collect_connection
+from _octo_common import load_context, graphql_query, collect_connection
 
 
 # ---------------------------------------------------------------------------
@@ -193,14 +193,14 @@ def _build_field_filter(attribute, operator, value):
 # Subcommands
 # ---------------------------------------------------------------------------
 
-def cmd_list(settings, args):
+def cmd_list(context, args):
     query = Q_LIST if args.attrs else Q_LIST_COMPACT
     variables = {"ckId": args.ckId, "first": args.first or 50}
     sort = _parse_sort(args.sort)
     if sort:
         variables["sortOrder"] = sort
 
-    data = graphql_query(settings, query, variables=variables, tenant_override=args.tenant, verify_ssl=not args.insecure)
+    data = graphql_query(context, query, variables=variables, tenant_override=args.tenant, verify_ssl=not args.insecure)
     conn = data.get("runtime", {}).get("runtimeEntities")
     if conn is None:
         print(f"Error: could not query instances of '{args.ckId}' (type may be abstract or invalid).", file=sys.stderr)
@@ -238,10 +238,10 @@ def cmd_list(settings, args):
         print(f"  ... more results available (use --first {(args.first or 50) * 2} to see more)")
 
 
-def cmd_get(settings, args):
+def cmd_get(context, args):
     variables = {"ckId": args.ckId, "rtId": args.rtId}
 
-    data = graphql_query(settings, Q_GET, variables=variables, tenant_override=args.tenant, verify_ssl=not args.insecure)
+    data = graphql_query(context, Q_GET, variables=variables, tenant_override=args.tenant, verify_ssl=not args.insecure)
     conn = data.get("runtime", {}).get("runtimeEntities")
     if conn is None:
         print(f"Error: could not query '{args.ckId}' (type may be abstract or invalid).", file=sys.stderr)
@@ -288,10 +288,10 @@ def cmd_get(settings, args):
         print("\n  Outbound associations: none")
 
 
-def cmd_count(settings, args):
+def cmd_count(context, args):
     variables = {"ckId": args.ckId}
 
-    data = graphql_query(settings, Q_COUNT, variables=variables, tenant_override=args.tenant, verify_ssl=not args.insecure)
+    data = graphql_query(context, Q_COUNT, variables=variables, tenant_override=args.tenant, verify_ssl=not args.insecure)
     conn = data.get("runtime", {}).get("runtimeEntities")
     if conn is None:
         print(f"Error: could not count '{args.ckId}' (type may be abstract or invalid).", file=sys.stderr)
@@ -305,7 +305,7 @@ def cmd_count(settings, args):
     print(f"{args.ckId}: {total} instances")
 
 
-def cmd_search(settings, args):
+def cmd_search(context, args):
     attr = args.attr or "name"
     field_filter = _build_field_filter(attr, "LIKE", args.term)
     variables = {
@@ -317,7 +317,7 @@ def cmd_search(settings, args):
     if sort:
         variables["sortOrder"] = sort
 
-    data = graphql_query(settings, Q_SEARCH, variables=variables, tenant_override=args.tenant, verify_ssl=not args.insecure)
+    data = graphql_query(context, Q_SEARCH, variables=variables, tenant_override=args.tenant, verify_ssl=not args.insecure)
     conn = data.get("runtime", {}).get("runtimeEntities")
     if conn is None:
         print(f"Error: could not search '{args.ckId}' (type may be abstract or invalid).", file=sys.stderr)
@@ -345,7 +345,7 @@ def cmd_search(settings, args):
         print(f"  {rtId}  {name}  ({attr}={_format_attr_value(matched_val)})")
 
 
-def cmd_query(settings, args):
+def cmd_query(context, args):
     columns = [c.strip() for c in args.columns.split(",")]
     variables = {
         "ckId": args.ckId,
@@ -356,7 +356,7 @@ def cmd_query(settings, args):
     if sort:
         variables["sortOrder"] = sort
 
-    data = graphql_query(settings, Q_QUERY, variables=variables, tenant_override=args.tenant, verify_ssl=not args.insecure)
+    data = graphql_query(context, Q_QUERY, variables=variables, tenant_override=args.tenant, verify_ssl=not args.insecure)
     result = data["runtime"]["transientQuery"]["simple"]
     total = result.get("totalCount", "?")
     items = result.get("items") or []
@@ -406,7 +406,7 @@ def cmd_query(settings, args):
         print(f"  {'  '.join(vals)}")
 
 
-def cmd_filter(settings, args):
+def cmd_filter(context, args):
     value = _coerce_value(args.value)
     field_filter = _build_field_filter(args.attr, args.op, value)
     variables = {
@@ -418,7 +418,7 @@ def cmd_filter(settings, args):
     if sort:
         variables["sortOrder"] = sort
 
-    data = graphql_query(settings, Q_FILTER, variables=variables, tenant_override=args.tenant, verify_ssl=not args.insecure)
+    data = graphql_query(context, Q_FILTER, variables=variables, tenant_override=args.tenant, verify_ssl=not args.insecure)
     conn = data.get("runtime", {}).get("runtimeEntities")
     if conn is None:
         print(f"Error: could not filter '{args.ckId}' (type may be abstract or invalid).", file=sys.stderr)
@@ -512,7 +512,7 @@ def main():
         parser.print_help()
         sys.exit(1)
 
-    settings = load_settings()
+    context = load_context()
 
     commands = {
         "list": cmd_list,
@@ -522,7 +522,7 @@ def main():
         "query": cmd_query,
         "filter": cmd_filter,
     }
-    commands[args.command](settings, args)
+    commands[args.command](context, args)
 
 
 if __name__ == "__main__":

@@ -17,7 +17,7 @@ FIXTURES = os.path.join(SCRIPTS, "e2e_fixtures")
 RT_EXPLORER = os.path.join(SCRIPTS, "rt_explorer.py")
 
 sys.path.insert(0, SCRIPTS)
-from _octo_common import load_settings, graphql_query, get_graphql_url, get_token
+from _octo_common import load_context, graphql_query, get_graphql_url, get_token
 
 
 def get_context_info():
@@ -221,7 +221,7 @@ def phase_3_import_ck_model(tenant_id):
     )
 
     # Verify via GraphQL that E2ETest model was imported
-    settings = load_settings()
+    context = load_context()
     query = """
     query {
       constructionKit {
@@ -230,7 +230,7 @@ def phase_3_import_ck_model(tenant_id):
         }
       }
     }"""
-    data = graphql_query(settings, query, tenant_override=tenant_id)
+    data = graphql_query(context, query, tenant_override=tenant_id)
     models = data.get("constructionKit", {}).get("models", {}).get("items", [])
     model_names = [m["id"]["fullName"] for m in models]
     assert_true(
@@ -391,7 +391,7 @@ def phase_6_query_and_assert(tenant_id):
     # outbound, so we use a direct GraphQL query with direction: INBOUND.
     print()
     print("  [5/6] Association traversal (Plant \u2192 Areas \u2192 Sensors)...")
-    settings = load_settings()
+    context = load_context()
 
     # Step A: Get plant's OUTBOUND associations -> should find 2 Areas
     r = run_rt_explorer(["get", "E2ETest/Plant", "aaa000000000000000000001"], tenant_id, "Get plant")
@@ -420,7 +420,7 @@ def phase_6_query_and_assert(tenant_id):
     for area_assoc in area_assocs:
         area_rtId = area_assoc["targetRtId"]
         data = graphql_query(
-            settings, Q_INBOUND_ASSOC,
+            context, Q_INBOUND_ASSOC,
             variables={"ckId": "E2ETest/Area", "rtId": area_rtId},
             tenant_override=tenant_id
         )
@@ -483,7 +483,7 @@ def main():
     print("=" * 60)
 
     # Check prerequisites
-    settings = load_settings()
+    context = load_context()
     print(f"  Active context loaded")
 
     # Save original context name for restoration

@@ -197,7 +197,7 @@ For environment URLs, read `references/environments.md` in this skill directory.
 ## Execution Flow
 
 1. **Parse intent** — Map natural language to one or more commands from the table above
-2. **Gather context** — Run `AuthStatus` and read settings if not cached in this session
+2. **Gather context** — Run `AuthStatus` and read the active context if not cached in this session
 3. **Resolve dependencies** — e.g., list users before creating to avoid duplicates; lookup current user's roles for "with my roles"
 4. **Build command** — Assemble full `octo-cli -c <CommandValue> <flags>`
 5. **Confirm if mutating** — For mutating ops, show the command + a human-readable summary, wait for user confirmation
@@ -244,7 +244,7 @@ When creating users without specific details, generate unique usernames like `te
 First run `GetUsers` + identify current user, then apply the same roles to the new user via `AddUserToRole`.
 
 ### Tenant context
-Always use the configured tenant from settings. Never require `-tid` on commands that use the configured tenant (e.g., `EnableCommunication`, `EnableReporting`, `EnableStreamData`, `RunFixupScripts`). Only include `-tid` for Asset Repository tenant commands that explicitly require it.
+Always use the configured tenant from the active context. Never require `-tid` on commands that use the configured tenant (e.g., `EnableCommunication`, `EnableReporting`, `EnableStreamData`, `RunFixupScripts`). Only include `-tid` for Asset Repository tenant commands that explicitly require it.
 
 ### Environment-aware prompts
 After context discovery, always indicate which environment is active when presenting commands for confirmation. Example: "**[test-2]** This will create a new user..."

@@ -9,13 +9,13 @@ print()
 
 # 1. Module imports without errors
 print("1. Import check...")
-from _octo_common import load_settings, get_graphql_url, get_token, graphql_query, collect_connection
+from _octo_common import load_context, get_graphql_url, get_token, graphql_query, collect_connection
 print("   All functions imported OK")
 
-# 2. Settings load correctly
+# 2. Context loads correctly
 print()
-print("2. Settings load check...")
-s = load_settings()
+print("2. Context load check...")
+s = load_context()
 print(f"   TenantId: {s['OctoToolOptions']['TenantId']}")
 print(f"   AssetUrl: {s['OctoToolOptions']['AssetServiceUrl']}")
 

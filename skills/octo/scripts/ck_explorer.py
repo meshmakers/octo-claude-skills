@@ -17,7 +17,7 @@ import sys
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from _octo_common import load_settings, graphql_query, collect_connection
+from _octo_common import load_context, graphql_query, collect_connection
 
 
 # ---------------------------------------------------------------------------
@@ -155,8 +155,8 @@ def _group_by_model(items, name_key):
 # Subcommands
 # ---------------------------------------------------------------------------
 
-def cmd_models(settings, args):
-    data = graphql_query(settings, Q_MODELS, tenant_override=args.tenant, verify_ssl=not args.insecure)
+def cmd_models(context, args):
+    data = graphql_query(context, Q_MODELS, tenant_override=args.tenant, verify_ssl=not args.insecure)
     models = collect_connection(data["constructionKit"]["models"])
 
     if args.json:
@@ -180,8 +180,8 @@ def cmd_models(settings, args):
             print(f"    {desc}")
 
 
-def cmd_model(settings, args):
-    data = graphql_query(settings, Q_MODELS, tenant_override=args.tenant, verify_ssl=not args.insecure)
+def cmd_model(context, args):
+    data = graphql_query(context, Q_MODELS, tenant_override=args.tenant, verify_ssl=not args.insecure)
     models = collect_connection(data["constructionKit"]["models"])
 
     target = args.model_name
@@ -223,9 +223,9 @@ def cmd_model(settings, args):
         print("  Dependencies: none")
 
 
-def cmd_types(settings, args):
+def cmd_types(context, args):
     first = args.first or 200
-    data = graphql_query(settings, Q_TYPES % first, tenant_override=args.tenant, verify_ssl=not args.insecure)
+    data = graphql_query(context, Q_TYPES % first, tenant_override=args.tenant, verify_ssl=not args.insecure)
     conn = data["constructionKit"]["types"]
     total = conn.get("totalCount", "?")
     types = collect_connection(conn)
@@ -268,8 +268,8 @@ def cmd_types(settings, args):
         print()
 
 
-def cmd_type(settings, args):
-    data = graphql_query(settings, Q_TYPE_DETAIL, tenant_override=args.tenant, verify_ssl=not args.insecure)
+def cmd_type(context, args):
+    data = graphql_query(context, Q_TYPE_DETAIL, tenant_override=args.tenant, verify_ssl=not args.insecure)
     types = collect_connection(data["constructionKit"]["types"])
 
     target = args.type_name
@@ -355,9 +355,9 @@ def cmd_type(settings, args):
         print("\n  Derived types: none")
 
 
-def cmd_enums(settings, args):
+def cmd_enums(context, args):
     first = args.first or 200
-    data = graphql_query(settings, Q_ENUMS % first, tenant_override=args.tenant, verify_ssl=not args.insecure)
+    data = graphql_query(context, Q_ENUMS % first, tenant_override=args.tenant, verify_ssl=not args.insecure)
     conn = data["constructionKit"]["enums"]
     total = conn.get("totalCount", "?")
     enums = collect_connection(conn)
@@ -398,8 +398,8 @@ def cmd_enums(settings, args):
         print()
 
 
-def cmd_enum(settings, args):
-    data = graphql_query(settings, Q_ENUMS % 200, tenant_override=args.tenant, verify_ssl=not args.insecure)
+def cmd_enum(context, args):
+    data = graphql_query(context, Q_ENUMS % 200, tenant_override=args.tenant, verify_ssl=not args.insecure)
     enums = collect_connection(data["constructionKit"]["enums"])
 
     target = args.enum_name
@@ -444,8 +444,8 @@ def cmd_enum(settings, args):
         print("\n  Values: none")
 
 
-def cmd_search(settings, args):
-    data = graphql_query(settings, Q_SEARCH_TYPES, tenant_override=args.tenant, verify_ssl=not args.insecure)
+def cmd_search(context, args):
+    data = graphql_query(context, Q_SEARCH_TYPES, tenant_override=args.tenant, verify_ssl=not args.insecure)
     types = collect_connection(data["constructionKit"]["types"])
     enums = collect_connection(data["constructionKit"]["enums"])
 
@@ -537,7 +537,7 @@ def main():
         parser.print_help()
         sys.exit(1)
 
-    settings = load_settings()
+    context = load_context()
 
     commands = {
         "models": cmd_models,
@@ -548,7 +548,7 @@ def main():
         "enum": cmd_enum,
         "search": cmd_search,
     }
-    commands[args.command](settings, args)
+    commands[args.command](context, args)
 
 
 if __name__ == "__main__":

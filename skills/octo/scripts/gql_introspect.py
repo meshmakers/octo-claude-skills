@@ -13,13 +13,13 @@ import sys
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from _octo_common import load_settings, graphql_query
+from _octo_common import load_context, graphql_query
 
 
-def cmd_top(settings, args):
+def cmd_top(context, args):
     """Show top-level query fields."""
     query = """{ __schema { queryType { fields { name type { name kind ofType { name kind } } } } } }"""
-    data = graphql_query(settings, query, tenant_override=args.tenant, verify_ssl=not args.insecure)
+    data = graphql_query(context, query, tenant_override=args.tenant, verify_ssl=not args.insecure)
     fields = data["__schema"]["queryType"]["fields"]
 
     if args.json:
@@ -34,7 +34,7 @@ def cmd_top(settings, args):
         print(f"  {f['name']:40s} -> {tname}")
 
 
-def cmd_type(settings, args):
+def cmd_type(context, args):
     """Show fields of a specific GraphQL type."""
     query = """{
         __type(name: "%s") {
@@ -49,7 +49,7 @@ def cmd_type(settings, args):
         }
     }""" % args.type_name
 
-    data = graphql_query(settings, query, tenant_override=args.tenant, verify_ssl=not args.insecure)
+    data = graphql_query(context, query, tenant_override=args.tenant, verify_ssl=not args.insecure)
     t = data.get("__type")
 
     if not t:
@@ -118,12 +118,12 @@ def main():
         parser.print_help()
         sys.exit(1)
 
-    settings = load_settings()
+    context = load_context()
 
     if args.command == "top":
-        cmd_top(settings, args)
+        cmd_top(context, args)
     elif args.command == "type":
-        cmd_type(settings, args)
+        cmd_type(context, args)
 
 
 if __name__ == "__main__":

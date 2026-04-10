@@ -1,6 +1,6 @@
 """Shared foundation for OctoMesh GraphQL exploration scripts.
 
-Provides settings loading, authentication, and GraphQL query execution
+Provides context loading, authentication, and GraphQL query execution
 using the connection info from ~/.octo-cli/contexts.json.
 """
 import json
@@ -9,7 +9,7 @@ import sys
 import requests
 
 
-def load_settings():
+def load_context():
     """Read ~/.octo-cli/contexts.json and return the active context as a dict.
 
     Returns a dict with "OctoToolOptions" and "Authentication" keys,
@@ -48,23 +48,23 @@ def load_settings():
     }
 
 
-def get_graphql_url(settings, tenant_override=None):
+def get_graphql_url(context, tenant_override=None):
     """Build the GraphQL endpoint URL from the active context.
 
     Returns: https://{AssetServiceUrl}tenants/{TenantId}/GraphQL
     """
-    opts = settings["OctoToolOptions"]
+    opts = context["OctoToolOptions"]
     base = opts["AssetServiceUrl"].rstrip("/")
     tenant = tenant_override or opts["TenantId"]
     return f"{base}/tenants/{tenant}/GraphQL"
 
 
-def get_token(settings):
+def get_token(context):
     """Extract the access token from the active context.
 
     Exits with error if missing or empty.
     """
-    token = settings.get("Authentication", {}).get("AccessToken")
+    token = context.get("Authentication", {}).get("AccessToken")
     if not token:
         print("Error: no access token found in active context.", file=sys.stderr)
         print("Run 'octo-cli -c LogIn -i' to authenticate.", file=sys.stderr)
@@ -72,7 +72,7 @@ def get_token(settings):
     return token
 
 
-def graphql_query(settings, query, variables=None, tenant_override=None, verify_ssl=True):
+def graphql_query(context, query, variables=None, tenant_override=None, verify_ssl=True):
     """Execute a GraphQL query and return the 'data' dict.
 
     Handles HTTP errors, auth failures, GraphQL errors, and connection errors.
@@ -80,14 +80,20 @@ def graphql_query(settings, query, variables=None, tenant_override=None, verify_
 
     Args:
         verify_ssl: If False, skip TLS certificate verification (for local dev
-                    with self-signed certs). Pass --insecure from CLI scripts.
+                    with self-signed certs). Also automatically disabled for
+                    localhost URLs.
     """
+    url = get_graphql_url(context, tenant_override)
+
+    # Auto-disable SSL verification for localhost (self-signed certs)
+    if verify_ssl and ("://localhost" in url or "://127.0.0.1" in url):
+        verify_ssl = False
+
     if not verify_ssl:
         import urllib3
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-    url = get_graphql_url(settings, tenant_override)
-    token = get_token(settings)
+    token = get_token(context)
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     payload = {"query": query}
     if variables:

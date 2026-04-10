@@ -42,7 +42,7 @@ All scripts share `_octo_common.py` which provides:
 
 ## Adding New Scripts
 
-1. Import shared utilities from `_octo_common.py` (settings, auth, GraphQL helpers)
+1. Import shared utilities from `_octo_common.py` (context, auth, GraphQL helpers)
 2. Add any new dependencies to `scripts/requirements.txt`
 3. Always invoke via `bash scripts/run_python.sh <your_script.py>`
 4. Use `--json` flag convention for machine-readable output and `--first N` for pagination
@@ -52,7 +52,7 @@ All scripts share `_octo_common.py` which provides:
 Verification scripts validate each layer of functionality:
 
 ```bash
-bash skills/octo/scripts/run_python.sh skills/octo/scripts/_verify_step1.py   # Settings + auth
+bash skills/octo/scripts/run_python.sh skills/octo/scripts/_verify_step1.py   # Context + auth
 bash skills/octo/scripts/run_python.sh skills/octo/scripts/_verify_step2.py   # CK explorer basics
 bash skills/octo/scripts/run_python.sh skills/octo/scripts/_verify_step3.py   # CK explorer detail
 bash skills/octo/scripts/run_python.sh skills/octo/scripts/_verify_step4.py   # GraphQL introspection
