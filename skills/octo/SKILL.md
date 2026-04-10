@@ -374,12 +374,13 @@ These multi-step workflows handle common user intents. When the user expresses o
 ### "Set up a new data flow end-to-end"
 This is the full lifecycle — combines `pipeline-expert` knowledge (YAML) with `octo` operational commands:
 1. Ask what the data flow should do (what trigger, what transformations)
-2. Route to `pipeline-expert` via `Skill("pipeline-expert", args: ...)` to generate the pipeline YAML
-3. Create runtime entities via `octo-cli -c ImportRt -f <file> -w`: DataFlow, Pipeline (with association to DataFlow + Adapter), optionally PipelineTrigger
-4. Deploy: `octo-cli -c DeployPipeline --adapterId <id> --pipelineId <id> --file <yaml>`
-5. Verify: `octo-cli -c GetPipelineStatus --identifier <pipelineId> --json` → confirm Deployed
-6. Test: `octo-cli -c ExecutePipeline --identifier <rtId>` → verify execution completes
-7. If using triggers: `octo-cli -c DeployTriggers` to activate cron schedules
+2. **Pre-flight check:** For each CK type the pipeline will create/update, run `ck_explorer.py preflight <type> --insecure` to discover exact attribute names and mandatory associations
+3. Route to `pipeline-expert` via `Skill("pipeline-expert", args: ...)` to generate the pipeline YAML
+4. Create runtime entities via `octo-cli -c ImportRt -f <file> -w`: DataFlow, Pipeline (with association to DataFlow + Adapter), optionally PipelineTrigger
+5. Deploy: `octo-cli -c DeployPipeline --adapterId <id> --pipelineId <id> --file <yaml>`
+6. Verify: `octo-cli -c GetPipelineStatus --identifier <pipelineId> --json` → confirm Deployed
+7. Test: `octo-cli -c ExecutePipeline --identifier <rtId>` → verify execution completes
+8. If using triggers: `octo-cli -c DeployTriggers` to activate cron schedules
 
 ### "What's the status of my data flows?"
 1. Discover data flows: `rt_explorer.py list System.Communication/DataFlow`
@@ -395,6 +396,31 @@ Use `GetPipelineSchema` when:
 - The user asks about a specific node's configuration options
 - Before writing pipeline YAML, to discover what's available in the target environment
 - The schema can be saved to a file with `--outputFile <path>` for reuse
+
+### FromHttpRequest — Endpoint Location
+
+**CRITICAL:** `FromHttpRequest@1`-triggered pipeline endpoints live on the **mesh adapter** process, NOT the communication service.
+
+| Component | Default URL | Purpose |
+|-----------|-------------|---------|
+| Communication Service | `https://localhost:5015` | Pipeline management (deploy, status, execute) |
+| **Mesh Adapter** | `https://localhost:5020` | **HTTP-triggered pipeline endpoints** |
+
+**URL pattern:** `https://localhost:5020/{tenantId}/{path}`
+
+Where `{path}` matches the `path` property in the `FromHttpRequest@1` trigger configuration (e.g., `/create-machines`).
+
+The adapter runs its own ASP.NET Core HTTP server with dynamic route registration. Routes are registered/unregistered as pipelines are deployed/undeployed.
+
+### Pipeline Debugging — After Execution
+
+After executing a pipeline (especially via HTTP trigger), if no results appear:
+
+1. **Check execution status:** `octo-cli -c GetLatestPipelineExecution --identifier <pipelineId> --json` — if `Status` is `null`, the pipeline failed
+2. **Check adapter log:** `logFiles/MeshAdapter.log` — search for `ERROR` entries with the pipeline ID
+3. **Common failure causes:** missing mandatory associations, wrong attribute name casing, RtId path resolution failure
+4. **The adapter log shows** the exact exception, stack trace, and which node failed (e.g., `PipelineExecution/CreateAssociationUpdate@1`)
+5. **Debug tree:** `octo-cli -c GetPipelineDebugPoints` — nodes missing from the tree never executed (pipeline stopped before reaching them)
 
 ## Data Model Exploration
 
@@ -441,6 +467,7 @@ All Python scripts MUST be invoked through the virtual environment wrapper using
 | `enums --model X` | List enums in a specific model | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/ck_explorer.py" enums --model System-2.0.2` |
 | `enum <fullName>` | Enum detail: values, flags | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/ck_explorer.py" enum System-2.0.2/AggregationTypes-1` |
 | `search <term>` | Search type/enum names (case-insensitive) | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/ck_explorer.py" search maintenance` |
+| `preflight <fullName>` | Pre-flight for pipeline authoring (attrs + mandatory assocs) | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/ck_explorer.py" preflight Industry.Basic-2.1.0/Machine-1` |
 
 Flags: `--json` for raw JSON output, `--first N` for pagination limit, `--tenant <id>` to override tenant, `--insecure` to disable SSL verification (for localhost with self-signed certs).
 
