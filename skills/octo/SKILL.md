@@ -1,6 +1,6 @@
 ---
 name: octo
-description: Natural language interface for OctoMesh CLI (octo-cli), data model exploration, and runtime instance browsing via GraphQL. Trigger on anything related to OctoMesh CLI operations — managing users, roles, tenants, clients, identity providers, service hooks, authentication, environment switching, or any platform administration task. Also trigger for data model exploration — Construction Kit models, CK types, enums, attributes, associations, GraphQL schema introspection, or any question about the tenant's data model. Also trigger for runtime instance queries — listing, counting, searching, filtering, or inspecting runtime entities/instances of any CK type. Trigger whenever the user mentions octo, OctoMesh, tenant management, user management, identity services, data model, construction kit, CK types, CK enums, runtime instances, show instances, list machines, count entities, or wants to interact with the mesh platform.
+description: Primary entry point for ALL OctoMesh tasks — this skill routes to specialized sibling skills when needed. Use this skill for OctoMesh CLI operations (octo-cli), data model exploration, runtime instance browsing via GraphQL, AND as the gateway for building/DevOps (routes to octo-devtools), debugging/investigation (routes to octo-agent), and pipeline YAML (routes to pipeline-expert). Trigger on anything related to OctoMesh — CLI operations, managing users, roles, tenants, clients, identity providers, service hooks, authentication, environment switching, platform administration, data model exploration, Construction Kit models, CK types, enums, attributes, associations, GraphQL schema introspection, runtime instance queries, listing, counting, searching, filtering, inspecting entities, building projects, starting services, Docker, debugging, investigating bugs, pipeline YAML, ETL, or any interaction with the mesh platform. When in doubt about which OctoMesh skill to use, use this one — it will route you to the right place.
 allowed-tools:
   - "Read(~/.octo-cli/contexts.json)"
   - "Read(${CLAUDE_PLUGIN_ROOT}/skills/octo/references/*)"
@@ -14,6 +14,18 @@ allowed-tools:
 
 Single entry point: `/octo <natural language>`
 Claude infers the correct `octo-cli` command from the user's intent, resolves context (environment, tenant, auth status), and executes it — with confirmation for mutating operations.
+
+## Routing — Check Before Proceeding
+
+This skill is the hub for all OctoMesh tasks. Before doing any work, check if the user's request belongs to a specialized sibling skill. If it does, invoke that skill immediately via the Skill tool and pass along the user's request — do NOT attempt to handle it here.
+
+| If the user's intent involves... | Invoke this skill instead |
+|---|---|
+| Building repos, `dotnet build`, starting/stopping services, Docker compose, git sync, NuGet packages, clean builds, dev environment setup, PowerShell cmdlets (`Invoke-Build`, `Start-Octo`, etc.) | `Skill("octo-devtools", args: "<user's request>")` |
+| Debugging bugs, investigating failures, CK model errors (`ResolveFailed`, `modelState`), inspecting MongoDB, selective builds to isolate issues, database backup/restore, service health checks, error logs, cascade failures | `Skill("octo-agent", args: "<user's request>")` |
+| Pipeline YAML creation/editing/debugging, pipeline nodes, DataContext, DataFlow, ForEach, triggers, transformations, `ApplyChanges`, `CreateUpdateInfo`, `PipelineTrigger`, cron schedules, ETL pipelines | `Skill("pipeline-expert", args: "<user's request>")` |
+
+Only continue with this skill if the request is about: CLI commands (`octo-cli`), data model exploration (CK models/types/enums), runtime instance browsing, GraphQL introspection, or environment/auth management.
 
 ## Context Discovery
 
