@@ -10,6 +10,7 @@ Usage:
     python ck_explorer.py enums [--model X] [--first N] [--json] [--tenant ID]
     python ck_explorer.py enum <fullName> [--json] [--tenant ID]
     python ck_explorer.py search <term> [--first N] [--json] [--tenant ID]
+    python ck_explorer.py preflight <fullName> [--json] [--tenant ID]
 """
 import argparse
 import json
@@ -486,6 +487,92 @@ def cmd_search(context, args):
             print(f"  {fn}")
 
 
+def cmd_preflight(context, args):
+    data = graphql_query(context, Q_TYPE_DETAIL, tenant_override=args.tenant, verify_ssl=not args.insecure)
+    types = collect_connection(data["constructionKit"]["types"])
+
+    target = args.type_name
+    match = None
+    for t in types:
+        fn = t["ckTypeId"]["fullName"]
+        svfn = t["ckTypeId"].get("semanticVersionedFullName", "")
+        if fn == target or svfn == target:
+            match = t
+            break
+    # Also try partial match (just the type name without model prefix)
+    if not match:
+        for t in types:
+            fn = t["ckTypeId"]["fullName"]
+            short = fn.split("/", 1)[1] if "/" in fn else fn
+            if short == target:
+                match = t
+                break
+
+    if not match:
+        print(f"No type found matching '{target}'.", file=sys.stderr)
+        print("Use 'ck_explorer.py types' to list available types.", file=sys.stderr)
+        sys.exit(1)
+
+    # Extract attributes
+    attrs = collect_connection(match.get("attributes"))
+    attr_list = []
+    for a in attrs:
+        attr_list.append({
+            "attributeName": a["attributeName"],
+            "attributeValueType": a.get("attributeValueType", "?"),
+            "isOptional": a.get("isOptional", False),
+        })
+
+    # Extract mandatory outbound associations (multiplicity ONE)
+    assoc = match.get("associations", {})
+    out_assocs = (assoc.get("out") or {}).get("all") or []
+    mandatory = []
+    for a in out_assocs:
+        mult = a.get("multiplicity", "")
+        if mult.upper() == "ONE":
+            target_id = a.get("targetCkTypeId", {}).get("fullName", "?")
+            role = a.get("roleId", {}).get("fullName", "?")
+            nav = a.get("navigationPropertyName", "")
+            mandatory.append({
+                "targetCkTypeId": target_id,
+                "roleId": role,
+                "navigationPropertyName": nav,
+            })
+
+    display_name = match["ckTypeId"].get("semanticVersionedFullName") or match["ckTypeId"]["fullName"]
+
+    if args.json:
+        result = {
+            "ckTypeId": match["ckTypeId"]["fullName"],
+            "semanticVersionedFullName": match["ckTypeId"].get("semanticVersionedFullName", ""),
+            "attributes": attr_list,
+            "mandatoryAssociations": mandatory,
+        }
+        print(json.dumps(result, indent=2))
+        return
+
+    print(f"Pre-flight for {display_name}:")
+    print()
+
+    if attr_list:
+        print("  Attributes for CreateUpdateInfo:")
+        for a in attr_list:
+            req = "optional" if a["isOptional"] else "required"
+            print(f"    {a['attributeName']:30s} {a['attributeValueType']:10s} {req}")
+    else:
+        print("  Attributes: none")
+
+    print()
+    if mandatory:
+        print("  Mandatory associations (must include CreateAssociationUpdate):")
+        for a in mandatory:
+            print(f"    -> {a['targetCkTypeId']:30s} role: {a['roleId']}    nav: {a['navigationPropertyName']}")
+        print()
+        print("  NOTE: At least one mandatory association must be satisfied.")
+    else:
+        print("  Mandatory associations: none")
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -531,6 +618,10 @@ def main():
     p_search.add_argument("search_term", help="Search term (case-insensitive)")
     add_common_flags(p_search, with_first=True)
 
+    p_preflight = sub.add_parser("preflight", help="Pre-flight check for pipeline authoring: attributes and mandatory associations")
+    p_preflight.add_argument("type_name", help="Type fullName or semanticVersionedFullName")
+    add_common_flags(p_preflight)
+
     args = parser.parse_args()
 
     if not args.command:
@@ -547,6 +638,7 @@ def main():
         "enums": cmd_enums,
         "enum": cmd_enum,
         "search": cmd_search,
+        "preflight": cmd_preflight,
     }
     commands[args.command](context, args)
 
