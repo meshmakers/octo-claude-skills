@@ -200,7 +200,7 @@ def cmd_list(settings, args):
     if sort:
         variables["sortOrder"] = sort
 
-    data = graphql_query(settings, query, variables=variables, tenant_override=args.tenant)
+    data = graphql_query(settings, query, variables=variables, tenant_override=args.tenant, verify_ssl=not args.insecure)
     conn = data.get("runtime", {}).get("runtimeEntities")
     if conn is None:
         print(f"Error: could not query instances of '{args.ckId}' (type may be abstract or invalid).", file=sys.stderr)
@@ -241,7 +241,7 @@ def cmd_list(settings, args):
 def cmd_get(settings, args):
     variables = {"ckId": args.ckId, "rtId": args.rtId}
 
-    data = graphql_query(settings, Q_GET, variables=variables, tenant_override=args.tenant)
+    data = graphql_query(settings, Q_GET, variables=variables, tenant_override=args.tenant, verify_ssl=not args.insecure)
     conn = data.get("runtime", {}).get("runtimeEntities")
     if conn is None:
         print(f"Error: could not query '{args.ckId}' (type may be abstract or invalid).", file=sys.stderr)
@@ -291,7 +291,7 @@ def cmd_get(settings, args):
 def cmd_count(settings, args):
     variables = {"ckId": args.ckId}
 
-    data = graphql_query(settings, Q_COUNT, variables=variables, tenant_override=args.tenant)
+    data = graphql_query(settings, Q_COUNT, variables=variables, tenant_override=args.tenant, verify_ssl=not args.insecure)
     conn = data.get("runtime", {}).get("runtimeEntities")
     if conn is None:
         print(f"Error: could not count '{args.ckId}' (type may be abstract or invalid).", file=sys.stderr)
@@ -317,7 +317,7 @@ def cmd_search(settings, args):
     if sort:
         variables["sortOrder"] = sort
 
-    data = graphql_query(settings, Q_SEARCH, variables=variables, tenant_override=args.tenant)
+    data = graphql_query(settings, Q_SEARCH, variables=variables, tenant_override=args.tenant, verify_ssl=not args.insecure)
     conn = data.get("runtime", {}).get("runtimeEntities")
     if conn is None:
         print(f"Error: could not search '{args.ckId}' (type may be abstract or invalid).", file=sys.stderr)
@@ -356,7 +356,7 @@ def cmd_query(settings, args):
     if sort:
         variables["sortOrder"] = sort
 
-    data = graphql_query(settings, Q_QUERY, variables=variables, tenant_override=args.tenant)
+    data = graphql_query(settings, Q_QUERY, variables=variables, tenant_override=args.tenant, verify_ssl=not args.insecure)
     result = data["runtime"]["transientQuery"]["simple"]
     total = result.get("totalCount", "?")
     items = result.get("items") or []
@@ -418,7 +418,7 @@ def cmd_filter(settings, args):
     if sort:
         variables["sortOrder"] = sort
 
-    data = graphql_query(settings, Q_FILTER, variables=variables, tenant_override=args.tenant)
+    data = graphql_query(settings, Q_FILTER, variables=variables, tenant_override=args.tenant, verify_ssl=not args.insecure)
     conn = data.get("runtime", {}).get("runtimeEntities")
     if conn is None:
         print(f"Error: could not filter '{args.ckId}' (type may be abstract or invalid).", file=sys.stderr)
@@ -458,6 +458,8 @@ def main():
     def add_common_flags(p, with_first=False, with_sort=False):
         p.add_argument("--json", action="store_true", help="Output raw JSON")
         p.add_argument("--tenant", type=str, default=None, help="Override tenant ID")
+        p.add_argument("--insecure", action="store_true",
+                       help="Disable SSL certificate verification (for localhost dev)")
         if with_first:
             p.add_argument("--first", type=int, default=None, help="Pagination limit")
         if with_sort:

@@ -72,12 +72,20 @@ def get_token(settings):
     return token
 
 
-def graphql_query(settings, query, variables=None, tenant_override=None):
+def graphql_query(settings, query, variables=None, tenant_override=None, verify_ssl=True):
     """Execute a GraphQL query and return the 'data' dict.
 
     Handles HTTP errors, auth failures, GraphQL errors, and connection errors.
     Exits with actionable error messages on failure.
+
+    Args:
+        verify_ssl: If False, skip TLS certificate verification (for local dev
+                    with self-signed certs). Pass --insecure from CLI scripts.
     """
+    if not verify_ssl:
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
     url = get_graphql_url(settings, tenant_override)
     token = get_token(settings)
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
@@ -86,10 +94,14 @@ def graphql_query(settings, query, variables=None, tenant_override=None):
         payload["variables"] = variables
 
     try:
-        resp = requests.post(url, json=payload, headers=headers, timeout=30)
-    except requests.ConnectionError:
-        print(f"Error: cannot connect to {url}", file=sys.stderr)
-        print("Check your network and that the AssetServiceUrl is correct in the active context.", file=sys.stderr)
+        resp = requests.post(url, json=payload, headers=headers, timeout=30, verify=verify_ssl)
+    except requests.ConnectionError as e:
+        if "SSL" in str(e) or "CERTIFICATE_VERIFY_FAILED" in str(e):
+            print(f"Error: SSL certificate verification failed for {url}", file=sys.stderr)
+            print("For local development with self-signed certs, use --insecure.", file=sys.stderr)
+        else:
+            print(f"Error: cannot connect to {url}", file=sys.stderr)
+            print("Check your network and that the AssetServiceUrl is correct in the active context.", file=sys.stderr)
         sys.exit(1)
     except requests.Timeout:
         print(f"Error: request to {url} timed out.", file=sys.stderr)

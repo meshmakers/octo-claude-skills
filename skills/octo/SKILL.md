@@ -295,7 +295,7 @@ All Python scripts MUST be invoked through the virtual environment wrapper using
 | `enum <fullName>` | Enum detail: values, flags | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/ck_explorer.py" enum System-2.0.2/AggregationTypes-1` |
 | `search <term>` | Search type/enum names (case-insensitive) | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/ck_explorer.py" search maintenance` |
 
-Flags: `--json` for raw JSON output, `--first N` for pagination limit, `--tenant <id>` to override tenant.
+Flags: `--json` for raw JSON output, `--first N` for pagination limit, `--tenant <id>` to override tenant, `--insecure` to disable SSL verification (for localhost with self-signed certs).
 
 #### `gql_introspect.py` — GraphQL Schema Introspection
 
@@ -306,7 +306,7 @@ Safety valve for when field names change between server versions.
 | `top` | Show top-level query fields | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/gql_introspect.py" top` |
 | `type <name>` | Show fields of a GraphQL type | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/gql_introspect.py" type CkType` |
 
-Flags: `--json`, `--tenant <id>`
+Flags: `--json`, `--tenant <id>`, `--insecure`
 
 #### `rt_explorer.py` — Runtime Instance Explorer
 
@@ -323,7 +323,7 @@ Browse, search, and inspect runtime entities (instances of CK types).
 | `query <ckId> --columns c1,c2` | Transient query with specific columns | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/rt_explorer.py" query Industry.Basic/Machine --columns name,machineState` |
 | `filter <ckId> <attr> <op> <val>` | Filter by attribute value | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/rt_explorer.py" filter Industry.Basic/Machine machineState EQUALS 2` |
 
-Flags: `--json` for raw JSON output, `--first N` for pagination limit, `--tenant <id>` to override tenant, `--sort attr:asc|desc` for sorting (on list/search/filter/query).
+Flags: `--json` for raw JSON output, `--first N` for pagination limit, `--tenant <id>` to override tenant, `--sort attr:asc|desc` for sorting (on list/search/filter/query), `--insecure` to disable SSL verification (for localhost with self-signed certs).
 
 Filter operators: `EQUALS`, `NOT_EQUALS`, `LESS_THAN`, `LESS_EQUAL_THAN`, `GREATER_THAN`, `GREATER_EQUAL_THAN`, `IN`, `NOT_IN`, `LIKE`, `MATCH_REG_EX`, `ANY_EQ`, `ANY_LIKE`.
 

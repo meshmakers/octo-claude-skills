@@ -156,7 +156,7 @@ def _group_by_model(items, name_key):
 # ---------------------------------------------------------------------------
 
 def cmd_models(settings, args):
-    data = graphql_query(settings, Q_MODELS, tenant_override=args.tenant)
+    data = graphql_query(settings, Q_MODELS, tenant_override=args.tenant, verify_ssl=not args.insecure)
     models = collect_connection(data["constructionKit"]["models"])
 
     if args.json:
@@ -181,7 +181,7 @@ def cmd_models(settings, args):
 
 
 def cmd_model(settings, args):
-    data = graphql_query(settings, Q_MODELS, tenant_override=args.tenant)
+    data = graphql_query(settings, Q_MODELS, tenant_override=args.tenant, verify_ssl=not args.insecure)
     models = collect_connection(data["constructionKit"]["models"])
 
     target = args.model_name
@@ -225,7 +225,7 @@ def cmd_model(settings, args):
 
 def cmd_types(settings, args):
     first = args.first or 200
-    data = graphql_query(settings, Q_TYPES % first, tenant_override=args.tenant)
+    data = graphql_query(settings, Q_TYPES % first, tenant_override=args.tenant, verify_ssl=not args.insecure)
     conn = data["constructionKit"]["types"]
     total = conn.get("totalCount", "?")
     types = collect_connection(conn)
@@ -269,7 +269,7 @@ def cmd_types(settings, args):
 
 
 def cmd_type(settings, args):
-    data = graphql_query(settings, Q_TYPE_DETAIL, tenant_override=args.tenant)
+    data = graphql_query(settings, Q_TYPE_DETAIL, tenant_override=args.tenant, verify_ssl=not args.insecure)
     types = collect_connection(data["constructionKit"]["types"])
 
     target = args.type_name
@@ -357,7 +357,7 @@ def cmd_type(settings, args):
 
 def cmd_enums(settings, args):
     first = args.first or 200
-    data = graphql_query(settings, Q_ENUMS % first, tenant_override=args.tenant)
+    data = graphql_query(settings, Q_ENUMS % first, tenant_override=args.tenant, verify_ssl=not args.insecure)
     conn = data["constructionKit"]["enums"]
     total = conn.get("totalCount", "?")
     enums = collect_connection(conn)
@@ -399,7 +399,7 @@ def cmd_enums(settings, args):
 
 
 def cmd_enum(settings, args):
-    data = graphql_query(settings, Q_ENUMS % 200, tenant_override=args.tenant)
+    data = graphql_query(settings, Q_ENUMS % 200, tenant_override=args.tenant, verify_ssl=not args.insecure)
     enums = collect_connection(data["constructionKit"]["enums"])
 
     target = args.enum_name
@@ -445,7 +445,7 @@ def cmd_enum(settings, args):
 
 
 def cmd_search(settings, args):
-    data = graphql_query(settings, Q_SEARCH_TYPES, tenant_override=args.tenant)
+    data = graphql_query(settings, Q_SEARCH_TYPES, tenant_override=args.tenant, verify_ssl=not args.insecure)
     types = collect_connection(data["constructionKit"]["types"])
     enums = collect_connection(data["constructionKit"]["enums"])
 
@@ -499,6 +499,8 @@ def main():
     def add_common_flags(p, with_first=False, with_model=False):
         p.add_argument("--json", action="store_true", help="Output raw JSON")
         p.add_argument("--tenant", type=str, default=None, help="Override tenant ID")
+        p.add_argument("--insecure", action="store_true",
+                       help="Disable SSL certificate verification (for localhost dev)")
         if with_first:
             p.add_argument("--first", type=int, default=None, help="Pagination limit")
         if with_model:

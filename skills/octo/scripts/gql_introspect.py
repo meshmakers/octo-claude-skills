@@ -19,7 +19,7 @@ from _octo_common import load_settings, graphql_query
 def cmd_top(settings, args):
     """Show top-level query fields."""
     query = """{ __schema { queryType { fields { name type { name kind ofType { name kind } } } } } }"""
-    data = graphql_query(settings, query, tenant_override=args.tenant)
+    data = graphql_query(settings, query, tenant_override=args.tenant, verify_ssl=not args.insecure)
     fields = data["__schema"]["queryType"]["fields"]
 
     if args.json:
@@ -49,7 +49,7 @@ def cmd_type(settings, args):
         }
     }""" % args.type_name
 
-    data = graphql_query(settings, query, tenant_override=args.tenant)
+    data = graphql_query(settings, query, tenant_override=args.tenant, verify_ssl=not args.insecure)
     t = data.get("__type")
 
     if not t:
@@ -102,11 +102,15 @@ def main():
     top_cmd = sub.add_parser("top", help="Show top-level query fields")
     top_cmd.add_argument("--json", action="store_true", help="Output raw JSON")
     top_cmd.add_argument("--tenant", type=str, default=None, help="Override tenant ID")
+    top_cmd.add_argument("--insecure", action="store_true",
+                         help="Disable SSL certificate verification (for localhost dev)")
 
     type_cmd = sub.add_parser("type", help="Show fields of a GraphQL type")
     type_cmd.add_argument("type_name", help="GraphQL type name (case-sensitive)")
     type_cmd.add_argument("--json", action="store_true", help="Output raw JSON")
     type_cmd.add_argument("--tenant", type=str, default=None, help="Override tenant ID")
+    type_cmd.add_argument("--insecure", action="store_true",
+                         help="Disable SSL certificate verification (for localhost dev)")
 
     args = parser.parse_args()
 
