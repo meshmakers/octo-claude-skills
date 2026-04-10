@@ -63,10 +63,10 @@ Invoke-Build -repositoryPath ./octo-asset-repo-services -configuration DebugL
 **Changes affect NuGet packages — use Invoke-BuildAll with scope flags:**
 ```
 # Build base libraries + services (no frontend) — handles NuGet propagation automatically
-Invoke-BuildAll -configuration DebugL -excludeFrontend
+Invoke-BuildAll -configuration DebugL -excludeFrontend $true
 
 # Build only core libraries (no services, no frontend)
-Invoke-BuildAll -configuration DebugL -excludeFrontend -excludeAdditional
+Invoke-BuildAll -configuration DebugL -excludeFrontend $true -excludeAdditional $true
 ```
 
 **NEVER manually chain `Invoke-Build` + `Copy-NuGetPackages` to propagate NuGet changes — use `Invoke-BuildAll` instead.**
@@ -154,7 +154,7 @@ For a fresh start:
 To speed up backend-only development:
 
 ```
-Invoke-BuildAll -configuration DebugL -excludeFrontend
+Invoke-BuildAll -configuration DebugL -excludeFrontend $true
 ```
 
 ## 12. Release Preparation

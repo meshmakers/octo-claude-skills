@@ -26,13 +26,17 @@ Claude translates the user's intent into the appropriate PowerShell cmdlet from 
 All commands are executed through the wrapper script, which loads the OctoMesh profile automatically:
 
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/skills/octo-devtools/scripts/run_pwsh.sh" "<PowerShell command>"
+bash "${CLAUDE_PLUGIN_ROOT}/skills/octo-devtools/scripts/run_pwsh.sh" '<PowerShell command>'
 ```
 
-**CRITICAL — correct path examples:**
-- CORRECT: `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo-devtools/scripts/run_pwsh.sh" "Get-AllGitRepStatus"`
+**CRITICAL — quoting and path examples:**
+- CORRECT: `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo-devtools/scripts/run_pwsh.sh" 'Get-AllGitRepStatus'`
+- CORRECT: `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo-devtools/scripts/run_pwsh.sh" 'Invoke-BuildAll -configuration DebugL -excludeFrontend $true'`
+- WRONG: `bash "..." "Invoke-BuildAll -excludeFrontend $true"` (double quotes — bash eats `$true`!)
 - WRONG: `pwsh -Command "Get-AllGitRepStatus"` (profile not loaded!)
-- WRONG: `cd ... && bash scripts/run_pwsh.sh "..."` (causes permission prompts!)
+- WRONG: `cd ... && bash scripts/run_pwsh.sh '...'` (causes permission prompts!)
+
+**Always use single quotes** around the PowerShell command argument so that PowerShell variables like `$true` and `$false` are not consumed by bash.
 
 ## Build Strategy — CRITICAL
 
@@ -47,10 +51,10 @@ OctoMesh is a monorepo where repos produce NuGet packages consumed by downstream
 Invoke-BuildAll -configuration DebugL
 
 # Backend only — skips Angular frontends (saves significant time)
-Invoke-BuildAll -configuration DebugL -excludeFrontend
+Invoke-BuildAll -configuration DebugL -excludeFrontend $true
 
 # Core repos only — skips optional/additional repos AND frontends
-Invoke-BuildAll -configuration DebugL -excludeFrontend -excludeAdditional
+Invoke-BuildAll -configuration DebugL -excludeFrontend $true -excludeAdditional $true
 ```
 
 **Use `Invoke-BuildAll` for:**
@@ -205,8 +209,8 @@ For common multi-step workflows, read `references/workflows.md` in this skill di
 
 ### Natural language mapping
 - "build everything" / "build all" → `Invoke-BuildAll -configuration DebugL`
-- "build without frontend" / "build backend" → `Invoke-BuildAll -configuration DebugL -excludeFrontend`
-- "build core only" / "build libraries" / "build base" → `Invoke-BuildAll -configuration DebugL -excludeFrontend -excludeAdditional`
+- "build without frontend" / "build backend" → `Invoke-BuildAll -configuration DebugL -excludeFrontend $true`
+- "build core only" / "build libraries" / "build base" → `Invoke-BuildAll -configuration DebugL -excludeFrontend $true -excludeAdditional $true`
 - "build asset repo" → `Invoke-Build -repositoryPath ./octo-asset-repo-services -configuration DebugL` (only if no NuGet changes!)
 - "rebuild after pull" / "sync and build" → `Sync-AllGitRepos` then `Invoke-BuildAll -configuration DebugL`
 - "git status" / "repo status" → `Get-AllGitRepStatus`

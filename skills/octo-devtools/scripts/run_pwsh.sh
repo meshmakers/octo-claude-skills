@@ -27,7 +27,7 @@ MONOREPO_ROOT="$(find_monorepo_root)" || {
     echo "Ensure the working directory is within the OctoMesh monorepo workspace." >&2
     exit 1
 }
-PROFILE="$MONOREPO_ROOT/octo-tools/modules/profile.ps1"
+PROFILE_UNIX="$MONOREPO_ROOT/octo-tools/modules/profile.ps1"
 
 # Verify pwsh is available
 if ! command -v pwsh >/dev/null 2>&1; then
@@ -37,10 +37,18 @@ if ! command -v pwsh >/dev/null 2>&1; then
 fi
 
 # Verify profile exists
-if [ ! -f "$PROFILE" ]; then
-    echo "ERROR: Profile not found at $PROFILE" >&2
+if [ ! -f "$PROFILE_UNIX" ]; then
+    echo "ERROR: Profile not found at $PROFILE_UNIX" >&2
     echo "Ensure octo-tools is checked out at $MONOREPO_ROOT/octo-tools/" >&2
     exit 1
+fi
+
+# Convert MSYS2/Git Bash path to Windows path for PowerShell.
+# /c/dev/meshmakers/... → C:\dev\meshmakers\... (pwsh cannot resolve Unix-style paths)
+if command -v cygpath >/dev/null 2>&1; then
+    PROFILE="$(cygpath -w "$PROFILE_UNIX")"
+else
+    PROFILE="$PROFILE_UNIX"
 fi
 
 # Join all arguments as a single PowerShell command string
