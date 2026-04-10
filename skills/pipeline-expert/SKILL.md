@@ -227,6 +227,99 @@ For full property documentation, read `references/node-reference-sdk.md` and `re
 - **System properties**: `$.key.RtId`, `$.key.CkTypeId`, `$.key.RtWellKnownName`
 - All property names are **PascalCase**
 
+## Attribute Name Casing in CreateUpdateInfo
+
+**CRITICAL:** The `attributeName` field in `CreateUpdateInfo@1` must use the **exact casing from the CK model definition** — typically **camelCase** (e.g., `name`, `machineState`, `operatingHours`).
+
+This is **different** from the PascalCase you see in GraphQL query results (where attributes appear as `$.key.Attributes.Name`). The distinction:
+
+| Context | Casing | Example |
+|---------|--------|---------|
+| Reading RT entities (GraphQL response) | PascalCase | `$.key.Attributes.MachineState` |
+| Writing RT entities (`attributeName` in CreateUpdateInfo) | camelCase (from CK model) | `attributeName: machineState` |
+
+**Always run `ck_explorer.py preflight <type>` before writing CreateUpdateInfo to get the exact attribute names.**
+
+## EntityUpdateInfo JSON Structure
+
+When `CreateUpdateInfo@1` writes to the DataContext, it produces this JSON structure:
+
+```json
+{
+  "RtEntity": {
+    "RtId": "cc000000000000000000bb01",
+    "RtChangedDateTime": "2026-04-10T22:17:12Z",
+    "CkTypeId": "Industry.Basic/Machine",
+    "Attributes": { "Name": "...", "MachineState": 0 }
+  },
+  "RtId": "cc000000000000000000bb01",
+  "CkTypeId": "Industry.Basic/Machine",
+  "ModOption": 0
+}
+```
+
+**CRITICAL:** The `RtId` field is **only populated when you provide a static `rtId` value** in the CreateUpdateInfo configuration. When using `generateRtId: true`, the RtId is generated internally at `ApplyChanges` time and is **NOT available** in the EntityUpdateInfo output for path-based references.
+
+**Consequence for associations:** To reference a newly-created entity's RtId in `CreateAssociationUpdate`, you **MUST** use static `rtId` values in CreateUpdateInfo, then use the same values as static `originRtId`/`targetRtId` in CreateAssociationUpdate. Do NOT use `originRtIdPath`/`targetRtIdPath` with `generateRtId`.
+
+## Mandatory Associations
+
+Some CK types have **mandatory outbound associations** (multiplicity = ONE). Creating an entity of such a type WITHOUT the required association will fail at `ApplyChanges` time with: `"Inbound association 'X' has minimum multiplicity of 'One'"`.
+
+**Pre-flight check:** Always run `ck_explorer.py preflight <type>` before writing CreateUpdateInfo for a new entity type. If the output shows mandatory associations, you MUST include `CreateAssociationUpdate@1` nodes in the same `ApplyChanges@2` call.
+
+**Common mandatory association:** `System/ParentChild` — types like Machine, TreeNode, and many domain entities require a parent. If the parent doesn't exist yet, create it in the same pipeline.
+
+**Pattern for creating entities with mandatory associations:**
+
+```yaml
+# 1. Create parent (with static rtId)
+- type: CreateUpdateInfo@1
+  targetPath: $.entityUpdates
+  targetValueWriteMode: Overwrite
+  targetValueKind: Array
+  updateKind: INSERT
+  rtId: "aa00000000000000parent01"
+  ckTypeId: Basic/Tree
+  attributeUpdates:
+    - attributeName: name
+      attributeValueType: String
+      value: "My Container"
+
+# 2. Create child (with static rtId)
+- type: CreateUpdateInfo@1
+  targetPath: $.entityUpdates
+  targetValueWriteMode: Append
+  targetValueKind: Array
+  updateKind: INSERT
+  rtId: "aa00000000000000child001"
+  ckTypeId: Industry.Basic/Machine
+  attributeUpdates:
+    - attributeName: name
+      attributeValueType: String
+      value: "My Machine"
+    - attributeName: machineState
+      attributeValueType: Enum
+      value: 1
+
+# 3. Create mandatory ParentChild association
+- type: CreateAssociationUpdate@1
+  targetPath: $.assocUpdates
+  targetValueWriteMode: Append
+  targetValueKind: Array
+  updateKind: CREATE
+  originRtId: "aa00000000000000child001"
+  originCkTypeId: Industry.Basic/Machine
+  targetRtId: "aa00000000000000parent01"
+  targetCkTypeId: Basic/Tree
+  associationRoleId: System/ParentChild
+
+# 4. Persist everything together
+- type: ApplyChanges@2
+  entityUpdatesPath: $.entityUpdates
+  associationUpdatesPath: $.assocUpdates
+```
+
 ## Common Patterns
 
 ### Entity CRUD
@@ -363,6 +456,36 @@ After writing pipeline YAML, use the **`octo` skill** to deploy and test it. Thi
 `octo-cli -c GetPipelineSchema --adapterId <rtId>` returns a JSON Schema (draft/2020-12) that describes all pipeline nodes available on a specific adapter. This complements the build-time schema files — use it when you need to discover what's available in the target environment, especially if the adapter has custom plugins loaded.
 
 To hand off to the `octo` skill for any of these operational commands, tell the user to invoke `/octo <their intent>` (e.g., `/octo deploy this pipeline`, `/octo run pipeline X`).
+
+## Pipeline Troubleshooting
+
+### Silent failures: adapter returns HTTP 200 on error
+
+The mesh adapter returns **HTTP 200** for `FromHttpRequest`-triggered pipelines **even when the pipeline fails internally**. The `GetLatestPipelineExecution` may also show `Status: null` and `DurationMs: null` on failure.
+
+**Always check the adapter log after unexpected results:**
+
+```
+logFiles/MeshAdapter.log
+```
+
+(Located in the meshmakers development directory, e.g., `C:/dev/meshmakers/logFiles/MeshAdapter.log`)
+
+### Common error patterns in the adapter log
+
+| Error message | Cause | Fix |
+|---------------|-------|-----|
+| "Inbound association 'X' has minimum multiplicity of 'One'" | Entity type requires a mandatory association | Run `ck_explorer.py preflight <type>`, add `CreateAssociationUpdate` |
+| "Value of origin RtId is null" | Path-based RtId reference resolves to null | Use static `originRtId`/`targetRtId` instead of path references |
+| "Attribute 'X' does not exist at type 'Y'" | Wrong attribute name or casing | Run `ck_explorer.py preflight <type>` for exact names |
+
+### Debugging workflow
+
+1. **Trigger the pipeline** (HTTP, ExecutePipeline, or scheduled)
+2. **Check execution:** `octo-cli -c GetLatestPipelineExecution --identifier <pipelineId> --json`
+3. **If Status is null:** the pipeline failed — check `logFiles/MeshAdapter.log` for `ERROR` entries
+4. **Check debug tree:** `octo-cli -c GetPipelineDebugPoints` — nodes missing from the tree never executed (pipeline stopped before reaching them)
+5. **The last node in the tree** is usually where the error occurred
 
 ## References
 
