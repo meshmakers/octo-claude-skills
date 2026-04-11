@@ -173,6 +173,23 @@ transformations:
 
 **Transformations** define the processing steps. Each node reads from and writes to the DataContext. Control flow nodes (ForEach, If, Switch) nest child transformations.
 
+## Common Pipeline YAML Mistakes
+
+These errors cause deployment failures. Check your YAML against this table before deploying:
+
+| Mistake | Error | Fix |
+|---------|-------|-----|
+| `version: '1'` at root level | `Property 'version' not found on NodeDefinitionRoot` | Remove it — pipeline YAML has only `triggers:` and `transformations:` at root |
+| `path: $` on `PrintDebug@1` | `Property 'path' not found` | `PrintDebug@1` has no `path` property — it prints the entire DataContext by default |
+| `path: $` on `SetPrimitiveValue@1` | `Property 'path' not found` | Use `targetPath` instead — `SetPrimitiveValue@1` writes to `targetPath`, not `path` |
+| `valueType: Int32` | `Not in enum` | Use the short enum name: `Int`, `Boolean`, `String`, `Double`, `DateTime`, etc. |
+| `ckTypeId: Model-Version/Type` | Deployment error | Use unversioned: `Model/Type` (pipeline YAML ckTypeId refs are unversioned, unlike ImportRt YAML) |
+
+**Prevention:** Before deploying, validate node properties against the pipeline schema:
+1. Fetch schema: `octo-cli -c GetPipelineSchema --adapterId <rtId> --outputFile schema.json`
+2. Look up each node type in `$defs` to confirm exact property names and enum values
+3. Or use `pipeline_validate.py` to validate automatically
+
 ## DataContext Essentials
 
 The DataContext is a mutable JSON document. All nodes share it.

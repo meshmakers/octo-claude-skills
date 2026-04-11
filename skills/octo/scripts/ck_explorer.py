@@ -14,6 +14,7 @@ Usage:
 """
 import argparse
 import json
+import re
 import sys
 import os
 
@@ -589,16 +590,55 @@ def cmd_preflight(context, args):
         print("  Mandatory associations: none")
 
 
+def _to_import_format(full_name):
+    """Convert a fully versioned CK ID to ImportRt format.
+
+    ImportRt requires ModelName/TypeName-TypeVersion (no model version, with type version).
+    GraphQL fullName is ModelName-ModelVersion/TypeName-TypeVersion.
+
+    Examples:
+        System.Communication-3.0.0/Pipeline-1  → System.Communication/Pipeline-1
+        System-2.0.2/Name-1                    → System/Name-1
+        Industry.Basic-2.1.0/Machine-1         → Industry.Basic/Machine-1
+    """
+    if not full_name or "/" not in full_name:
+        return full_name or ""
+    model_part, type_part = full_name.split("/", 1)
+    # Strip version from model part: 'System.Communication-3.0.0' → 'System.Communication'
+    model_stripped = re.sub(r'-\d+(\.\d+)*$', '', model_part)
+    return f"{model_stripped}/{type_part}"
+
+
+def _model_dep_range(full_name):
+    """Convert a fully versioned CK ID to a dependency version range.
+
+    Examples:
+        System.Communication-3.0.0/Pipeline-1  → System.Communication-[3.0,4.0)
+        System-2.0.2/Name-1                    → System-[2.0,3.0)
+    """
+    if not full_name or "/" not in full_name:
+        return full_name or ""
+    model_part = full_name.split("/", 1)[0]
+    m = re.search(r'-(\d+)', model_part)
+    if not m:
+        return model_part
+    model_name = model_part[:m.start()]
+    major = int(m.group(1))
+    return f"{model_name}-[{major}.0,{major + 1}.0)"
+
+
 def _print_import_template(match, attr_list, assoc_list, ck_type_unversioned, display_name, as_json):
     """Generate an ImportRt YAML template for the given type."""
-    # Determine model dependency from the type's fullName
+    # Determine import-format IDs from fullName
     type_full = match["ckTypeId"]["fullName"]
-    model_dep = type_full.rsplit("/", 1)[0] if "/" in type_full else type_full
+    ck_type_import = _to_import_format(type_full)
+    model_dep = _model_dep_range(type_full)
 
-    # Build attribute entries for the template
+    # Build attribute entries using import format for IDs
     attr_entries = []
     for a in attr_list:
-        attr_id = a.get("ckAttributeIdUnversioned") or a["attributeName"]
+        # Use fullName (versioned) and convert to import format
+        attr_id = _to_import_format(a.get("ckAttributeId", "")) or a["attributeName"]
         req = "required" if not a["isOptional"] else "optional"
         vtype = a.get("attributeValueType", "?")
         attr_entries.append({
@@ -609,11 +649,11 @@ def _print_import_template(match, attr_list, assoc_list, ck_type_unversioned, di
             "exampleValue": _example_value(vtype),
         })
 
-    # Build association entries
+    # Build association entries using import format for IDs
     assoc_entries = []
     for a in assoc_list:
-        role = a.get("roleIdUnversioned") or a["roleId"]
-        target = a.get("targetCkTypeIdUnversioned") or a["targetCkTypeId"]
+        role = _to_import_format(a["roleId"]) or a["roleId"]
+        target = _to_import_format(a["targetCkTypeId"]) or a["targetCkTypeId"]
         assoc_entries.append({
             "roleId": role,
             "targetCkTypeId": target,
@@ -623,7 +663,7 @@ def _print_import_template(match, attr_list, assoc_list, ck_type_unversioned, di
 
     if as_json:
         result = {
-            "ckTypeId": ck_type_unversioned or type_full,
+            "ckTypeId": ck_type_import,
             "modelDependency": model_dep,
             "attributes": attr_entries,
             "associations": assoc_entries,
@@ -634,13 +674,14 @@ def _print_import_template(match, attr_list, assoc_list, ck_type_unversioned, di
     # Print YAML template
     print(f"# ImportRt YAML template for {display_name}")
     print(f"# Generated from CK schema — fill in values marked with <...>")
+    print(f"# ID format: ModelName/TypeName-TypeVersion (matches ExportRtByDeepGraph output)")
     print()
     print(f"$schema: https://schemas.meshmakers.cloud/runtime-model.schema.json")
     print(f"dependencies:")
     print(f"  - {model_dep}")
     print(f"entities:")
-    print(f"  - rtId: <24-hex-char-id>")
-    print(f"    ckTypeId: {ck_type_unversioned or type_full}")
+    print(f"  - rtId: <24-hex-char-id>              # exactly 24 hex characters [0-9a-f]")
+    print(f"    ckTypeId: {ck_type_import}")
 
     # Associations
     mandatory_assocs = [a for a in assoc_entries if a["isMandatory"]]
@@ -649,12 +690,12 @@ def _print_import_template(match, attr_list, assoc_list, ck_type_unversioned, di
         print(f"    associations:")
         for a in mandatory_assocs:
             print(f"      - roleId: {a['roleId']}")
-            print(f"        targetRtId: <target-rtId>")
+            print(f"        targetRtId: <target-24-hex-char-id>")
             print(f"        targetCkTypeId: {a['targetCkTypeId']}")
         for a in optional_assocs:
             print(f"      # Optional ({a['multiplicity']}):")
             print(f"      # - roleId: {a['roleId']}")
-            print(f"      #   targetRtId: <target-rtId>")
+            print(f"      #   targetRtId: <target-24-hex-char-id>")
             print(f"      #   targetCkTypeId: {a['targetCkTypeId']}")
 
     # Attributes

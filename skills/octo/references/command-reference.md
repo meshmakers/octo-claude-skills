@@ -843,30 +843,40 @@ octo-cli -c ImportRt -f <file> [-r] [-w]
 
 ##### ImportRt YAML Format
 
-The import file uses a specific YAML structure. Use `ck_explorer.py preflight <type> --for-import` to generate a template for any CK type.
+The import file uses a specific YAML structure. Use `ck_explorer.py preflight <type> --for-import` to generate a template for any CK type with the correct ID format.
 
 ```yaml
 $schema: https://schemas.meshmakers.cloud/runtime-model.schema.json
 dependencies:
-  - <ModelName-[major.minor,next-major)>    # e.g. System.Communication-[3.0,4.0)
+  - <ModelName-[major.minor,next-major)>        # e.g. System.Communication-[3.0,4.0)
 entities:
-  - rtId: <24-hex-character-id>             # unique runtime ID (e.g. aaa000000000000000000001)
-    ckTypeId: <Model/TypeName>              # unversioned CK type ID
+  - rtId: <24-hex-character-id>                 # exactly 24 hex chars [0-9a-fA-F]
+    ckTypeId: <Model/TypeName-TypeVersion>       # import format (see rules below)
     attributes:
-      - id: <Model/AttributeName>           # full CK attribute ID (NOT the camelCase property name)
+      - id: <Model/AttributeName-AttrVersion>   # full CK attribute ID in import format
         value: <value>
-    associations:                           # optional — links to other entities
-      - roleId: <Model/RoleName>            # association role (unversioned)
-        targetRtId: <24-hex-id>             # rtId of the target entity
-        targetCkTypeId: <Model/TypeName>    # unversioned CK type of the target
+    associations:                               # optional — links to other entities
+      - roleId: <Model/RoleName-RoleVersion>    # association role in import format
+        targetRtId: <24-hex-id>                 # rtId of the target entity
+        targetCkTypeId: <Model/TypeName-TypeVersion>
 ```
 
+**ImportRt ID format — `ModelName/TypeName-TypeVersion`:**
+
+All IDs in ImportRt YAML (ckTypeId, attribute id, roleId, targetCkTypeId) use the **import format**: model name without version, type/attribute/role name WITH version suffix. This matches the format produced by `ExportRtByDeepGraph`.
+
+| Format | Example | Used in |
+|--------|---------|---------|
+| Import format (correct for ImportRt) | `System.Communication/Pipeline-1` | ImportRt YAML |
+| Fully versioned (from CK explorer) | `System.Communication-3.0.0/Pipeline-1` | ck_explorer.py output |
+| Fully unversioned | `System.Communication/Pipeline` | rt_explorer.py input |
+
 **Key rules:**
-- **CK type IDs** use unversioned format: `System.Communication/Pipeline` (not `System.Communication-3.1.1/Pipeline-1`)
-- **Attribute IDs** use the full CK attribute ID with the defining model prefix: `System/Name`, `System.Communication/PipelineDefinition` (not the camelCase property names like `name`, `pipelineDefinition`)
-- **Association role IDs** use unversioned format: `System/ParentChild`, `System.Communication/Executes`
+- **CK type IDs**: `System.Communication/Pipeline-1` (not `System.Communication-3.0.0/Pipeline-1`, not `System.Communication/Pipeline`)
+- **Attribute IDs**: `System/Name-1`, `System.Communication/PipelineDefinition-1` (not camelCase property names like `name`)
+- **Association role IDs**: `System/ParentChild-1`, `System.Communication/Executes-1`
 - **Dependencies** use a version range: `ModelName-[major.minor,next-major)`
-- **rtId** must be exactly 24 hex characters
+- **rtId** must be exactly 24 hex characters matching `^[0-9a-fA-F]{24}$` — letters like `g`-`z` are NOT valid hex
 
 **Example — DataFlow + Pipeline with associations:**
 
@@ -876,28 +886,28 @@ dependencies:
   - System.Communication-[3.0,4.0)
 entities:
   - rtId: aaa000000000000000000001
-    ckTypeId: System.Communication/DataFlow
+    ckTypeId: System.Communication/DataFlow-1
     attributes:
-      - id: System/Name
+      - id: System/Name-1
         value: My Data Flow
 
   - rtId: aaa000000000000000000002
-    ckTypeId: System.Communication/Pipeline
+    ckTypeId: System.Communication/Pipeline-1
     associations:
-      - roleId: System/ParentChild
+      - roleId: System/ParentChild-1
         targetRtId: aaa000000000000000000001
-        targetCkTypeId: System.Communication/DataFlow
-      - roleId: System.Communication/Executes
+        targetCkTypeId: System.Communication/DataFlow-1
+      - roleId: System.Communication/Executes-1
         targetRtId: <adapter-rtId>
-        targetCkTypeId: System.Communication/Adapter
+        targetCkTypeId: System.Communication/Adapter-1
     attributes:
-      - id: System.Communication/DeploymentState
+      - id: System.Communication/DeploymentState-1
         value: 0
-      - id: System/Name
+      - id: System/Name-1
         value: My Pipeline
-      - id: System/Enabled
+      - id: System/Enabled-1
         value: true
-      - id: System.Communication/PipelineDefinition
+      - id: System.Communication/PipelineDefinition-1
         value: >-
           triggers:
             - type: FromExecutePipelineCommand@1
@@ -907,19 +917,20 @@ entities:
               targetPath: $.items
 ```
 
-**Discovering attribute IDs:** Use `ck_explorer.py preflight <type> --for-import` to generate a ready-to-fill YAML template with the correct CK attribute IDs for any type. The standard preflight output (without `--for-import`) also shows the CK attribute ID alongside each property name.
+**Discovering attribute IDs:** Use `ck_explorer.py preflight <type> --for-import` to generate a ready-to-fill YAML template with the correct CK attribute IDs in import format. The standard preflight output (without `--for-import`) also shows the CK attribute ID alongside each property name.
 
 ##### ImportRt Troubleshooting
 
 Import failures return a generic error: `Stream contains invalid runtime model so that the schema validation failed.` This message does not indicate which entity or field caused the failure. Common causes:
 
-- **Wrong CK type name:** Using old/versioned names (e.g., `System.Communication/MeshPipeline` instead of `System.Communication/Pipeline`). Verify type names with `ck_explorer.py types --model <model>`.
-- **Wrong attribute ID format:** Using camelCase property names (`pipelineDefinition`) instead of CK attribute IDs (`System.Communication/PipelineDefinition`). Use `ck_explorer.py preflight <type> --for-import` to discover correct IDs.
+- **Wrong ID format:** Using fully versioned IDs (`System.Communication-3.0.0/Pipeline-1`) or fully unversioned IDs (`System.Communication/Pipeline`) instead of the import format (`System.Communication/Pipeline-1`). Use `ck_explorer.py preflight <type> --for-import` to generate the correct format.
+- **Wrong CK type name:** Using old/renamed types (e.g., `System.Communication/MeshPipeline` instead of `System.Communication/Pipeline`). Verify type names with `ck_explorer.py types --model <model>`.
+- **Wrong attribute ID format:** Using camelCase property names (`pipelineDefinition`) instead of CK attribute IDs (`System.Communication/PipelineDefinition-1`). Use `ck_explorer.py preflight <type> --for-import` to discover correct IDs.
+- **Invalid rtId format:** Must be exactly 24 hex characters matching `^[0-9a-fA-F]{24}$`. Letters g-z are NOT hex. The error message gives no indication of which field failed — always validate rtIds before importing.
 - **Missing required associations:** Some types require associations (e.g., Pipeline needs ParentChild to DataFlow and Executes to Adapter). Check with `ck_explorer.py preflight <type>`.
 - **Missing dependency:** The `dependencies` list must include the CK model(s) used in the file with a valid version range.
-- **Invalid rtId format:** Must be exactly 24 hex characters.
 
-To debug, try importing entities one at a time to isolate which entity fails. Export an existing working entity with `ExportRtByDeepGraph` for reference (see note below about ZIP format).
+**Debugging strategy:** Export an existing working entity with `ExportRtByDeepGraph` and compare the YAML structure to your import file. Try importing entities one at a time to isolate which entity fails.
 
 #### ExportRtByQuery
 Exports runtime entities matching a query. **Output is always a ZIP archive** regardless of the file extension specified.

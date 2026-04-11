@@ -393,29 +393,29 @@ dependencies:
 entities:
   # DataFlow — logical container for pipelines
   - rtId: <24-hex-id-for-dataflow>
-    ckTypeId: System.Communication/DataFlow
+    ckTypeId: System.Communication/DataFlow-1
     attributes:
-      - id: System/Name
+      - id: System/Name-1
         value: "<data flow name>"
 
   # Pipeline — linked to the DataFlow and an Adapter
   - rtId: <24-hex-id-for-pipeline>
-    ckTypeId: System.Communication/Pipeline
+    ckTypeId: System.Communication/Pipeline-1
     associations:
-      - roleId: System/ParentChild
+      - roleId: System/ParentChild-1
         targetRtId: <same-rtId-as-dataflow-above>
-        targetCkTypeId: System.Communication/DataFlow
-      - roleId: System.Communication/Executes
+        targetCkTypeId: System.Communication/DataFlow-1
+      - roleId: System.Communication/Executes-1
         targetRtId: <adapter-rtId-from-GetAdapters>
-        targetCkTypeId: System.Communication/Adapter
+        targetCkTypeId: System.Communication/Adapter-1
     attributes:
-      - id: System.Communication/DeploymentState
+      - id: System.Communication/DeploymentState-1
         value: 0
-      - id: System/Name
+      - id: System/Name-1
         value: "<pipeline name>"
-      - id: System/Enabled
+      - id: System/Enabled-1
         value: true
-      - id: System.Communication/PipelineDefinition
+      - id: System.Communication/PipelineDefinition-1
         value: >-
           <pipeline YAML from step 3>
 ```
@@ -425,7 +425,14 @@ To generate a template for any CK type automatically:
 ck_explorer.py preflight System.Communication/Pipeline --for-import --insecure
 ```
 
-**Key ID rules:** Use unversioned IDs everywhere — `System.Communication/Pipeline` not `System.Communication-3.1.1/Pipeline-1`. Attribute IDs use the defining model prefix — `System/Name` (defined in System model), `System.Communication/PipelineDefinition` (defined in System.Communication model). See `references/command-reference.md` for the full ImportRt YAML format reference.
+**ImportRt ID format — `ModelName/TypeName-TypeVersion`:**
+- **All IDs** (ckTypeId, attribute id, roleId, targetCkTypeId) use format `ModelName/TypeName-TypeVersion` — no model version, WITH type version suffix
+- Examples: `System.Communication/Pipeline-1`, `System/Name-1`, `System/ParentChild-1`
+- This matches the format produced by `ExportRtByDeepGraph`
+- **NOT** the fully versioned format from `ck_explorer.py` output (e.g., `System.Communication-3.0.0/Pipeline-1`)
+- **NOT** the fully unversioned format used by `rt_explorer.py` (e.g., `System.Communication/Pipeline`)
+- **rtId** must be exactly 24 hex characters `[0-9a-fA-F]` — validate before importing
+- See `references/command-reference.md` for the full ImportRt YAML format reference
 
 ### "What's the status of my data flows?"
 1. Discover data flows: `rt_explorer.py list System.Communication/DataFlow`
@@ -461,7 +468,7 @@ The adapter runs its own ASP.NET Core HTTP server with dynamic route registratio
 
 After executing a pipeline (especially via HTTP trigger), if no results appear:
 
-1. **Check execution status:** `octo-cli -c GetLatestPipelineExecution --identifier <pipelineId> --json` — if `Status` is `null`, the pipeline failed
+1. **Check execution status:** `octo-cli -c GetLatestPipelineExecution --identifier <pipelineId> --json` — `Status: null` can mean failure OR the execution tracking hasn't completed yet (common for HTTP-triggered pipelines). Always verify by checking the actual data or adapter log rather than relying solely on status
 2. **Check adapter log:** `logFiles/MeshAdapter.log` — search for `ERROR` entries with the pipeline ID
 3. **Common failure causes:** missing mandatory associations, wrong attribute name casing, RtId path resolution failure
 4. **The adapter log shows** the exact exception, stack trace, and which node failed (e.g., `PipelineExecution/CreateAssociationUpdate@1`)
@@ -549,17 +556,19 @@ Filter operators: `EQUALS`, `NOT_EQUALS`, `LESS_THAN`, `LESS_EQUAL_THAN`, `GREAT
 
 ### CRITICAL: CK Type ID Format Differences
 
-`ck_explorer.py` and `rt_explorer.py` use **different ID formats**:
+Three different contexts use three different ID formats:
 
-| Tool | Format | Example |
+| Context | Format | Example |
 |---|---|---|
-| `ck_explorer.py` output | Versioned: `ModelName-Version/TypeName-Version` | `Industry.Basic-2.1.0/Machine-1` |
-| `rt_explorer.py` input | Unversioned: `ModelName/TypeName` | `Industry.Basic/Machine` |
+| `ck_explorer.py` output | Fully versioned: `Model-Version/Type-Version` | `Industry.Basic-2.1.0/Machine-1` |
+| `rt_explorer.py` input | Fully unversioned: `Model/Type` | `Industry.Basic/Machine` |
+| **ImportRt YAML** | **Import format: `Model/Type-Version`** | **`Industry.Basic/Machine-1`** |
 
-**To convert a CK type ID for use with `rt_explorer.py`:** strip the version suffixes from both the model part and the type part. Remove the `-X.Y.Z` or `-N` segments:
-- `Industry.Basic-2.1.0/Machine-1` → `Industry.Basic/Machine`
-- `Basic-2.0.1/Employee-1` → `Basic/Employee`
-- `System-2.0.2/Entity-1` → `System/Entity`
+**Converting from `ck_explorer.py` output:**
+- For `rt_explorer.py`: strip ALL versions → `Industry.Basic-2.1.0/Machine-1` → `Industry.Basic/Machine`
+- For ImportRt YAML: strip MODEL version only, keep TYPE version → `Industry.Basic-2.1.0/Machine-1` → `Industry.Basic/Machine-1`
+
+The `ck_explorer.py preflight <type> --for-import` command generates the correct import format automatically.
 
 **NEVER pass versioned CK type IDs (like `Industry.Basic-2.1.0/Machine-1` or `Industry.Basic-2.1.0/Machine`) to `rt_explorer.py`.** Always strip version numbers first.
 
