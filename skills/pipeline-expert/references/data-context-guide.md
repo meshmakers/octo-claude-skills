@@ -108,7 +108,7 @@ These two iteration nodes have **different context models**. Confusing them is a
 | **Access current item** | `$.key.Field` | N/A (no "current item") |
 | **Access parent data** | `$.full.OtherData` | Direct: `$.OtherData` (same as parent) |
 | **Iteration index** | Not directly available | `indexTargetPath` (e.g., `$.i`) |
-| **Count source** | Array length (dynamic) | `count` property (static only) |
+| **Count source** | Array length (dynamic) | `count` (static) or `countPath` (dynamic JSONPath) |
 
 **Example — the same data accessed two ways:**
 

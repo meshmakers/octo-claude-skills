@@ -195,7 +195,7 @@ For full details on write semantics and field filters, read `references/data-con
 
 ## ForEach Iteration
 
-> **For@1 is different:** For@1 deep-clones the parent context directly — it does NOT create `$.full`/`$.key` paths. Access data at the same paths as the parent (e.g., `$.body.count`, not `$.full.body.count`). Its `count` is static only (no `countPath`). See `references/data-context-guide.md` for a full comparison table.
+> **For@1 is different:** For@1 deep-clones the parent context directly — it does NOT create `$.full`/`$.key` paths. Access data at the same paths as the parent (e.g., `$.body.count`, not `$.full.body.count`). Supports both static `count` and dynamic `countPath` (JSONPath). See `references/data-context-guide.md` for a full comparison table.
 
 ForEach creates a **child context** per array element with three key paths:
 
@@ -239,7 +239,7 @@ For a deeper explanation of context hierarchy, write modes, and field filters, r
 | Node | Purpose |
 |------|---------|
 | `ForEach@1` | Iterate array with child context (`$.full`/`$.key`/merge) |
-| `For@1` | Execute N times (deep-clones parent context, static count only — see data-context-guide.md) |
+| `For@1` | Execute N times (deep-clones parent context, supports `count` or `countPath` — see data-context-guide.md) |
 | `If@1` | Conditional (Equal, Contains, GreaterThan, RegexMatch, etc.) |
 | `Switch@1` | Multi-branch by value (supports array case values) |
 | `SelectByPath@1` | Select and transform multiple paths |

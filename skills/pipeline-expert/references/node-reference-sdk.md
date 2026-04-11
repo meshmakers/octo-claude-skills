@@ -38,48 +38,44 @@ Iterate over array elements, execute child transformations per item.
 
 ### For@1
 
-Execute child nodes a fixed number of times.
+Execute child nodes a specified number of times. Produces an array of outputs, one per iteration.
 
 > **Context model:** For@1 **deep-clones the parent context** for each iteration. Unlike ForEach@1, it does NOT create `$.full`/`$.key` child paths. Inside For@1 child nodes, access data directly (e.g., `$.body.count`, NOT `$.full.body.count`).
 
-> **Static count only:** The `count` property is a static integer — there is no `countPath` for dynamic values. For dynamic iteration counts, use one of these patterns:
-> - **For@1 + If@1 guard:** Set `count` to a known maximum, use `If@1` with `operator: LessThan` comparing `indexTargetPath` against the dynamic count to skip excess iterations.
-> - **Generate array + ForEach@1:** Build an array of the desired length upstream, then iterate with ForEach@1.
-
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `count` | uint | required | Number of iterations (static only, no `countPath`) |
+| `count` | uint | optional | Static number of iterations. Used when `countPath` is not set |
+| `countPath` | string | optional | JSONPath to dynamically resolve iteration count from data context. Takes precedence over `count` |
 | `indexTargetPath` | string | optional | Path to store current 0-based index in each iteration's context |
 | `path` | string | `$` | Source path |
 | `targetPath` | string | `$` | Where to write results |
-| `maxDegreeOfParallelism` | int | 0 | Parallelism control |
+| `maxDegreeOfParallelism` | int | 0 | Parallelism control (0=CPU count, -1=unlimited, >0=explicit) |
 | `transformations` | array | required | Child nodes per iteration |
 
+> Either `count` or `countPath` should be provided. When both are set, `countPath` takes precedence. `countPath` must resolve to a non-negative integer; null or negative values cause a runtime error.
+
 ```yaml
-# Basic: run 10 times, index available at $.i
+# Static count: run 4 times
 - type: For@1
-  count: 10
-  indexTargetPath: $.i
+  count: 4
+  targetPath: $.customers
+  transformations:
+    - type: Simulation@1
+      simulations:
+        - targetPath: $.customer.firstName
+          simulatorKey: Person.FirstName
+        - targetPath: $.customer.lastName
+          simulatorKey: Person.LastName
+
+# Dynamic count: read iteration count from HTTP request body
+- type: For@1
+  countPath: $.body.count
+  indexTargetPath: $.index
   targetPath: $.results
   transformations:
-    - type: SetPrimitiveValue@1
-      value: "item"
-      targetPath: $.label
-
-# Dynamic count pattern: iterate up to 100 times, guard with If
-- type: For@1
-  count: 100
-  indexTargetPath: $.i
-  transformations:
-    - type: If@1
-      path: $.i
-      operator: LessThan
-      valuePath: $.body.count
-      valueType: Int
-      transformations:
-        - type: SetPrimitiveValue@1
-          valuePath: $.i
-          targetPath: $.currentIndex
+    - type: FormatString@1
+      format: "Item-{$.index}"
+      targetPath: $.name
 ```
 
 ### If@1
