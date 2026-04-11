@@ -1,34 +1,34 @@
 $schema: https://schemas.meshmakers.cloud/runtime-model.schema.json
 dependencies:
-  - System.Communication-[2.0,3.0)
+  - System.Communication-[3.0,4.0)
   - E2ETest-[1.0,2.0)
 entities:
-  # Mesh Adapter
+  # Adapter
   - rtId: bbb000000000000000000001
-    ckTypeId: System.Communication/MeshAdapter
+    ckTypeId: System.Communication/Adapter
     attributes:
       - id: System/Name
         value: E2E Test Adapter
 
-  # Data Pipeline container
+  # DataFlow container
   - rtId: bbb000000000000000000002
-    ckTypeId: System.Communication/DataPipeline
+    ckTypeId: System.Communication/DataFlow
     attributes:
       - id: System/Name
         value: E2E Sensor Simulation
       - id: System/Description
         value: Creates simulated sensor entities linked to areas
 
-  # Mesh Pipeline with simulation definition
+  # Pipeline with simulation definition
   - rtId: bbb000000000000000000003
-    ckTypeId: System.Communication/MeshPipeline
+    ckTypeId: System.Communication/Pipeline
     associations:
       - roleId: System/ParentChild
         targetRtId: bbb000000000000000000002
-        targetCkTypeId: System.Communication/DataPipeline
+        targetCkTypeId: System.Communication/DataFlow
       - roleId: System.Communication/Executes
         targetRtId: bbb000000000000000000001
-        targetCkTypeId: System.Communication/MeshAdapter
+        targetCkTypeId: System.Communication/Adapter
     attributes:
       - id: System.Communication/DeploymentState
         value: 0

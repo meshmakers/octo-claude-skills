@@ -837,28 +837,115 @@ octo-cli -c ImportRt -f <file> [-r] [-w]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
-| `-f` | `file` | File to import | Yes |
+| `-f` | `file` | File to import (YAML format, see below) | Yes |
 | `-r` | `replace` | Replace existing entities (flag, no value) | No |
 | `-w` | `wait` | Wait for import job to complete | No |
 
+##### ImportRt YAML Format
+
+The import file uses a specific YAML structure. Use `ck_explorer.py preflight <type> --for-import` to generate a template for any CK type.
+
+```yaml
+$schema: https://schemas.meshmakers.cloud/runtime-model.schema.json
+dependencies:
+  - <ModelName-[major.minor,next-major)>    # e.g. System.Communication-[3.0,4.0)
+entities:
+  - rtId: <24-hex-character-id>             # unique runtime ID (e.g. aaa000000000000000000001)
+    ckTypeId: <Model/TypeName>              # unversioned CK type ID
+    attributes:
+      - id: <Model/AttributeName>           # full CK attribute ID (NOT the camelCase property name)
+        value: <value>
+    associations:                           # optional — links to other entities
+      - roleId: <Model/RoleName>            # association role (unversioned)
+        targetRtId: <24-hex-id>             # rtId of the target entity
+        targetCkTypeId: <Model/TypeName>    # unversioned CK type of the target
+```
+
+**Key rules:**
+- **CK type IDs** use unversioned format: `System.Communication/Pipeline` (not `System.Communication-3.1.1/Pipeline-1`)
+- **Attribute IDs** use the full CK attribute ID with the defining model prefix: `System/Name`, `System.Communication/PipelineDefinition` (not the camelCase property names like `name`, `pipelineDefinition`)
+- **Association role IDs** use unversioned format: `System/ParentChild`, `System.Communication/Executes`
+- **Dependencies** use a version range: `ModelName-[major.minor,next-major)`
+- **rtId** must be exactly 24 hex characters
+
+**Example — DataFlow + Pipeline with associations:**
+
+```yaml
+$schema: https://schemas.meshmakers.cloud/runtime-model.schema.json
+dependencies:
+  - System.Communication-[3.0,4.0)
+entities:
+  - rtId: aaa000000000000000000001
+    ckTypeId: System.Communication/DataFlow
+    attributes:
+      - id: System/Name
+        value: My Data Flow
+
+  - rtId: aaa000000000000000000002
+    ckTypeId: System.Communication/Pipeline
+    associations:
+      - roleId: System/ParentChild
+        targetRtId: aaa000000000000000000001
+        targetCkTypeId: System.Communication/DataFlow
+      - roleId: System.Communication/Executes
+        targetRtId: <adapter-rtId>
+        targetCkTypeId: System.Communication/Adapter
+    attributes:
+      - id: System.Communication/DeploymentState
+        value: 0
+      - id: System/Name
+        value: My Pipeline
+      - id: System/Enabled
+        value: true
+      - id: System.Communication/PipelineDefinition
+        value: >-
+          triggers:
+            - type: FromExecutePipelineCommand@1
+          transformations:
+            - type: GetRtEntitiesByType@1
+              ckTypeId: SomeModel/SomeType
+              targetPath: $.items
+```
+
+**Discovering attribute IDs:** Use `ck_explorer.py preflight <type> --for-import` to generate a ready-to-fill YAML template with the correct CK attribute IDs for any type. The standard preflight output (without `--for-import`) also shows the CK attribute ID alongside each property name.
+
+##### ImportRt Troubleshooting
+
+Import failures return a generic error: `Stream contains invalid runtime model so that the schema validation failed.` This message does not indicate which entity or field caused the failure. Common causes:
+
+- **Wrong CK type name:** Using old/versioned names (e.g., `System.Communication/MeshPipeline` instead of `System.Communication/Pipeline`). Verify type names with `ck_explorer.py types --model <model>`.
+- **Wrong attribute ID format:** Using camelCase property names (`pipelineDefinition`) instead of CK attribute IDs (`System.Communication/PipelineDefinition`). Use `ck_explorer.py preflight <type> --for-import` to discover correct IDs.
+- **Missing required associations:** Some types require associations (e.g., Pipeline needs ParentChild to DataFlow and Executes to Adapter). Check with `ck_explorer.py preflight <type>`.
+- **Missing dependency:** The `dependencies` list must include the CK model(s) used in the file with a valid version range.
+- **Invalid rtId format:** Must be exactly 24 hex characters.
+
+To debug, try importing entities one at a time to isolate which entity fails. Export an existing working entity with `ExportRtByDeepGraph` for reference (see note below about ZIP format).
+
 #### ExportRtByQuery
+Exports runtime entities matching a query. **Output is always a ZIP archive** regardless of the file extension specified.
 ```
 octo-cli -c ExportRtByQuery -f <file> -q <queryId>
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
-| `-f` | `file` | Output file (ZIP) | Yes |
+| `-f` | `file` | Output file (ZIP archive) | Yes |
 | `-q` | `queryId` | Query ID for export | Yes |
 
 #### ExportRtByDeepGraph
+Exports runtime entities by following associations from a starting entity. **Output is always a ZIP archive** regardless of the file extension specified — even if you use `.yaml` as the extension, the output is a ZIP containing YAML file(s).
 ```
 octo-cli -c ExportRtByDeepGraph -f <file> -id <runtime-identifiers> -t <ckTypeId>
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
-| `-f` | `file` | Output file (ZIP) | Yes |
+| `-f` | `file` | Output file (ZIP archive) | Yes |
 | `-id` | `runtime-identifiers` | Semicolon-separated list of RtIds | Yes |
 | `-t` | `ckTypeId` | CK type ID as starting point | Yes |
+
+To extract the YAML from the ZIP:
+```bash
+python3 -c "import zipfile, sys; z=zipfile.ZipFile(sys.argv[1]); [print(z.read(n).decode()) for n in z.namelist()]" export.zip
+```
 
 ### Time Series
 

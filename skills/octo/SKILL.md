@@ -375,13 +375,57 @@ These multi-step workflows handle common user intents. When the user expresses o
 ### "Set up a new data flow end-to-end"
 This is the full lifecycle — combines `pipeline-expert` knowledge (YAML) with `octo` operational commands:
 1. Ask what the data flow should do (what trigger, what transformations)
-2. **Pre-flight check:** For each CK type the pipeline will create/update, run `ck_explorer.py preflight <type> --insecure` to discover exact attribute names and mandatory associations
+2. **Pre-flight check:** For each CK type the pipeline will create/update, run `ck_explorer.py preflight <type> --for-import --insecure` to discover exact CK attribute IDs and mandatory associations
 3. Route to `pipeline-expert` via `Skill("pipeline-expert", args: ...)` to generate the pipeline YAML
-4. Create runtime entities via `octo-cli -c ImportRt -f <file> -w`: DataFlow, Pipeline (with association to DataFlow + Adapter), optionally PipelineTrigger
-5. Deploy: `octo-cli -c DeployPipeline --adapterId <id> --pipelineId <id> --file <yaml>`
-6. Verify: `octo-cli -c GetPipelineStatus --identifier <pipelineId> --json` → confirm Deployed
-7. Test: `octo-cli -c ExecutePipeline --identifier <rtId>` → verify execution completes
-8. If using triggers: `octo-cli -c DeployTriggers` to activate cron schedules
+4. **Discover the adapter:** `octo-cli -c GetAdapters --json` → get the adapter rtId
+5. **Create runtime entities** via `octo-cli -c ImportRt -f <file> -w` using the YAML template below
+6. Deploy: `octo-cli -c DeployPipeline --adapterId <id> --pipelineId <id> --file <yaml>`
+7. Verify: `octo-cli -c GetPipelineStatus --identifier <pipelineId> --json` → confirm Deployed
+8. Test: `octo-cli -c ExecutePipeline --identifier <rtId>` → verify execution completes
+9. If using triggers: `octo-cli -c DeployTriggers` to activate cron schedules
+
+**Step 5 — ImportRt YAML template for DataFlow + Pipeline:**
+
+```yaml
+$schema: https://schemas.meshmakers.cloud/runtime-model.schema.json
+dependencies:
+  - System.Communication-[3.0,4.0)
+entities:
+  # DataFlow — logical container for pipelines
+  - rtId: <24-hex-id-for-dataflow>
+    ckTypeId: System.Communication/DataFlow
+    attributes:
+      - id: System/Name
+        value: "<data flow name>"
+
+  # Pipeline — linked to the DataFlow and an Adapter
+  - rtId: <24-hex-id-for-pipeline>
+    ckTypeId: System.Communication/Pipeline
+    associations:
+      - roleId: System/ParentChild
+        targetRtId: <same-rtId-as-dataflow-above>
+        targetCkTypeId: System.Communication/DataFlow
+      - roleId: System.Communication/Executes
+        targetRtId: <adapter-rtId-from-GetAdapters>
+        targetCkTypeId: System.Communication/Adapter
+    attributes:
+      - id: System.Communication/DeploymentState
+        value: 0
+      - id: System/Name
+        value: "<pipeline name>"
+      - id: System/Enabled
+        value: true
+      - id: System.Communication/PipelineDefinition
+        value: >-
+          <pipeline YAML from step 3>
+```
+
+To generate a template for any CK type automatically:
+```
+ck_explorer.py preflight System.Communication/Pipeline --for-import --insecure
+```
+
+**Key ID rules:** Use unversioned IDs everywhere — `System.Communication/Pipeline` not `System.Communication-3.1.1/Pipeline-1`. Attribute IDs use the defining model prefix — `System/Name` (defined in System model), `System.Communication/PipelineDefinition` (defined in System.Communication model). See `references/command-reference.md` for the full ImportRt YAML format reference.
 
 ### "What's the status of my data flows?"
 1. Discover data flows: `rt_explorer.py list System.Communication/DataFlow`
@@ -469,8 +513,9 @@ All Python scripts MUST be invoked through the virtual environment wrapper using
 | `enum <fullName>` | Enum detail: values, flags | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/ck_explorer.py" enum System-2.0.2/AggregationTypes-1` |
 | `search <term>` | Search type/enum names (case-insensitive) | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/ck_explorer.py" search maintenance` |
 | `preflight <fullName>` | Pre-flight for pipeline authoring (attrs + mandatory assocs) | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/ck_explorer.py" preflight Industry.Basic-2.1.0/Machine-1` |
+| `preflight <fullName> --for-import` | Generate ImportRt YAML template with full CK attribute IDs | `bash "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh" "${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/ck_explorer.py" preflight System.Communication/Pipeline --for-import` |
 
-Flags: `--json` for raw JSON output, `--first N` for pagination limit, `--tenant <id>` to override tenant, `--insecure` to disable SSL verification (for localhost with self-signed certs).
+Flags: `--json` for raw JSON output, `--first N` for pagination limit, `--tenant <id>` to override tenant, `--insecure` to disable SSL verification (for localhost with self-signed certs), `--for-import` to output ImportRt YAML template (preflight only).
 
 #### `gql_introspect.py` — GraphQL Schema Introspection
 

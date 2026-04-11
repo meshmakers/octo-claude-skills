@@ -75,12 +75,13 @@ Q_TYPE_DETAIL = """{
                                 isOptional
                                 autoCompleteValues
                                 autoIncrementReference
+                                ckAttributeId { fullName semanticVersionedFullName }
                             }
                         }
                     }
                     associations {
-                        in { all { roleId { fullName } originCkTypeId { fullName } targetCkTypeId { fullName } navigationPropertyName multiplicity } }
-                        out { all { roleId { fullName } originCkTypeId { fullName } targetCkTypeId { fullName } navigationPropertyName multiplicity } }
+                        in { all { roleId { fullName semanticVersionedFullName } originCkTypeId { fullName semanticVersionedFullName } targetCkTypeId { fullName semanticVersionedFullName } navigationPropertyName multiplicity } }
+                        out { all { roleId { fullName semanticVersionedFullName } originCkTypeId { fullName semanticVersionedFullName } targetCkTypeId { fullName semanticVersionedFullName } navigationPropertyName multiplicity } }
                     }
                     derivedTypes { edges { node { ckTypeId { fullName } } } }
                 }
@@ -513,38 +514,50 @@ def cmd_preflight(context, args):
         print("Use 'ck_explorer.py types' to list available types.", file=sys.stderr)
         sys.exit(1)
 
-    # Extract attributes
+    # Extract attributes with CK attribute IDs
     attrs = collect_connection(match.get("attributes"))
     attr_list = []
     for a in attrs:
+        ck_attr_id = a.get("ckAttributeId") or {}
         attr_list.append({
             "attributeName": a["attributeName"],
             "attributeValueType": a.get("attributeValueType", "?"),
             "isOptional": a.get("isOptional", False),
+            "ckAttributeId": ck_attr_id.get("fullName", ""),
+            "ckAttributeIdUnversioned": ck_attr_id.get("semanticVersionedFullName", ""),
         })
 
-    # Extract mandatory outbound associations (multiplicity ONE)
+    # Extract outbound associations
     assoc = match.get("associations", {})
     out_assocs = (assoc.get("out") or {}).get("all") or []
-    mandatory = []
+    assoc_list = []
     for a in out_assocs:
         mult = a.get("multiplicity", "")
-        if mult.upper() == "ONE":
-            target_id = a.get("targetCkTypeId", {}).get("fullName", "?")
-            role = a.get("roleId", {}).get("fullName", "?")
-            nav = a.get("navigationPropertyName", "")
-            mandatory.append({
-                "targetCkTypeId": target_id,
-                "roleId": role,
-                "navigationPropertyName": nav,
-            })
+        target_id = a.get("targetCkTypeId", {})
+        role_id = a.get("roleId", {})
+        assoc_list.append({
+            "targetCkTypeId": target_id.get("fullName", "?"),
+            "targetCkTypeIdUnversioned": target_id.get("semanticVersionedFullName", ""),
+            "roleId": role_id.get("fullName", "?"),
+            "roleIdUnversioned": role_id.get("semanticVersionedFullName", ""),
+            "navigationPropertyName": a.get("navigationPropertyName", ""),
+            "multiplicity": mult,
+            "isMandatory": mult.upper() == "ONE",
+        })
 
     display_name = match["ckTypeId"].get("semanticVersionedFullName") or match["ckTypeId"]["fullName"]
+    ck_type_unversioned = match["ckTypeId"].get("semanticVersionedFullName", "")
+
+    if args.for_import:
+        _print_import_template(match, attr_list, assoc_list, ck_type_unversioned, display_name, args.json)
+        return
+
+    mandatory = [a for a in assoc_list if a["isMandatory"]]
 
     if args.json:
         result = {
             "ckTypeId": match["ckTypeId"]["fullName"],
-            "semanticVersionedFullName": match["ckTypeId"].get("semanticVersionedFullName", ""),
+            "semanticVersionedFullName": ck_type_unversioned,
             "attributes": attr_list,
             "mandatoryAssociations": mandatory,
         }
@@ -558,7 +571,8 @@ def cmd_preflight(context, args):
         print("  Attributes for CreateUpdateInfo:")
         for a in attr_list:
             req = "optional" if a["isOptional"] else "required"
-            print(f"    {a['attributeName']:30s} {a['attributeValueType']:10s} {req}")
+            attr_id = a.get("ckAttributeIdUnversioned") or a["attributeName"]
+            print(f"    {a['attributeName']:30s} {a['attributeValueType']:10s} {req:10s} id: {attr_id}")
     else:
         print("  Attributes: none")
 
@@ -566,11 +580,106 @@ def cmd_preflight(context, args):
     if mandatory:
         print("  Mandatory associations (must include CreateAssociationUpdate):")
         for a in mandatory:
-            print(f"    -> {a['targetCkTypeId']:30s} role: {a['roleId']}    nav: {a['navigationPropertyName']}")
+            role = a.get("roleIdUnversioned") or a["roleId"]
+            target = a.get("targetCkTypeIdUnversioned") or a["targetCkTypeId"]
+            print(f"    -> {target:30s} role: {role}    nav: {a['navigationPropertyName']}")
         print()
         print("  NOTE: At least one mandatory association must be satisfied.")
     else:
         print("  Mandatory associations: none")
+
+
+def _print_import_template(match, attr_list, assoc_list, ck_type_unversioned, display_name, as_json):
+    """Generate an ImportRt YAML template for the given type."""
+    # Determine model dependency from the type's fullName
+    type_full = match["ckTypeId"]["fullName"]
+    model_dep = type_full.rsplit("/", 1)[0] if "/" in type_full else type_full
+
+    # Build attribute entries for the template
+    attr_entries = []
+    for a in attr_list:
+        attr_id = a.get("ckAttributeIdUnversioned") or a["attributeName"]
+        req = "required" if not a["isOptional"] else "optional"
+        vtype = a.get("attributeValueType", "?")
+        attr_entries.append({
+            "id": attr_id,
+            "attributeName": a["attributeName"],
+            "attributeValueType": vtype,
+            "isOptional": a["isOptional"],
+            "exampleValue": _example_value(vtype),
+        })
+
+    # Build association entries
+    assoc_entries = []
+    for a in assoc_list:
+        role = a.get("roleIdUnversioned") or a["roleId"]
+        target = a.get("targetCkTypeIdUnversioned") or a["targetCkTypeId"]
+        assoc_entries.append({
+            "roleId": role,
+            "targetCkTypeId": target,
+            "multiplicity": a["multiplicity"],
+            "isMandatory": a["isMandatory"],
+        })
+
+    if as_json:
+        result = {
+            "ckTypeId": ck_type_unversioned or type_full,
+            "modelDependency": model_dep,
+            "attributes": attr_entries,
+            "associations": assoc_entries,
+        }
+        print(json.dumps(result, indent=2))
+        return
+
+    # Print YAML template
+    print(f"# ImportRt YAML template for {display_name}")
+    print(f"# Generated from CK schema — fill in values marked with <...>")
+    print()
+    print(f"$schema: https://schemas.meshmakers.cloud/runtime-model.schema.json")
+    print(f"dependencies:")
+    print(f"  - {model_dep}")
+    print(f"entities:")
+    print(f"  - rtId: <24-hex-char-id>")
+    print(f"    ckTypeId: {ck_type_unversioned or type_full}")
+
+    # Associations
+    mandatory_assocs = [a for a in assoc_entries if a["isMandatory"]]
+    optional_assocs = [a for a in assoc_entries if not a["isMandatory"]]
+    if mandatory_assocs or optional_assocs:
+        print(f"    associations:")
+        for a in mandatory_assocs:
+            print(f"      - roleId: {a['roleId']}")
+            print(f"        targetRtId: <target-rtId>")
+            print(f"        targetCkTypeId: {a['targetCkTypeId']}")
+        for a in optional_assocs:
+            print(f"      # Optional ({a['multiplicity']}):")
+            print(f"      # - roleId: {a['roleId']}")
+            print(f"      #   targetRtId: <target-rtId>")
+            print(f"      #   targetCkTypeId: {a['targetCkTypeId']}")
+
+    # Attributes
+    print(f"    attributes:")
+    for a in attr_entries:
+        req = "REQUIRED" if not a["isOptional"] else "optional"
+        print(f"      - id: {a['id']:40s}  # {a['attributeValueType']}, {req}")
+        print(f"        value: {a['exampleValue']}")
+
+
+def _example_value(vtype):
+    """Return a placeholder example value for an attribute type."""
+    vtype_upper = vtype.upper() if vtype else ""
+    if vtype_upper == "STRING":
+        return '"<string>"'
+    elif vtype_upper in ("INT", "INT32", "INT64", "LONG"):
+        return "0"
+    elif vtype_upper in ("DOUBLE", "FLOAT", "DECIMAL"):
+        return "0.0"
+    elif vtype_upper in ("BOOL", "BOOLEAN"):
+        return "false"
+    elif vtype_upper == "DATETIME":
+        return '"2025-01-01T00:00:00Z"'
+    else:
+        return f'"<{vtype}>"'
 
 
 # ---------------------------------------------------------------------------
@@ -620,6 +729,8 @@ def main():
 
     p_preflight = sub.add_parser("preflight", help="Pre-flight check for pipeline authoring: attributes and mandatory associations")
     p_preflight.add_argument("type_name", help="Type fullName or semanticVersionedFullName")
+    p_preflight.add_argument("--for-import", action="store_true", dest="for_import",
+                             help="Output an ImportRt YAML template with full CK attribute IDs")
     add_common_flags(p_preflight)
 
     args = parser.parse_args()
