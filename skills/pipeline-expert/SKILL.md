@@ -3,6 +3,9 @@ name: pipeline-expert
 description: Expert for OctoMesh ETL pipeline YAML — creation, reading, editing, debugging, validation. This skill should be used when the user mentions pipeline YAML, YAML pipeline, pipeline creation, pipeline nodes, node configuration, DataContext, ForEach iteration, ETL pipelines, adapter pipelines, triggers, transformations, ApplyChanges, CreateUpdateInfo, data mapping, pipeline debugging, pipeline error, data flow, DataFlow, dataflow, pipeline chaining, inter-pipeline communication, cross-adapter communication, PipelineTrigger, pipeline trigger, cron schedule, ToPipelineDataEvent, FromPipelineDataEvent, FromPipelineTriggerEvent, FromExecutePipelineCommand, targetPipelineRtId, GetRtEntities, entity CRUD, association updates, field filters, switch cases, polling pipelines, HTTP triggers, watch entity triggers, scheduled pipeline, cron trigger, email trigger, Zenon integration, SAP integration, EDA processing, email notifications, time series, anomaly detection, AI queries, buffering, webhook, Base64 encoding, logging, debug output, pipeline config lookup, report generation, pipeline schema, pipeline validation, CSV import, Excel import, SFTP upload, file hash, duplicate check, Grafana provisioning, Microsoft Teams, Microsoft Graph, simulation data, OCR, pipeline JSON schema, pipeline example.
 allowed-tools:
   - "Read(${CLAUDE_PLUGIN_ROOT}/skills/pipeline-expert/references/*)"
+  - "Grep"
+  - "Glob"
+  - "Read"
 ---
 
 # OctoMesh Pipeline Expert
@@ -14,6 +17,115 @@ OctoMesh pipelines are YAML-defined ETL data flows executed by adapters. Each pi
 An **Adapter** (`System.Communication/Adapter`) is a unified runtime that executes pipelines. Different adapter implementations exist (Mesh Adapter, Zenon Adapter, Simulation Adapter, etc.) but they all share the same CK type and pipeline execution model. Each adapter registers the pipeline nodes it supports — SDK-shared nodes plus adapter-specific ones.
 
 Pipelines handle: entity CRUD, cross-adapter data synchronization, data import/export, notifications, report generation, AI queries, anomaly detection, and more.
+
+## Source Code Research (MANDATORY)
+
+**NEVER guess how a pipeline node behaves.** When you are unsure about a node's properties, behavior, defaults, or edge cases, you MUST read the actual C# source code before answering or generating YAML. The reference docs in this skill are summaries — the source code is the ground truth.
+
+### When to Research
+
+You MUST read source code when:
+- You are **not 100% certain** about a node's available properties or their exact names
+- You need to understand **what a node actually does** at runtime (read the handler)
+- You need to know **default values** for optional properties
+- A user asks **why a node behaves a certain way** or reports unexpected behavior
+- You are writing YAML for a node you haven't used recently in this conversation
+- You encounter a node name you don't recognize or that isn't in the reference docs
+
+### Where Node Source Code Lives
+
+Pipeline nodes are split across two repositories in the monorepo. All paths below are **relative to the monorepo root** (the parent directory containing `octo-sdk`, `octo-mesh-adapter`, etc.):
+
+**SDK nodes** (ForEach, If, Switch, SetPrimitiveValue, For, SelectByPath, etc.):
+```
+octo-sdk/src/Sdk.Common/EtlDataPipeline/Nodes/
+├── Control/       (ForEach, If, Switch, For, SelectByPath)
+├── Extracts/      (SetPrimitiveValue, SetArrayOfPrimitiveValues, WriteJson)
+├── Transforms/    (Concat, FormatString, TransformString, Hash, Math, etc.)
+├── Triggers/      (FromPolling, FromPipelineDataEvent)
+├── Loads/         (ToPipelineDataEvent, ToWebhook)
+└── Buffering/     (BufferData, BufferRetrievalNode)
+```
+
+**Mesh Adapter nodes** (GetRtEntitiesByType, CreateUpdateInfo, ApplyChanges, etc.):
+- **Configuration classes** (properties, defaults, validation):
+  ```
+  octo-mesh-adapter/src/MeshNodes.Sdk/
+  ├── Extract/     (GetRtEntitiesByType, GetRtEntitiesById, GetOrCreate, etc.)
+  ├── Transform/   (CreateUpdateInfo, CreateAssociationUpdate, CheckDuplicate, etc.)
+  ├── Load/        (ApplyChanges, SaveInTimeSeries, SendEMail, SftpUpload, etc.)
+  └── Trigger/     (FromWatchRtEntity, FromHttpRequest, FromEmail, etc.)
+  ```
+- **Handler classes** (execution logic — what the node actually does):
+  ```
+  octo-mesh-adapter/src/MeshAdapter.Sdk/Nodes/
+  ├── Extract/
+  ├── Transform/
+  ├── Load/
+  └── Trigger/
+  ```
+
+**Finding the monorepo root:** The monorepo root is the parent directory of this plugin's repository. Use `../` relative to the plugin working directory, or search upward for a directory containing both `octo-sdk/` and `octo-mesh-adapter/`.
+
+### Naming Conventions
+
+| What | Pattern | Example |
+|------|---------|---------|
+| Config class | `[NodeName]NodeConfiguration.cs` | `CheckDuplicateNodeConfiguration.cs` |
+| Config class (versioned) | `[NodeName]NodeConfiguration[N].cs` | `ApplyChangesNodeConfiguration2.cs` |
+| Handler class | `[NodeName]Node.cs` | `CheckDuplicateNode.cs` |
+| Handler class (versioned) | `[NodeName]Node[N].cs` | `ApplyChangesNode2.cs` |
+| SDK nodes | Config + handler in same file | `ForEachNode.cs` |
+| Config attribute | `[NodeName("DisplayName", Version)]` | `[NodeName("CheckDuplicate", 1)]` |
+| Handler attribute | `[NodeConfiguration(typeof(ConfigClass))]` | `[NodeConfiguration(typeof(CheckDuplicateNodeConfiguration))]` |
+
+### How to Research a Node
+
+**Step 1 — Find the source file** (use Grep and Glob from the monorepo root):
+```
+# Search by node name (e.g., "CheckDuplicate")
+Grep for: NodeName\("CheckDuplicate"
+  in: octo-mesh-adapter/src/   (mesh adapter nodes)
+  or: octo-sdk/src/            (SDK nodes)
+
+# Or find the file by naming convention
+Glob for: **/CheckDuplicate*Configuration*.cs
+  in: octo-mesh-adapter/src/MeshNodes.Sdk/
+```
+
+**Step 2 — Read the configuration class** to learn:
+- All available properties and their C# types
+- Default values
+- Required vs optional properties
+- XML doc comments explaining each property
+
+**Step 3 — Read the handler class** to learn:
+- What the node actually does at runtime
+- How it reads from and writes to the DataContext
+- Error conditions and edge cases
+- How properties interact with each other
+
+### Quick Lookup Examples
+
+All paths below are relative to the monorepo root:
+
+```
+# Find where a specific node is defined
+Grep pattern: NodeName\("CreateUpdateInfo"
+Path: octo-mesh-adapter/src/
+
+# If not found in mesh-adapter, search the SDK
+Grep pattern: NodeName\("CreateUpdateInfo"
+Path: octo-sdk/src/
+
+# Find all available nodes for a category
+Glob pattern: **/*NodeConfiguration*.cs
+Path: octo-mesh-adapter/src/MeshNodes.Sdk/Transform/
+
+# Find the handler to understand runtime behavior
+Glob pattern: **/CheckDuplicateNode.cs
+Path: octo-mesh-adapter/src/MeshAdapter.Sdk/
+```
 
 ## DataFlows and Pipeline Triggers
 
@@ -54,7 +166,10 @@ transformations:
       - type: ChildNode@Version
 ```
 
-**Triggers** define how the pipeline starts: polling interval, HTTP request, entity change watch, event hub message, explicit command, or email.
+**Triggers** define how the pipeline starts: polling interval, HTTP request, entity change watch, event hub message, explicit command, or email. Each trigger type populates the DataContext with different initial paths — see `references/data-context-guide.md` "Trigger DataContext Placement" for the full table. Key examples:
+- `FromHttpRequest@1`: body at `$.body`, query params at `$.query`, files at `$.files`
+- `FromWatchRtEntity@1`: changed entity at `$.Document`
+- `FromExecutePipelineCommand@1` / `FromPipelineTriggerEvent@1`: empty context
 
 **Transformations** define the processing steps. Each node reads from and writes to the DataContext. Control flow nodes (ForEach, If, Switch) nest child transformations.
 
@@ -79,6 +194,8 @@ targetValueKind: Array
 For full details on write semantics and field filters, read `references/data-context-guide.md`.
 
 ## ForEach Iteration
+
+> **For@1 is different:** For@1 deep-clones the parent context directly — it does NOT create `$.full`/`$.key` paths. Access data at the same paths as the parent (e.g., `$.body.count`, not `$.full.body.count`). Its `count` is static only (no `countPath`). See `references/data-context-guide.md` for a full comparison table.
 
 ForEach creates a **child context** per array element with three key paths:
 
@@ -121,8 +238,8 @@ For a deeper explanation of context hierarchy, write modes, and field filters, r
 
 | Node | Purpose |
 |------|---------|
-| `ForEach@1` | Iterate array with child context (full/key/merge) |
-| `For@1` | Execute N times |
+| `ForEach@1` | Iterate array with child context (`$.full`/`$.key`/merge) |
+| `For@1` | Execute N times (deep-clones parent context, static count only — see data-context-guide.md) |
 | `If@1` | Conditional (Equal, Contains, GreaterThan, RegexMatch, etc.) |
 | `Switch@1` | Multi-branch by value (supports array case values) |
 | `SelectByPath@1` | Select and transform multiple paths |
@@ -239,6 +356,8 @@ This is **different** from the PascalCase you see in GraphQL query results (wher
 |---------|--------|---------|
 | Reading RT entities (GraphQL response) | PascalCase | `$.key.Attributes.MachineState` |
 | Writing RT entities (`attributeName` in CreateUpdateInfo) | camelCase (from CK model) | `attributeName: machineState` |
+| Field filters (`attributePath` in fieldFilters) | PascalCase (matches DB field names) | `attributePath: SerialNumber` |
+| System properties in fieldFilters | PascalCase | `attributePath: RtWellKnownName` |
 
 **Always run `ck_explorer.py preflight <type>` before writing CreateUpdateInfo to get the exact attribute names.**
 
@@ -440,10 +559,11 @@ For schema structure details, extraction commands, and fallback rules, read `ref
 2. **Identify the trigger** — What starts this pipeline? Manual command (`FromExecutePipelineCommand@1`), cron schedule (`FromPipelineTriggerEvent@1` + PipelineTrigger entity), data from another pipeline (`FromPipelineDataEvent@1`), polling, HTTP, entity change watch, or email?
 3. **Plan the data flow** — What data comes in? What entities need to be read/created/updated?
 4. **Choose nodes** — Select from the node reference tables above
-5. **Define DataContext paths** — Plan `$.path` names for each step's input and output
-6. **Handle iterations** — Use ForEach for arrays; plan `$.full`/`$.key` access patterns
-7. **Build update operations** — Use CreateUpdateInfo + CreateAssociationUpdate for entity CRUD
-8. **Persist with ApplyChanges@2** — Always Flatten updates before applying; use Append for collecting
+5. **Research node properties** — For every node you plan to use, read the C# configuration class to confirm exact property names, types, and defaults. Do NOT rely on memory alone. See "Source Code Research" section.
+6. **Define DataContext paths** — Plan `$.path` names for each step's input and output
+7. **Handle iterations** — Use ForEach for arrays; plan `$.full`/`$.key` access patterns
+8. **Build update operations** — Use CreateUpdateInfo + CreateAssociationUpdate for entity CRUD
+9. **Persist with ApplyChanges@2** — Always Flatten updates before applying; use Append for collecting
 
 For annotated real-world examples covering all these patterns, read `references/pipeline-examples.md`.
 
@@ -482,13 +602,15 @@ To hand off to the `octo` skill for any of these operational commands, tell the 
 
 The Mesh Adapter returns **HTTP 200** for `FromHttpRequest`-triggered pipelines **even when the pipeline fails internally**. The `GetLatestPipelineExecution` may also show `Status: null` and `DurationMs: null` on failure.
 
+> **Status: null does not always mean failure.** For `FromHttpRequest`-triggered executions, the execution tracking may not complete before the HTTP response returns. This means `Status: null` can appear even on a **successful** run. Always verify by checking the actual data (e.g., query the entities that should have been created/updated) rather than relying solely on execution status.
+
 **Always check the adapter log after unexpected results:**
 
 ```
 logFiles/MeshAdapter.log
 ```
 
-(Located in the meshmakers development directory, e.g., `C:/dev/meshmakers/logFiles/MeshAdapter.log`)
+(Located in `logFiles/MeshAdapter.log` relative to the monorepo root)
 
 ### Common error patterns in the adapter log
 
@@ -505,11 +627,18 @@ logFiles/MeshAdapter.log
 3. **If Status is null:** the pipeline failed — check the adapter log (e.g., `logFiles/MeshAdapter.log`) for `ERROR` entries
 4. **Check debug tree:** `octo-cli -c GetPipelineDebugPoints` — nodes missing from the tree never executed (pipeline stopped before reaching them)
 5. **The last node in the tree** is usually where the error occurred
+6. **Read the handler source code** for the failing node to understand what conditions cause the error — search for the error message text in the handler class
 
 ## References
 
-- **SDK nodes** (control flow, transforms, extracts, loads, buffering, simulation — shared across all adapters): `references/node-reference-sdk.md`
-- **Mesh Adapter nodes** (entity CRUD, triggers, domain-specific — provided by the `octo-mesh-adapter` implementation): `references/node-reference-mesh.md`
-- **DataContext mechanics** (paths, write modes, field filters, iterations): `references/data-context-guide.md`
-- **Real examples** (annotated pipelines from deployments): `references/pipeline-examples.md`
-- **Pipeline JSON Schema** (authoritative property reference, validation workflow): `references/pipeline-schema-guide.md`
+**Priority order** — when you need to understand a node, use sources in this order:
+
+1. **C# source code** (ground truth) — configuration classes for properties/defaults, handler classes for behavior. See "Source Code Research" section above.
+2. **Pipeline JSON Schema** (auto-generated from source) — authoritative for property names, types, required fields: `references/pipeline-schema-guide.md`
+3. **Reference docs** (hand-maintained summaries) — useful for quick lookups but may lag behind the source:
+   - SDK nodes: `references/node-reference-sdk.md`
+   - Mesh Adapter nodes: `references/node-reference-mesh.md`
+4. **DataContext mechanics** (paths, write modes, field filters, iterations): `references/data-context-guide.md`
+5. **Real examples** (annotated pipelines from deployments): `references/pipeline-examples.md`
+
+**If there is ANY doubt about a node's properties or behavior, read the source code. Do not guess.**

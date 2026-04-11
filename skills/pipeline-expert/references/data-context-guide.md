@@ -83,6 +83,54 @@ documentMode: Replace
 # → Context cleared, then set to newValue
 ```
 
+## Trigger DataContext Placement
+
+Each trigger type populates the DataContext differently. Know what paths your trigger provides before writing transformation nodes.
+
+| Trigger | Populated Paths | Notes |
+|---------|-----------------|-------|
+| `FromHttpRequest@1` | `$.body` (JSON/text/base64), `$.query` (params), `$.files` (uploads), `$.formData` (form fields), `$.path`, `$.method`, `$.contentType` | `$.bodyEncoding: "base64"` added for binary content |
+| `FromWatchRtEntity@1` | `$.Document` (changed entity with `RtId`, `CkTypeId`, `Attributes`) | Entity state after the change |
+| `FromPipelineDataEvent@1` | Whatever the sender placed via `ToPipelineDataEvent@1`'s `targetPath` | Depends on sending pipeline |
+| `FromPolling@1` | `$.input` (if `input` property is configured) | Empty context if no input |
+| `FromExecutePipelineCommand@1` | Empty context | No input data |
+| `FromPipelineTriggerEvent@1` | Empty context | No input data |
+| `FromEmail@1` | `$.subject`, `$.from`, `$.body`, `$.attachments` | Email content |
+| `FromMicrosoftGraph@1` | `$.message` (Teams message content) | Teams channel message |
+
+## For@1 vs ForEach@1 Context Models
+
+These two iteration nodes have **different context models**. Confusing them is a common source of bugs.
+
+| Aspect | ForEach@1 | For@1 |
+|--------|-----------|-------|
+| **Child context** | Creates `$.full`/`$.key` wrapper | Deep-clones parent context |
+| **Access current item** | `$.key.Field` | N/A (no "current item") |
+| **Access parent data** | `$.full.OtherData` | Direct: `$.OtherData` (same as parent) |
+| **Iteration index** | Not directly available | `indexTargetPath` (e.g., `$.i`) |
+| **Count source** | Array length (dynamic) | `count` property (static only) |
+
+**Example — the same data accessed two ways:**
+
+```yaml
+# ForEach@1: body.count is at $.full.body.count
+- type: ForEach@1
+  iterationPath: $.items
+  transformations:
+    - type: SetPrimitiveValue@1
+      valuePath: $.full.body.count    # parent context via $.full
+      targetPath: $.key.totalCount
+
+# For@1: body.count is at $.body.count (direct access)
+- type: For@1
+  count: 10
+  indexTargetPath: $.i
+  transformations:
+    - type: SetPrimitiveValue@1
+      valuePath: $.body.count         # same level — no $.full wrapper
+      targetPath: $.totalCount
+```
+
 ## ForEach Iteration
 
 ForEach creates child data contexts for each array element. Understanding the context hierarchy is essential.
@@ -152,6 +200,8 @@ Set to `1` for sequential execution when order matters or when nodes have side e
 ## Field Filters
 
 Many extract nodes support `fieldFilters` for server-side filtering.
+
+> **attributePath casing:** The `attributePath` value is **case-sensitive** and passed directly to the MongoDB query engine. Use **PascalCase** matching the database field names — the same casing as in GraphQL query results (e.g., `Name`, `SerialNumber`, `MachineState`). System properties also use PascalCase: `RtWellKnownName`, `RtId`, `CkTypeId`. This is different from the camelCase used in `CreateUpdateInfo@1`'s `attributeName`.
 
 ### Filter Structure
 

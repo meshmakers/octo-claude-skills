@@ -85,6 +85,8 @@ Look up entities by well-known name. Enriches source data with matching entity I
 
 Find an entity by field filters or generate a new ID if not found.
 
+> **fieldFilters attributePath casing:** The `attributePath` value is **case-sensitive** and passed directly to the MongoDB query engine without normalization. Use **PascalCase** matching the database field names (same casing as GraphQL query results: `Name`, `SerialNumber`, `MachineState`). For system properties, use their exact names: `RtWellKnownName`, `RtId`, `CkTypeId`.
+
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `ckTypeId` | string | optional | CK type ID |
@@ -98,11 +100,20 @@ Find an entity by field filters or generate a new ID if not found.
 - type: GetOrCreateRtEntitiesByType@1
   ckTypeId: Industry.Basic/Sensor
   fieldFilters:
-    - attributePath: SerialNumber
+    - attributePath: SerialNumber          # PascalCase — matches DB field name
       operator: Equals
       comparisonValuePath: $.key.serial
   rtIdTargetPath: $.key.rtId
   modOperationPath: $.key.modOp
+
+# System property filter example:
+- type: GetOrCreateRtEntitiesByType@1
+  ckTypeId: Basic/Tree
+  fieldFilters:
+    - attributePath: RtWellKnownName       # system property, PascalCase
+      comparisonValue: "My Container"
+  rtIdTargetPath: $.parentRtId
+  modOperationPath: $.parentModOp
 ```
 
 ### GetAssociationTargets@1
@@ -795,11 +806,30 @@ Trigger pipeline on HTTP requests.
 | `method` | enum | required | HTTP method (GET, POST, PUT, DELETE) |
 | `path` | string | required | URL path pattern |
 
+**DataContext placement:** The trigger populates the DataContext with these paths:
+
+| Path | Content |
+|------|---------|
+| `$.body` | JSON request body (parsed object for JSON, string for text, base64 for binary) |
+| `$.query` | Query parameters as object (e.g., `$.query.page`). Array values if same key appears multiple times |
+| `$.files` | Array of uploaded files (multipart/form-data only). Each: `{fileName, contentType, length, data, encoding}` where `data` is base64 |
+| `$.formData` | Form fields from multipart/form-data (e.g., `$.formData.fieldName`) |
+| `$.path` | Request path (lowercase) |
+| `$.method` | HTTP method (uppercase) |
+| `$.contentType` | Request Content-Type header |
+| `$.bodyEncoding` | `"base64"` (only present for binary content) |
+
 ```yaml
 triggers:
   - type: FromHttpRequest@1
     path: /createBillingItems
     method: POST
+
+# In transformations, access the request data:
+# $.body.someField      — JSON body field
+# $.query.page          — query parameter
+# $.files[0].data       — first uploaded file (base64)
+# $.formData.fieldName  — form field value
 ```
 
 ### FromWatchRtEntity@1

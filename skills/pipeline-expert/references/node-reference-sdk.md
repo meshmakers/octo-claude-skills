@@ -40,24 +40,46 @@ Iterate over array elements, execute child transformations per item.
 
 Execute child nodes a fixed number of times.
 
+> **Context model:** For@1 **deep-clones the parent context** for each iteration. Unlike ForEach@1, it does NOT create `$.full`/`$.key` child paths. Inside For@1 child nodes, access data directly (e.g., `$.body.count`, NOT `$.full.body.count`).
+
+> **Static count only:** The `count` property is a static integer — there is no `countPath` for dynamic values. For dynamic iteration counts, use one of these patterns:
+> - **For@1 + If@1 guard:** Set `count` to a known maximum, use `If@1` with `operator: LessThan` comparing `indexTargetPath` against the dynamic count to skip excess iterations.
+> - **Generate array + ForEach@1:** Build an array of the desired length upstream, then iterate with ForEach@1.
+
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `count` | uint | required | Number of iterations |
-| `indexTargetPath` | string | optional | Path to store current index |
+| `count` | uint | required | Number of iterations (static only, no `countPath`) |
+| `indexTargetPath` | string | optional | Path to store current 0-based index in each iteration's context |
 | `path` | string | `$` | Source path |
 | `targetPath` | string | `$` | Where to write results |
 | `maxDegreeOfParallelism` | int | 0 | Parallelism control |
 | `transformations` | array | required | Child nodes per iteration |
 
 ```yaml
+# Basic: run 10 times, index available at $.i
 - type: For@1
   count: 10
-  indexTargetPath: $.index
+  indexTargetPath: $.i
   targetPath: $.results
   transformations:
     - type: SetPrimitiveValue@1
       value: "item"
-      targetPath: $.key.label
+      targetPath: $.label
+
+# Dynamic count pattern: iterate up to 100 times, guard with If
+- type: For@1
+  count: 100
+  indexTargetPath: $.i
+  transformations:
+    - type: If@1
+      path: $.i
+      operator: LessThan
+      valuePath: $.body.count
+      valueType: Int
+      transformations:
+        - type: SetPrimitiveValue@1
+          valuePath: $.i
+          targetPath: $.currentIndex
 ```
 
 ### If@1
@@ -652,17 +674,77 @@ Each simulation entry:
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `targetPath` | string | required | JSONPath where the generated value is written |
-| `simulatorKey` | string | `Increment` | Simulator type key (e.g., `Increment`, `Random`, `Name`) |
+| `simulatorKey` | string | required | Simulator type key — must be one of the registered keys below |
 | `configuration` | string | `{}` | JSON configuration string for the chosen simulator |
+
+#### Valid simulatorKey Values
+
+**Math generators:**
+| Key | Description | Configuration |
+|-----|-------------|---------------|
+| `Math.IntRandom` | Random integer | `{"min": 1, "max": 100}` |
+| `Math.DoubleRandom` | Random double | `{"min": 1.0, "max": 100.0}` |
+| `Math.Sinus` | Sine wave | `{"amplitude": 1.0, "frequency": 1.0}` |
+| `Math.Triangle` | Triangle wave | `{"amplitude": 1.0, "frequency": 1.0}` |
+| `Math.Constant` | Constant value | `{"amplitude": 1.0}` |
+
+**Text generators:**
+| Key | Description |
+|-----|-------------|
+| `Text.Lorem.Word` | Random lorem ipsum word |
+
+**Energy generators:**
+| Key | Description | Configuration |
+|-----|-------------|---------------|
+| `Energy.MeteringPointNumber` | Metering point number | `{"length": 33, "countryCode": "AT"}` |
+| `Energy.DateTime` | Date/time in range | `{"startDate": "...", "endDate": "..."}` |
+
+**Person generators (Bogus):**
+| Key | Description |
+|-----|-------------|
+| `Person.FirstName` | Random first name |
+| `Person.LastName` | Random last name |
+| `Person.FullName` | Full name |
+| `Person.Email` | Email address |
+| `Person.UserName` | Username |
+| `Person.Avatar` | Avatar URL |
+| `Person.Phone` | Phone number |
+| `Person.DateOfBirth` | Date of birth |
+| `Person.Gender` | Gender |
+| `Person.Company.Name` | Company name |
+| `Person.Company.CatchPhrase` | Company catch phrase |
+| `Person.Company.Bs` | Company BS |
+| `Person.Address.Street` | Street address |
+| `Person.Address.State` | State |
+| `Person.Address.Suite` | Suite number |
+| `Person.Address.City` | City |
+| `Person.Address.ZipCode` | Zip code |
+| `Person.Address.Geo.Lat` | Latitude |
+| `Person.Address.Geo.Lng` | Longitude |
+
+**Address generators (Bogus):**
+| Key | Description |
+|-----|-------------|
+| `Address.Country` | Country name |
+| `Address.CountryCode` | Country code |
+| `Address.ZipCode` | Zip code |
+| `Address.City` | City name |
+| `Address.StreetAddress` | Full street address |
+| `Address.StreetName` | Street name |
+| `Address.BuildingNumber` | Building number |
 
 ```yaml
 - type: Simulation@1
   locale: en
   simulations:
     - targetPath: $.sensor.Temperature
-      simulatorKey: Random
+      simulatorKey: Math.DoubleRandom
       configuration: '{"min": 20.0, "max": 80.0}'
-    - targetPath: $.sensor.SerialNumber
-      simulatorKey: Increment
-      configuration: '{"start": 1000}'
+    - targetPath: $.sensor.Pressure
+      simulatorKey: Math.Sinus
+      configuration: '{"amplitude": 50.0, "frequency": 0.1}'
+    - targetPath: $.sensor.OperatorName
+      simulatorKey: Person.FullName
+    - targetPath: $.sensor.Location
+      simulatorKey: Address.City
 ```
