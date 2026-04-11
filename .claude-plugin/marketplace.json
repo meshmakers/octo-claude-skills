@@ -7,8 +7,8 @@
   "plugins": [
     {
       "name": "octo-claude-skills",
-      "description": "OctoMesh platform skills for Claude Code: CLI natural language interface, data model exploration, runtime instance browsing, GraphQL schema introspection, and ETL pipeline YAML authoring",
-      "version": "0.11.0",
+      "description": "OctoMesh platform skills for Claude Code: CLI natural language interface, data model exploration, runtime instance browsing, GraphQL schema introspection, ETL pipeline YAML authoring, and structured commit workflow with Azure DevOps work item linking",
+      "version": "0.12.0",
       "source": "./",
       "author": {
         "name": "Meshmakers"
