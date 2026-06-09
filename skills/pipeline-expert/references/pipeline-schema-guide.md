@@ -11,11 +11,10 @@ Each adapter generates its schema at build time via an MSBuild target that runs 
 | Adapter | Schema Path (relative to monorepo root) | Typical Use |
 |---------|----------------------------------------|-------------|
 | **Mesh Adapter** | `octo-mesh-adapter/bin/DebugL/net10.0/pipeline-schema.json` | Most common; richest node set |
-| **EDA Adapter** | `octo-adapter-eda/bin/DebugL/net10.0/pipeline-schema.json` | Energy data pipelines |
 | **Zenon Adapter** | `octo-plug-zenon/src/Octo.Edge.Adapter.Zenon.WindowsService/bin/DebugL/net10.0/pipeline-schema.json` | SCADA integration pipelines |
 | **Simulation Adapter** | `octo-sdk/src/Sdk.Plug.Simulation/bin/DebugL/net10.0/pipeline-schema.json` | Test/simulation pipelines |
 
-**Which schema to use:** Pick the adapter implementation that will execute the pipeline. The Mesh Adapter schema is the most common choice as it has the richest set of nodes. For adapter-specific nodes (EDA, Zenon, Simulation), use that adapter's schema.
+**Which schema to use:** Pick the adapter implementation that will execute the pipeline. The Mesh Adapter schema is the most common choice as it has the richest set of nodes. For adapter-specific nodes (Zenon, Simulation), use that adapter's schema. (The EDA energy nodes live in a separate `octo-adapter-eda` repo that is **not** part of this monorepo — its schema cannot be generated here.)
 
 **If the schema file does not exist**, fall back to the hand-maintained node reference docs (`node-reference-sdk.md` for shared SDK nodes and `node-reference-mesh.md` for Mesh Adapter nodes).
 
@@ -78,6 +77,13 @@ Enum `$defs` entries list all valid values in both PascalCase and CONSTANT_CASE:
 ```
 
 Either casing is accepted. The reference docs use PascalCase.
+
+### Editor-Hint Extensions (x-propertyGroup / x-nodeKind)
+
+The generated schema also emits non-standard `x-` extension keywords for the visual editor — they do not affect YAML validity, only UI layout:
+
+- **`x-propertyGroup`** — present on most node properties (from the `[PropertyGroup("Group", order, "widget")]` attribute on the C# config). Groups properties into editor sections and hints a widget (e.g. `jsonpath`, `password`, `textarea`, `code`). Ignore it when validating.
+- **`x-nodeKind`** — present on `Group@1` with value `"group"` (from `[NodeKind("group")]`), letting the editor render a collapsible region. No runtime effect.
 
 ## Using the Schema for Validation
 

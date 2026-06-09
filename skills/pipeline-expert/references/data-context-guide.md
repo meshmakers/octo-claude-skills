@@ -11,7 +11,25 @@ The DataContext is the mutable JSON document that flows through a pipeline. Ever
 - `$.array[*]` — all array elements
 - `$.array[*].field` — field from each array element
 
-The context stores data as Newtonsoft.Json `JToken` objects (JObject, JArray, JValue). Writing to a path that doesn't exist creates the intermediate structure automatically.
+The context is backed by **System.Text.Json** (`JsonNode`/`JsonElement`) — Newtonsoft.Json is no longer used on the pipeline data path. Writing to a path that doesn't exist creates the intermediate structure automatically.
+
+### IDataContext surface (for node authors / debugging behavior)
+
+The node-author surface is **path-only** — nodes never see `JToken`/`JObject`/`JArray`, and there is no `EnumerateMatches` (removed). The complete surface is:
+
+| Method | Purpose |
+|--------|---------|
+| `Get<T>(path)` / `GetValue(path)` | Typed scalar read / untyped `JsonElement` read |
+| `TryGet<T>(path, out value)` | Non-throwing typed read (false when the path is absent/null) |
+| `Set<T>(path, value, documentMode, valueKind, writeMode)` | Typed write |
+| `GetKind(path)` | Inspect whether a path holds a value, null, array, object, or is undefined |
+| `Length(path)` | Element count for arrays |
+| `Iterate*Async(path, body)` | Iteration over arrays |
+| `UpdateMatchesAsync(jsonPath, body)` | Multi-match read/write (per-match sub-contexts) |
+| `SelectMatches(jsonPath)` | Read-only multi-match — returns `IEnumerable<IDataContext>` of **detached** sub-contexts, one per JSONPath match (replaces the removed `EnumerateMatches`, which returned raw `JsonNode?`) |
+| `WriteJsonTo(path, stream)` | Serialize a subtree to a stream (used for hashing) |
+
+Node code must not pass `JsonSerializerOptions` to any of these — all serialization is internal to the context implementation.
 
 ## Reading from Context
 
@@ -47,7 +65,7 @@ Controls how the value is written to the target path.
 | **Overwrite** (default) | Replace property value | Replace entire array |
 | **Append** | Merge properties | Add to end of array |
 | **Prepend** | N/A | Insert at start of array |
-| **Merge** | Deep merge (both must be JObject) | N/A |
+| **Merge** | Deep merge (both must be JSON objects) | N/A |
 
 ### Value Kind (targetValueKind)
 
@@ -56,7 +74,7 @@ Controls whether the value is treated as a scalar or array element.
 | Kind | Behavior |
 |------|----------|
 | **Simple** (default) | Write value as-is |
-| **Array** | Always wrap value in JArray before applying write mode |
+| **Array** | Always wrap value in a JSON array before applying write mode |
 
 ### Common Combinations
 
@@ -259,9 +277,11 @@ fieldFilters:
 
 ### Sort Orders
 
+Sort orders use `attributeName` (the attribute to sort by) — **not** `attributePath` (which is the fieldFilters key). The `SortOrderDto` shape is `{attributeName, sortOrder}` with `sortOrder` one of `Ascending`/`Descending`.
+
 ```yaml
 sortOrders:
-  - attributePath: CreatedAt
+  - attributeName: CreatedAt      # attributeName, not attributePath
     sortOrder: Descending
 ```
 

@@ -1,12 +1,25 @@
 ---
 name: octo-commit
-description: "Use when finishing work, committing changes, creating pull requests, wrapping up development tasks, or closing out work items across OctoMesh repositories. Triggers: commit, push, PR, pull request, merge, finish work, done, ship it, wrap up, AB#, work item, ready to commit, close task, create branch, feature branch, dev/"
+description: "Structured workflow for committing finished work across OctoMesh repositories: scans repos for changes, resolves or creates the Azure DevOps work item, builds the AB# commit message, verifies the build/tests, and optionally opens a PR. Enforces the review checkpoint — never pushes or opens a PR without explicit user approval in the current session. Trigger on: commit, push, PR, pull request, merge, finish work, done, ship it, wrap up, AB#, work item, ready to commit, close task, create branch, feature branch, dev/, Azure DevOps."
 allowed-tools:
-  - "Bash(git:*)"
-  - "Bash(az:*)"
-  - "Bash(gh:*)"
-  - "Bash(dotnet:*)"
-  - "Bash(npm:*)"
+  - "Bash(git status:*)"
+  - "Bash(git diff:*)"
+  - "Bash(git log:*)"
+  - "Bash(git add:*)"
+  - "Bash(git commit:*)"
+  - "Bash(git checkout:*)"
+  - "Bash(git push:*)"
+  - "Bash(git pull:*)"
+  - "Bash(git config:*)"
+  - "Bash(git remote:*)"
+  - "Bash(gh pr create:*)"
+  - "Bash(az boards:*)"
+  - "Bash(az repos pr create:*)"
+  - "Bash(az devops:*)"
+  - "Bash(dotnet build:*)"
+  - "Bash(dotnet test:*)"
+  - "Bash(npm run lint:*)"
+  - "Bash(npm test:*)"
   - "Bash(for:*)"
   - "Read"
   - "Grep"
@@ -18,6 +31,15 @@ allowed-tools:
 
 Structured workflow for committing finished work across OctoMesh repositories with Azure DevOps work item linking, verification, and optional PR creation.
 
+## CRITICAL: Review Checkpoint Before Pushing
+
+**Never push or create a PR without explicit user approval given in the CURRENT session.** This is a firm convention from the repo owner.
+
+- Implementation latitude (permission to write code) does NOT imply push authority.
+- Statements like "I'll look at it later", "Ich schau's mir später an", "let me review first" mean **STOP** — do not push, do not open a PR. The user is taking a review checkpoint *before* the push.
+- Committing locally may be fine when asked; **pushing and PR creation always require a fresh, explicit go-ahead** ("push it", "create the PR", "ship it").
+- When in doubt, ask via **AskUserQuestion** before any `git push` / `gh pr create` / `az repos pr create`.
+
 ## Commit Message Format
 
 ```
@@ -27,7 +49,10 @@ AB#<WorkItemId> <New|Fix>: <Description>
 | Work Item Type | Prefix | Example |
 |---------------|--------|---------|
 | Issue / Epic | `New` | `AB#4521 New: Add pipeline validation endpoint` |
+| Task | `New` (default) | `AB#4081 New: Add blueprint variables` |
 | Bug | `Fix` | `AB#4493 Fix: Resolve null reference in CK compilation` |
+
+`New` and `Fix` cover the overwhelming majority of OctoMesh commits. **Task** has no distinct prefix convention in the git history — default to `New` and confirm the prefix with the user if the change is clearly a correction (then `Fix`).
 
 **Description:** imperative mood, concise (e.g., "Add validation" not "Added validation").
 
@@ -53,10 +78,11 @@ digraph commit_flow {
     workitem [label="4. Find or create work item"];
     strategy [label="5. Choose commit strategy"];
     verify [label="6. Verify completion"];
-    execute [label="7. Commit and push"];
-    pr [label="8. Create PR"];
+    approve [label="7. REVIEW CHECKPOINT: get explicit approval"];
+    execute [label="8. Commit and push"];
+    pr [label="9. Create PR"];
 
-    scan -> context -> claudemd -> workitem -> strategy -> verify -> execute;
+    scan -> context -> claudemd -> workitem -> strategy -> verify -> approve -> execute;
     execute -> pr [label="if feature branch"];
 }
 ```
@@ -115,10 +141,10 @@ For every repo with pending changes:
 
 1. Check if user mentioned a work item ID (AB#1234, "work item 1234")
 2. Check current branch name for clues (`dev/reimar/AB1234-feature`)
-3. If unknown, analyze the changes and search Azure DevOps:
+3. If unknown, analyze the changes and search Azure DevOps with a WIQL query:
 
 ```bash
-az boards work-item query \
+az boards query \
   --wiql "SELECT [System.Id], [System.Title], [System.WorkItemType], [System.State] \
           FROM WorkItems \
           WHERE [System.TeamProject] = 'OctoMesh' \
@@ -128,32 +154,37 @@ az boards work-item query \
   --org https://dev.azure.com/meshmakers
 ```
 
-Work item types: **Bug**, **Issue** (features), **Epic**.
+**CRITICAL:** The WIQL command is `az boards query` — there is **no** `az boards work-item query` subcommand (`az boards work-item` only has create/delete/show/update).
+
+Work item types: **Bug**, **Issue** (features), **Epic**, **Task**.
 
 Present matching work items to the user with AskUserQuestion if multiple matches found.
 
 **If no matching work item exists**, ask user whether to create one. If yes, gather the following via AskUserQuestion:
 
-1. **Type**: Bug, Issue, or Epic
-2. **Team**: Product Team or Solution Team
+1. **Type**: Bug, Issue, Epic, or Task
+2. **Team**: one of the real OctoMesh teams (see below)
 3. **Area**: suggest based on which repos have changes
 4. **Iteration**: list available iterations for the chosen team
+
+**OctoMesh Azure DevOps teams** (use the exact names):
+`Solutions Team` (plural), `Product Team`, `CustomerProjects Team`, `Sales Team`, `BizOps Team`, `Energy Solution Team`.
 
 ```bash
 # List available iterations for a team
 az boards iteration team list \
-  --team "<Team>" \
+  --team "Solutions Team" \
   --org https://dev.azure.com/meshmakers \
   --project OctoMesh
 
 # List available areas for a team
 az boards area team list \
-  --team "<Team>" \
+  --team "Solutions Team" \
   --org https://dev.azure.com/meshmakers \
   --project OctoMesh
 ```
 
-Create the work item:
+Create the work item (Mutating — confirm with user first):
 
 ```bash
 az boards work-item create \
@@ -167,16 +198,9 @@ az boards work-item create \
 
 ### Step 5: Choose Commit Strategy
 
-Use **AskUserQuestion** if not already clear from context:
+Use **AskUserQuestion** if not already clear from context: **Direct to main** (small, low-risk) or **Feature branch + PR** (standard).
 
-> "How should we handle this commit?"
-> - **Direct to main** -- small, low-risk change
-> - **Feature branch + PR** -- standard workflow
-
-If feature branch:
-- Create branch: `dev/<username>/<feature-name>`
-- Derive username from `git config user.name` (first name, lowercase)
-- Derive feature name from work item title or change context (kebab-case)
+For a feature branch, create it using the Branch Naming convention above:
 
 ```bash
 git -C <repo> checkout -b dev/<username>/<feature-name>
@@ -204,17 +228,26 @@ If build or tests fail, use **AskUserQuestion**:
 For significant changes, ask about documentation:
 > "Does this change need documentation updates?"
 
-### Step 7: Commit and Push
+### Step 7: Review Checkpoint — Get Explicit Approval
 
-Build the commit message using the format `AB#<id> <New|Fix>: <Description>`.
+Before any `git push` / `gh pr create` / `az repos pr create`, you must have explicit approval **in the current session**. Show the user what will happen via **AskUserQuestion**:
 
-**Before committing**, show the user what will happen via **AskUserQuestion**:
-
-> Ready to commit:
+> Ready to commit and push:
 > - **Repo:** [repo-name]
 > - **Message:** `AB#1234 New: Add pipeline validation`
 > - **Files:** [file list or summary]
 > - **Branch:** main / dev/reimar/feature-name
+> - **Will push + open PR:** yes/no
+
+If the user defers ("I'll look at it later"), STOP — you may commit locally only if explicitly asked, but do **not** push or open a PR.
+
+### Step 8: Commit and Push
+
+Build the commit message using the format `AB#<id> <New|Fix>: <Description>`.
+
+**Co-Authored-By convention:** OctoMesh repos use a **model-specific** trailer of the form
+`Co-Authored-By: Claude <model name> <noreply@anthropic.com>` — not a bare `Claude`. Use the
+running model's name, e.g. `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`.
 
 For each repo with changes:
 
@@ -226,17 +259,23 @@ git -C <repo> add <specific-files>
 git -C <repo> commit -m "$(cat <<'EOF'
 AB#<id> <New|Fix>: <Description>
 
-Co-Authored-By: Claude <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
 EOF
 )"
 
-# Push
+# First push of a new branch MUST set upstream with -u
 git -C <repo> push -u origin <branch>
+
+# Subsequent pushes (upstream already set)
+git -C <repo> push
 ```
 
-**NEVER force-push to main.** Always confirm before pushing.
+**CRITICAL:** The initial push of a freshly created feature branch requires `-u`
+(`git push -u origin <branch>`) to set the upstream tracking ref; later pushes can use a bare `git push`.
 
-### Step 8: Create PR (if feature branch)
+**NEVER force-push to main.** Always confirm before pushing (see Review Checkpoint).
+
+### Step 9: Create PR (if feature branch)
 
 **For GitHub repos** (majority of OctoMesh repos):
 
@@ -253,8 +292,7 @@ AB#<id>
 
 ## Test Plan
 - [ ] Build passes (DebugL)
-- [ ] Unit tests pass
-- [ ] Integration tests pass
+- [ ] Unit + integration tests pass
 - [ ] Manual verification done
 
 Generated with [Claude Code](https://claude.ai/code)
@@ -262,7 +300,8 @@ EOF
 )"
 ```
 
-**For Azure DevOps repos** (e.g., meshmakers_staging):
+**For Azure DevOps repos** (e.g., `meshmakers_staging`). Use `--work-items` to link the PR
+directly to the ADO work item (space-separated IDs):
 
 ```bash
 az repos pr create \
@@ -270,6 +309,7 @@ az repos pr create \
   --source-branch <branch> \
   --target-branch main \
   --title "AB#<id> <New|Fix>: <Description>" \
+  --work-items <id> \
   --org https://dev.azure.com/meshmakers \
   --project OctoMesh
 ```
@@ -289,30 +329,39 @@ When changes span multiple repos:
 
 ## Repo Remotes Quick Reference
 
-| Repo | Host | PR Tool |
-|------|------|---------|
-| Most `octo-*` repos | GitHub (`meshmakers/`) | `gh pr create` |
-| `meshmakers_staging` | Azure DevOps | `az repos pr create` |
-| `pipeline-editor`, `docs` | GitHub (`reikla/`) | `gh pr create --repo reikla/<name>` |
+Most `octo-*` repos live at `meshmakers/<repo>` on GitHub (`gh pr create`). `meshmakers_staging`
+is the sole Azure DevOps-hosted repo (`az repos pr create`). `pipeline-editor`, `docs`,
+`zenon-dynprop-api`, and `aspire-management-prototype` are under `reikla/` on GitHub.
+
+**CRITICAL:** The local directory `docs` maps to the GitHub repo `reikla/ai-docs` (NOT `reikla/docs`).
+If unsure of a repo's remote, verify before pushing: `git -C <repo> remote get-url origin`.
+
+See `${CLAUDE_PLUGIN_ROOT}/skills/octo-commit/references/repo-remotes.md` for the full directory-to-remote table.
 
 ## Common Mistakes
 
 | Mistake | Prevention |
 |---------|------------|
+| Pushing without approval | Get explicit go-ahead **this session** before any push/PR |
 | Committing without work item | Always resolve AB# first -- search or create |
-| Wrong prefix (New vs Fix) | Check work item type: Bug -> Fix, Issue/Epic -> New |
-| Forgetting Co-Authored-By | Template includes it -- never remove |
+| Wrong WIQL command | Use `az boards query --wiql`, NOT `az boards work-item query` |
+| Wrong prefix (New vs Fix) | Bug -> Fix; Issue/Epic/Task -> New (confirm Task if it's a fix) |
+| Wrong team name | It's `Solutions Team` (plural), not "Solution Team" |
+| Bare Co-Authored-By | Use model-specific name: `Claude <model> <noreply@anthropic.com>` |
+| Wrong docs remote | `docs` dir -> `reikla/ai-docs`, not `reikla/docs` |
+| Missing upstream on new branch | First push needs `git push -u origin <branch>` |
 | Not reading CLAUDE.md | Always read before build/test/commit |
 | Committing secrets | Review staged files for .env, credentials, tokens |
 | Force-pushing to main | Never. Use feature branches for risky changes |
-| Skipping tests | Run tests per CLAUDE.md before every commit |
 | Wrong build config | OctoMesh .NET repos require `DebugL`, not `Debug` or `Release` |
 | Stale branch | Pull latest before branching: `git pull --rebase` |
 
 ## Red Flags -- STOP and Verify
 
+- **About to push or open a PR without explicit approval in the current session** — STOP. "I'll look at it later" means do not push.
 - About to commit without an AB# work item link
 - Pushing directly to main on a non-trivial change
 - Tests not run or failing
 - Changes in repos you haven't read CLAUDE.md for
 - Sensitive files in the staging area (.env, appsettings with secrets)
+- Pushing a new branch without `-u` (upstream not set)

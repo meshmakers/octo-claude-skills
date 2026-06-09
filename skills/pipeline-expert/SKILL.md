@@ -1,6 +1,6 @@
 ---
 name: pipeline-expert
-description: Expert for OctoMesh ETL pipeline YAML — creation, reading, editing, debugging, validation. This skill should be used when the user mentions pipeline YAML, YAML pipeline, pipeline creation, pipeline nodes, node configuration, DataContext, ForEach iteration, ETL pipelines, adapter pipelines, triggers, transformations, ApplyChanges, CreateUpdateInfo, data mapping, pipeline debugging, pipeline error, data flow, DataFlow, dataflow, pipeline chaining, inter-pipeline communication, cross-adapter communication, PipelineTrigger, pipeline trigger, cron schedule, ToPipelineDataEvent, FromPipelineDataEvent, FromPipelineTriggerEvent, FromExecutePipelineCommand, targetPipelineRtId, GetRtEntities, entity CRUD, association updates, field filters, switch cases, polling pipelines, HTTP triggers, watch entity triggers, scheduled pipeline, cron trigger, email trigger, Zenon integration, SAP integration, EDA processing, email notifications, time series, anomaly detection, AI queries, buffering, webhook, Base64 encoding, logging, debug output, pipeline config lookup, report generation, pipeline schema, pipeline validation, CSV import, Excel import, SFTP upload, file hash, duplicate check, Grafana provisioning, Microsoft Teams, Microsoft Graph, simulation data, OCR, pipeline JSON schema, pipeline example.
+description: Authoring, reading, editing, debugging, and validating OctoMesh ETL pipeline YAML — the node-by-node config, DataContext/JSONPath data flow, triggers, transformations, entity CRUD via CreateUpdateInfo/ApplyChanges, archive (CrateDB) writes, inter-pipeline chaining within a DataFlow, and deployment/debug troubleshooting. Use whenever someone builds or fixes a pipeline definition or asks what a node does. Trigger on: pipeline YAML, pipeline node, node configuration, DataContext, ForEach, For, DataFlow, PipelineTrigger, cron schedule, ToPipelineDataEvent, FromPipelineDataEvent, FromPipelineTriggerEvent, FromExecutePipelineCommand, GetRtEntities, CreateUpdateInfo, CreateAssociationUpdate, ApplyChanges, association updates, field filters, SaveStreamDataInArchive, TimeRangeArchive, BackfillFromRtEntity, SetPipelineExecutionResult, OutputData empty, Group node, DataPointMapping, ApplyDataPointMappings, BuildMappingTargets, GenerateDataPointMappings, ValidateDataPointCoverage, ToDiscord, AnthropicAiQuery, MCP, Zenon, SAP, anomaly detection, CSV/Excel import, SFTP, Grafana, Teams, OCR, pipeline schema, pipeline validation, pipeline debug, deploy pipeline, pipeline error.
 allowed-tools:
   - "Read(${CLAUDE_PLUGIN_ROOT}/skills/pipeline-expert/references/*)"
   - "Grep"
@@ -14,118 +14,31 @@ allowed-tools:
 
 OctoMesh pipelines are YAML-defined ETL data flows executed by adapters. Each pipeline has **triggers** that start execution and **transformations** (an ordered list of nodes) that process data through a shared **DataContext** — a mutable JSON document accessed via JSONPath.
 
-An **Adapter** (`System.Communication/Adapter`) is a unified runtime that executes pipelines. Different adapter implementations exist (Mesh Adapter, Zenon Adapter, Simulation Adapter, etc.) but they all share the same CK type and pipeline execution model. Each adapter registers the pipeline nodes it supports — SDK-shared nodes plus adapter-specific ones.
-
-Pipelines handle: entity CRUD, cross-adapter data synchronization, data import/export, notifications, report generation, AI queries, anomaly detection, and more.
+An **Adapter** (`System.Communication/Adapter`) is a unified runtime that executes pipelines. Different implementations exist (Mesh, Zenon, Simulation, …) but all share the same CK type and execution model; each registers the nodes it supports — SDK-shared nodes plus adapter-specific ones. Pipelines handle entity CRUD, cross-adapter sync, import/export, notifications, reports, AI queries, anomaly detection, and more.
 
 ## Source Code Research (MANDATORY)
 
-**NEVER guess how a pipeline node behaves.** When you are unsure about a node's properties, behavior, defaults, or edge cases, you MUST read the actual C# source code before answering or generating YAML. The reference docs in this skill are summaries — the source code is the ground truth.
-
-### When to Research
-
-You MUST read source code when:
-- You are **not 100% certain** about a node's available properties or their exact names
-- You need to understand **what a node actually does** at runtime (read the handler)
-- You need to know **default values** for optional properties
-- A user asks **why a node behaves a certain way** or reports unexpected behavior
-- You are writing YAML for a node you haven't used recently in this conversation
-- You encounter a node name you don't recognize or that isn't in the reference docs
+**NEVER guess how a pipeline node behaves.** The reference docs are summaries; the C# source is ground truth. Read the source before answering or writing YAML whenever you are not 100% certain of a node's property names/defaults, need to know what it does at runtime, hit a node you don't recognize, or a user reports unexpected behavior. All paths below are **relative to the monorepo root** — the parent directory of this plugin's repo, containing both `octo-sdk/` and `octo-mesh-adapter/` (use `../` or search upward).
 
 ### Where Node Source Code Lives
 
-Pipeline nodes are split across two repositories in the monorepo. All paths below are **relative to the monorepo root** (the parent directory containing `octo-sdk`, `octo-mesh-adapter`, etc.):
+| Node set | Configuration classes (properties/defaults) | Handler classes (runtime behavior) |
+|----------|----------------------------------------------|-------------------------------------|
+| **SDK** (ForEach, If, Switch, For, Group, SelectByPath, SetPrimitiveValue, Concat, Math, FromPolling, ToPipelineDataEvent, SetPipelineExecutionResult, BufferData, …) | `octo-sdk/src/Sdk.Common/EtlDataPipeline/Nodes/` under `Control/`, `Extracts/`, `Transforms/`, `Triggers/`, `Loads/`, `Buffering/` — config + handler usually in the same file | (same files) |
+| **Mesh Adapter** (GetRtEntitiesByType, CreateUpdateInfo, ApplyChanges, SaveStreamDataInArchive, ToDiscord, ApplyDataPointMappings, …) | `octo-mesh-adapter/src/MeshNodes.Sdk/` under `Extract/`, `Transform/`, `Load/`, `Trigger/` | `octo-mesh-adapter/src/MeshAdapter.Sdk/Nodes/` under the same four folders |
+| **Zenon Adapter** (the six archive/Editor nodes) | `octo-plug-zenon/src/Octo.Edge.Adapter.Zenon.WindowsService/Nodes/` — config record + handler in the same file | (same files) |
+| **Simulation** (`Simulation@1`) | `octo-sdk/src/Sdk.SimulationNodes/Nodes/Extracts/SimulationNode.cs`; generators under `Sdk.SimulationNodes/Generators/` | (same) |
 
-**SDK nodes** (ForEach, If, Switch, SetPrimitiveValue, For, SelectByPath, etc.):
-```
-octo-sdk/src/Sdk.Common/EtlDataPipeline/Nodes/
-├── Control/       (ForEach, If, Switch, For, SelectByPath)
-├── Extracts/      (SetPrimitiveValue, SetArrayOfPrimitiveValues, WriteJson)
-├── Transforms/    (Concat, FormatString, TransformString, Hash, Math, etc.)
-├── Triggers/      (FromPolling, FromPipelineDataEvent)
-├── Loads/         (ToPipelineDataEvent, ToWebhook)
-└── Buffering/     (BufferData, BufferRetrievalNode)
-```
-
-**Mesh Adapter nodes** (GetRtEntitiesByType, CreateUpdateInfo, ApplyChanges, etc.):
-- **Configuration classes** (properties, defaults, validation):
-  ```
-  octo-mesh-adapter/src/MeshNodes.Sdk/
-  ├── Extract/     (GetRtEntitiesByType, GetRtEntitiesById, GetOrCreate, etc.)
-  ├── Transform/   (CreateUpdateInfo, CreateAssociationUpdate, CheckDuplicate, etc.)
-  ├── Load/        (ApplyChanges, SaveInTimeSeries, SendEMail, SftpUpload, etc.)
-  └── Trigger/     (FromWatchRtEntity, FromHttpRequest, FromEmail, etc.)
-  ```
-- **Handler classes** (execution logic — what the node actually does):
-  ```
-  octo-mesh-adapter/src/MeshAdapter.Sdk/Nodes/
-  ├── Extract/
-  ├── Transform/
-  ├── Load/
-  └── Trigger/
-  ```
-
-**Finding the monorepo root:** The monorepo root is the parent directory of this plugin's repository. Use `../` relative to the plugin working directory, or search upward for a directory containing both `octo-sdk/` and `octo-mesh-adapter/`.
-
-### Naming Conventions
+### Naming Conventions & Lookup
 
 | What | Pattern | Example |
 |------|---------|---------|
-| Config class | `[NodeName]NodeConfiguration.cs` | `CheckDuplicateNodeConfiguration.cs` |
-| Config class (versioned) | `[NodeName]NodeConfiguration[N].cs` | `ApplyChangesNodeConfiguration2.cs` |
-| Handler class | `[NodeName]Node.cs` | `CheckDuplicateNode.cs` |
-| Handler class (versioned) | `[NodeName]Node[N].cs` | `ApplyChangesNode2.cs` |
-| SDK nodes | Config + handler in same file | `ForEachNode.cs` |
+| Config class | `[NodeName]NodeConfiguration.cs` (versioned: `…Configuration2.cs`) | `CheckDuplicateNodeConfiguration.cs` |
+| Handler class | `[NodeName]Node.cs` (versioned: `…Node2.cs`) | `CheckDuplicateNode.cs` |
 | Config attribute | `[NodeName("DisplayName", Version)]` | `[NodeName("CheckDuplicate", 1)]` |
 | Handler attribute | `[NodeConfiguration(typeof(ConfigClass))]` | `[NodeConfiguration(typeof(CheckDuplicateNodeConfiguration))]` |
 
-### How to Research a Node
-
-**Step 1 — Find the source file** (use Grep and Glob from the monorepo root):
-```
-# Search by node name (e.g., "CheckDuplicate")
-Grep for: NodeName\("CheckDuplicate"
-  in: octo-mesh-adapter/src/   (mesh adapter nodes)
-  or: octo-sdk/src/            (SDK nodes)
-
-# Or find the file by naming convention
-Glob for: **/CheckDuplicate*Configuration*.cs
-  in: octo-mesh-adapter/src/MeshNodes.Sdk/
-```
-
-**Step 2 — Read the configuration class** to learn:
-- All available properties and their C# types
-- Default values
-- Required vs optional properties
-- XML doc comments explaining each property
-
-**Step 3 — Read the handler class** to learn:
-- What the node actually does at runtime
-- How it reads from and writes to the DataContext
-- Error conditions and edge cases
-- How properties interact with each other
-
-### Quick Lookup Examples
-
-All paths below are relative to the monorepo root:
-
-```
-# Find where a specific node is defined
-Grep pattern: NodeName\("CreateUpdateInfo"
-Path: octo-mesh-adapter/src/
-
-# If not found in mesh-adapter, search the SDK
-Grep pattern: NodeName\("CreateUpdateInfo"
-Path: octo-sdk/src/
-
-# Find all available nodes for a category
-Glob pattern: **/*NodeConfiguration*.cs
-Path: octo-mesh-adapter/src/MeshNodes.Sdk/Transform/
-
-# Find the handler to understand runtime behavior
-Glob pattern: **/CheckDuplicateNode.cs
-Path: octo-mesh-adapter/src/MeshAdapter.Sdk/
-```
+Find a node: Grep for `NodeName\("CheckDuplicate"` in `octo-mesh-adapter/src/` (else `octo-sdk/src/`), or Glob `**/CheckDuplicate*Configuration*.cs`. Read the **config class** for properties/defaults/required-vs-optional (from XML docs), then the **handler** for runtime behavior, DataContext reads/writes, and error conditions.
 
 ## DataFlows and Pipeline Triggers
 
@@ -142,7 +55,7 @@ A **PipelineTrigger** (`System.Communication/PipelineTrigger`) is a child of a D
 - Has `Enabled` and `CronExpression` attributes
 - Has a `Triggers` association linking to one or more Pipeline entities
 - The target pipelines must use `FromPipelineTriggerEvent@1` as their trigger node
-- Cron format: `minute hour dayOfMonth month dayOfWeek year` (6 fields)
+- Cron format: standard 5-field `minute hour dayOfMonth month dayOfWeek` (no year field; e.g. `0 * * * *` = top of every hour). Scheduled via the MassTransit/Hangfire recurring scheduler.
 
 **Entity relationships:**
 ```
@@ -155,21 +68,17 @@ DataFlow
 
 ```yaml
 triggers:
-  - type: NodeType@Version
-    # trigger-specific properties
-
+  - type: NodeType@Version      # trigger-specific properties
 transformations:
-  - type: NodeType@Version
-    # node-specific properties
-    # control flow nodes nest child nodes:
-    transformations:
+  - type: NodeType@Version      # node-specific properties
+    transformations:            # control-flow nodes nest child nodes
       - type: ChildNode@Version
 ```
 
 **Triggers** define how the pipeline starts: polling interval, HTTP request, entity change watch, event hub message, explicit command, or email. Each trigger type populates the DataContext with different initial paths — see `references/data-context-guide.md` "Trigger DataContext Placement" for the full table. Key examples:
 - `FromHttpRequest@1`: body at `$.body`, query params at `$.query`, files at `$.files`
 - `FromWatchRtEntity@1`: changed entity at `$.Document`
-- `FromExecutePipelineCommand@1` / `FromPipelineTriggerEvent@1`: empty context
+- `FromExecutePipelineCommand@1` / `FromPipelineTriggerEvent@1`: empty context. `FromExecutePipelineCommand@1` now lives in `Sdk.Common` and is available on **all** adapters (Edge and Mesh), not Mesh-only — the pipeline must still belong to a DataFlow.
 
 **Transformations** define the processing steps. Each node reads from and writes to the DataContext. Control flow nodes (ForEach, If, Switch) nest child transformations.
 
@@ -185,10 +94,7 @@ These errors cause deployment failures. Check your YAML against this table befor
 | `valueType: Int32` | `Not in enum` | Use the short enum name: `Int`, `Boolean`, `String`, `Double`, `DateTime`, etc. |
 | `ckTypeId: Model-Version/Type` | Deployment error | Use unversioned: `Model/Type` (pipeline YAML ckTypeId refs are unversioned, unlike ImportRt YAML) |
 
-**Prevention:** Before deploying, validate node properties against the pipeline schema:
-1. Fetch schema: `octo-cli -c GetPipelineSchema --adapterId <rtId> --outputFile schema.json`
-2. Look up each node type in `$defs` to confirm exact property names and enum values
-3. Or use `pipeline_validate.py` to validate automatically
+**Prevention:** before deploying, fetch the schema (`octo-cli -c GetPipelineSchema --adapterId <rtId> --outputFile schema.json`) and confirm each node's property names and enum values in `$defs`, or use `pipeline_validate.py`.
 
 ## DataContext Essentials
 
@@ -237,6 +143,8 @@ For a deeper explanation of context hierarchy, write modes, and field filters, r
 
 ## Node Categories
 
+This is an operational overview of the **most-used** nodes. The full property tables for every node live in `references/node-reference-sdk.md` (SDK nodes, available on all adapters) and `references/node-reference-mesh.md` (Mesh Adapter nodes). Read those before writing YAML for any node not summarized here.
+
 ### Triggers
 
 | Node | Purpose |
@@ -245,80 +153,43 @@ For a deeper explanation of context hierarchy, write modes, and field filters, r
 | `FromHttpRequest@1` | HTTP endpoint (method + path) |
 | `FromWatchRtEntity@1` | Entity change stream (Insert/Update/Delete) |
 | `FromPipelineDataEvent@1` | Receive data from another pipeline in the same DataFlow |
-| `FromExecutePipelineCommand@1` | Manual execution command (via service or UI) |
-| `FromPipelineTriggerEvent@1` | Scheduled execution via PipelineTrigger entity (cron) |
-| `FromSendNotification@1` | Notification service message |
-| `FromEmail@1` | Incoming email via IMAP |
-| `FromMicrosoftGraph@1` | Poll Microsoft Teams channels via Graph API |
+| `FromExecutePipelineCommand@1` | Manual execution command (SDK node — all adapters); pipeline must be in a DataFlow |
+| `FromPipelineTriggerEvent@1` | Scheduled execution via PipelineTrigger entity (5-field cron) |
+| `FromSendNotification@1`, `FromEmail@1`, `FromMicrosoftGraph@1` | Notification message / IMAP email / Teams channel poll |
 
-### Control Flow
+### Control Flow (SDK)
 
 | Node | Purpose |
 |------|---------|
 | `ForEach@1` | Iterate array with child context (`$.full`/`$.key`/merge) |
-| `For@1` | Execute N times (deep-clones parent context, supports `count` or `countPath` — see data-context-guide.md) |
+| `For@1` | Execute N times — deep-clones parent context; `count` (static) or `countPath` (dynamic, wins); `maxDegreeOfParallelism` |
 | `If@1` | Conditional (Equal, Contains, GreaterThan, RegexMatch, etc.) |
 | `Switch@1` | Multi-branch by value (supports array case values) |
 | `SelectByPath@1` | Select and transform multiple paths |
+| `Group@1` | Structural no-op container — runs children inline on the same context; editor-grouping only, NO runtime effect |
 
 ### Extract (Data In)
 
 | Node | Purpose |
 |------|---------|
-| `SetPrimitiveValue@1` | Set static or dynamic value |
-| `SetArrayOfPrimitiveValues@1` | Set array of values |
-| `WriteJson@1` | Inject raw JSON string |
-| `GetRtEntitiesByType@1` | Query entities by CK type |
-| `GetRtEntitiesById@1` | Fetch entities by ID |
-| `GetRtEntitiesByWellKnownName@1` | Lookup by name, enrich with IDs |
-| `GetOrCreateRtEntitiesByType@1` | Find or generate new ID |
+| `SetPrimitiveValue@1` / `SetArrayOfPrimitiveValues@1` / `WriteJson@1` | Inject static/dynamic value, value array, or raw JSON (SDK) |
+| `GetRtEntitiesByType@1` / `GetRtEntitiesById@1` / `GetRtEntitiesByWellKnownName@1` | Query entities by CK type / by ID / by well-known name (enriches with IDs) |
+| `GetOrCreateRtEntitiesByType@1` | Find by field filters or generate a new ID |
 | `GetAssociationTargets@1` | Traverse associations |
-| `GetQueryById@1` | Execute saved query |
-| `GetPipelineConfigByWellKnownName@1` | Load global config |
-| `GetPipelineConfigByCkTypeId@1` | Load configs by CK type |
-| `GetNotificationTemplate@1` | Load notification template |
-| `EnrichWithMongoData@1` | Enrich updates with current DB state |
+| `GetQueryById@1` | Execute a saved query (simple/aggregation/grouping queries; cache disabled — always fresh) |
+| `GetPipelineConfigByWellKnownName@1` (SDK) / `GetPipelineConfigByCkTypeId@1` (Mesh) | Load global config by name / by CK type |
+| `GetNotificationTemplate@1` | Load notification template (subject + body) |
+| `BackfillFromRtEntity@1` | Backfill missing attributes from MongoDB using a CkArchive's column spec (replaces removed `EnrichWithMongoData@1`); sits before `SaveStreamDataInArchive@1` |
 
 ### Transform
 
-| Node | Purpose |
-|------|---------|
-| `CreateUpdateInfo@1` | Build entity Insert/Update/Delete operations |
-| `CreateAssociationUpdate@1` | Build association Create/Delete operations |
-| `CreateFileSystemUpdate@1` | Create file system items |
-| `DataMapping@1` | Map values (e.g., int→string enum) |
-| `Concat@1` | Concatenate string parts |
-| `FormatString@1` | Format with `{$.path}` placeholders |
-| `TransformString@1` | String ops (Trim, ToUpper, Substring, etc.) |
-| `Flatten@1` | Flatten nested arrays |
-| `Project@1` | Include/exclude fields |
-| `Join@1` | Inner join two arrays |
-| `Math@1` | Add, Subtract, Multiply, Divide, Round |
-| `DateTime@1` | Now, StartOfDay, AddDays/Hours/Minutes/Seconds, DaysBetween, Format, CombineDateTime, ExtractDate/Time |
-| `SumAggregation@1` | Weighted sum with optional filter |
-| `FilterLatestUpdateInfo@1` | Deduplicate entity updates |
-| `Distinct@1` | Remove duplicates by property |
-| `PlaceholderReplace@1` | Replace `${name}` in strings |
-| `Base64Encode@1` / `Base64Decode@1` | Base64 encoding/decoding |
-| `Hash@1` | Cryptographic hash (MD5–SHA512) |
-| `ConvertDataType@1` | Type conversion |
-| `Map@1` | Pivot/transpose arrays |
-| `LinearScaler@1` | Linear value scaling |
-| `Logger@1` / `PrintDebug@1` | Log message / print data context |
-| `ExecuteCSharp@1` | Dynamic C# execution |
-| `MakeHttpRequest@1` | HTTP request (GET/POST/PUT/DELETE) |
-| `AnthropicAiQuery@1` | Claude AI document analysis |
-| `PdfOcrExtraction@1` | PDF text extraction via OCR |
-| `QueryResultToMarkdownTable@1` | Query results → Markdown |
-| `StatisticalAnomalyDetection@1` | Z-Score/IQR anomaly detection |
-| `MachineLearningAnomalyDetection@1` | ML.NET spike/change detection |
-| `ImportFromExcel@1` | Excel data import |
-| `ImportFromCsv@1` | Import tabular data from CSV files |
-| `MinMax@1` | Find min/max in array |
-| `CheckDuplicate@1` | Check if entity with matching attribute already exists |
-| `ComputeFileHash@1` | SHA-256 hash of base64 file data |
-| `ReplyToTeamsChannel@1` | Send message card to Teams channel via webhook |
-| `Simulation@1` | Generate simulated data values (Bogus-based) |
+Common: `CreateUpdateInfo@1` (build entity Insert/Update/Delete), `CreateAssociationUpdate@1` (build association Create/Delete), `CreateFileSystemUpdate@1`, `DataMapping@1` (value mapping), `Concat@1`, `FormatString@1`, `TransformString@1`, `Flatten@1`, `Project@1`, `Join@1`, `Math@1`, `SumAggregation@1`, `FilterLatestUpdateInfo@1`, `Distinct@1` (SDK — all adapters), `PlaceholderReplace@1`, `Base64Encode@1`/`Base64Decode@1`, `Hash@1`, `ConvertDataType@1`, `Map@1`, `LinearScaler@1`, `MinMax@1`, `Logger@1`/`PrintDebug@1`, `ExecuteCSharp@1`, `MakeHttpRequest@1`, `CheckDuplicate@1`, `ComputeFileHash@1`, `QueryResultToMarkdownTable@1`.
+
+Specialized (see `node-reference-mesh.md`): `AnthropicAiQuery@1` (Claude AI; MCP-aware), `PdfOcrExtraction@1`, `StatisticalAnomalyDetection@1`, `MachineLearningAnomalyDetection@1`, `ImportFromCsv@1`, `ImportFromExcel@1`, `ReplyToTeamsChannel@1`.
+
+DataPointMapping family (Mesh): `ApplyDataPointMappings@1` (evaluate mappings with mXparser expressions), `BuildMappingTargets@1` (resolve mappings to acquisition targets), `GenerateDataPointMappings@1` (deterministic rule-based generator — non-AI alternative to `AnthropicAiQuery@1`), `ValidateDataPointCoverage@1` (coverage report), `MapToRecordArray@1`, `UpdateRecordArrayItem@1`.
+
+Simulation: `Simulation@1` is an **Extract** node (not Transform) — Bogus/Math/Energy generators; `SimulateEnergyMeasurements@1` (Mesh) generates 15-min EnergyMeasurement slots from BDEW/PV profiles.
 
 ### Load (Data Out)
 
@@ -326,27 +197,34 @@ For a deeper explanation of context hierarchy, write modes, and field filters, r
 |------|---------|
 | `ApplyChanges@1` | Apply entity updates to MongoDB |
 | `ApplyChanges@2` | Apply entity + association updates (preferred) |
-| `SaveInTimeSeries@1` | Save to CrateDB time series |
-| `ToPipelineDataEvent@1` | Send data to another pipeline in the same DataFlow (requires `targetPipelineRtId`) |
-| `ToWebhook@1` | HTTP POST to external endpoint |
-| `SendEMail@1` | Send email (Markdown → HTML) |
-| `GenerateAndStoreReport@1` | Generate and store report |
-| `SftpUpload@1` | Upload file to SFTP server |
-| `GrafanaProvisionTenant@1` | Provision Grafana org and datasource for tenant |
-| `GrafanaDeprovisionTenant@1` | Deprovision Grafana org for tenant |
+| `SaveStreamDataInArchive@1` | Write entity data to a named CrateDB **CkArchive** (replaces removed `SaveInTimeSeries@1`); requires `archiveRtId` pointing at an **Activated** archive |
+| `SaveTimeRangeStreamDataInArchive@1` | Write pre-aggregated time-range points to an Activated `TimeRangeArchive` (requires `archiveRtId`) |
+| `UpdateRtEntityIfNewer@1` | Timestamp dedup: keep only strictly-newer candidates for the RT write, emit all for the archive write |
+| `SetPipelineExecutionResult@1` (SDK) | **REQUIRED to persist pipeline OutputData.** Without it the execution result is never stored — `GetLatestPipelineExecution` shows empty OutputData. See "Persisting OutputData" below |
+| `ToPipelineDataEvent@1` (SDK) | Send data to another pipeline in the same DataFlow (`targetPipelineRtId`); optional await-result mode for synchronous request/response |
+| `ToWebhook@1` (SDK) | HTTP POST to external endpoint |
+| `ToDiscord@1` | Post message/embed/attachment to a Discord channel via a `DiscordConfiguration` entity |
+| `DeployPipeline@1` | Deploy another pipeline in the same DataFlow via the Communication Controller REST API |
+| `SendEMail@1`, `GenerateAndStoreReport@1`, `SftpUpload@1` | Email / report generation / SFTP upload |
+| `GrafanaProvisionTenant@1` / `GrafanaDeprovisionTenant@1` | Provision / deprovision a tenant Grafana org |
 
-### Buffering
+### Buffering (SDK)
 
-| Node | Purpose |
-|------|---------|
-| `BufferData@1` | Buffer with time-based flush |
-| `BufferRetrievalNode@1` | Retrieve buffered data |
+`BufferData@1` (buffer with time-based flush) and `BufferRetrievalNode@1` (retrieve buffered data).
 
 ### Domain-Specific
 
-SAP nodes (SapLogin, GetProductionOrderList, GetProductionOrderDetails), Zenon nodes (SetZenonVariables, FromZenonAml, ReadZenonAmlMessages), EDA energy nodes (EdaParseMessage, EdaStartProcess, etc.), Microsoft Teams nodes (FromMicrosoftGraph, ReplyToTeamsChannel), and Grafana nodes (GrafanaProvisionTenant, GrafanaDeprovisionTenant) are documented in `references/node-reference-mesh.md`.
+SAP nodes (SapLogin, GetProductionOrderList, GetProductionOrderDetails), Zenon nodes (variable/AML read-write **plus** the six archive/Editor nodes `ReadZenonArchiveInfo@1`, `ReadZenonArchiveData@1`, `ListZenonProjects@1`, `GetZenonDynamicProperties@1`, `GetZenonDynamicProperty@1`, `SetZenonDynamicProperty@1`), Microsoft Teams nodes, and Grafana nodes are documented in `references/node-reference-mesh.md`. EDA energy nodes ship in an **external adapter not present in this monorepo** — see that file's external-adapter note.
 
-For full property documentation, read `references/node-reference-sdk.md` and `references/node-reference-mesh.md`.
+## Persisting OutputData (why is OutputData empty?)
+
+Pipeline execution output is **only** stored when the pipeline includes `SetPipelineExecutionResult@1` (SDK Load node). It captures the data-context value at its `path` and stores it as the `PipelineExecution.OutputData` retrieved via `GetLatestPipelineExecution`. Without this node nothing is persisted — this is by design (avoids storing large results from high-frequency pipelines), and it explains an empty/missing OutputData. `maxLength` (default 1 048 576 chars) truncates oversized results.
+
+```yaml
+- type: SetPipelineExecutionResult@1
+  path: $.result        # value to persist as OutputData
+  # maxLength: 1048576  # optional cap
+```
 
 ## RT Entity Data Structures
 
@@ -380,23 +258,13 @@ This is **different** from the PascalCase you see in GraphQL query results (wher
 
 ## EntityUpdateInfo JSON Structure
 
-When `CreateUpdateInfo@1` writes to the DataContext, it produces this JSON structure:
+`CreateUpdateInfo@1` writes an `EntityUpdateInfo`: a nested `RtEntity` (with `RtId`, `RtChangedDateTime`, `CkTypeId`, `Attributes`) plus top-level `RtId`, `CkTypeId`, and `ModOption` (0=Insert, 1=Update, 2=Delete).
 
 ```json
-{
-  "RtEntity": {
-    "RtId": "cc000000000000000000bb01",
-    "RtChangedDateTime": "2026-04-10T22:17:12Z",
-    "CkTypeId": "Industry.Basic/Machine",
-    "Attributes": { "Name": "...", "MachineState": 0 }
-  },
-  "RtId": "cc000000000000000000bb01",
-  "CkTypeId": "Industry.Basic/Machine",
-  "ModOption": 0
-}
+{ "RtEntity": { "RtId": "cc...bb01", "CkTypeId": "Industry.Basic/Machine", "Attributes": { "MachineState": 0 } }, "RtId": "cc...bb01", "CkTypeId": "Industry.Basic/Machine", "ModOption": 0 }
 ```
 
-**Note:** The `RtId` field is only populated when either a static `rtId` is provided or the RtId was resolved/generated by an upstream node (like `GetOrCreateRtEntitiesByType@1`). Do NOT use `generateRtId: true` in `CreateUpdateInfo` — use `GetOrCreateRtEntitiesByType@1` or `GetRtEntitiesByWellKnownName@1` to obtain IDs first.
+The top-level `RtId` is populated only when a static `rtId` is given or an upstream node resolved/generated it. Do NOT use `generateRtId: true` — obtain IDs first via `GetOrCreateRtEntitiesByType@1` or `GetRtEntitiesByWellKnownName@1` so they can be referenced in associations.
 
 ## Mandatory Associations
 
@@ -408,46 +276,28 @@ Some CK types have **mandatory outbound associations** (multiplicity = ONE). Cre
 
 ### The intended workflow for creating entities with associations
 
-The correct pattern uses `GetOrCreateRtEntitiesByType@1` to resolve/generate IDs, then `CreateUpdateInfo@1` and `CreateAssociationUpdate@1` reference those IDs via paths:
+Use `GetOrCreateRtEntitiesByType@1` to resolve/generate IDs for both parent and child (each writes `rtId` + `modOp` paths), then have `CreateUpdateInfo@1` and `CreateAssociationUpdate@1` reference those IDs **via paths** — never `generateRtId: true`:
 
 ```yaml
-# 1. Resolve or create the parent entity (provides RtId via rtIdTargetPath)
-- type: GetOrCreateRtEntitiesByType@1
+- type: GetOrCreateRtEntitiesByType@1   # parent → $.parentRtId / $.parentModOp
   ckTypeId: Basic/Tree
-  fieldFilters:
-    - attributePath: RtWellKnownName
-      comparisonValue: "My Container"
+  fieldFilters: [{ attributePath: RtWellKnownName, comparisonValue: "My Container" }]
   rtIdTargetPath: $.parentRtId
   modOperationPath: $.parentModOp
-
-# 2. Resolve or create the child entity
-- type: GetOrCreateRtEntitiesByType@1
+- type: GetOrCreateRtEntitiesByType@1   # child → $.childRtId / $.childModOp
   ckTypeId: Industry.Basic/Machine
-  fieldFilters:
-    - attributePath: RtWellKnownName
-      comparisonValue: "My Machine"
+  fieldFilters: [{ attributePath: RtWellKnownName, comparisonValue: "My Machine" }]
   rtIdTargetPath: $.childRtId
   modOperationPath: $.childModOp
-
-# 3. Create entity update for the child (uses RtId from step 2)
-- type: CreateUpdateInfo@1
+- type: CreateUpdateInfo@1              # child entity update, RtId from path
   targetPath: $.entityUpdates
   targetValueWriteMode: Append
   targetValueKind: Array
   updateKindPath: $.childModOp
   rtIdPath: $.childRtId
   ckTypeId: Industry.Basic/Machine
-  rtWellKnownNamePath: $.machineName
-  attributeUpdates:
-    - attributeName: name
-      attributeValueType: String
-      valuePath: $.machineName
-    - attributeName: machineState
-      attributeValueType: Enum
-      value: 1
-
-# 4. Create mandatory ParentChild association (only on INSERT)
-- type: If@1
+  attributeUpdates: [{ attributeName: machineState, attributeValueType: Enum, value: 1 }]
+- type: If@1                            # create the mandatory assoc ONLY on INSERT (modOp = 0)
   path: $.childModOp
   value: 0
   valueType: Enum
@@ -462,55 +312,18 @@ The correct pattern uses `GetOrCreateRtEntitiesByType@1` to resolve/generate IDs
       targetRtIdPath: $.parentRtId
       targetCkTypeId: Basic/Tree
       associationRoleId: System/ParentChild
-
-# 5. Persist everything together
-- type: ApplyChanges@2
+- type: ApplyChanges@2                  # persist entities + associations together
   entityUpdatesPath: $.entityUpdates
   associationUpdatesPath: $.assocUpdates
 ```
 
-**Key points:**
-- `GetOrCreateRtEntitiesByType@1` provides the RtId (existing or newly generated) via `rtIdTargetPath`
-- `CreateUpdateInfo@1` reads that RtId via `rtIdPath` — do NOT use `generateRtId: true`
-- `CreateAssociationUpdate@1` reads RtIds via `originRtIdPath`/`targetRtIdPath`
-- Only create associations on INSERT (check `modOperationPath` value = 0)
+Only create associations on INSERT (guard on `modOperationPath` = 0); `CreateUpdateInfo@1`/`CreateAssociationUpdate@1` read the IDs via `rtIdPath`/`originRtIdPath`/`targetRtIdPath`.
 
 ## Common Patterns
 
 ### Entity CRUD
 
-Query entities, create update operations, apply to database:
-
-```yaml
-- type: GetRtEntitiesByWellKnownName@1
-  ckTypeId: MyModel/MyType
-  path: $.items[*]
-  wellKnownNamePath: $.Name
-  rtIdTargetPath: $.rtId
-  modOperationPath: $.modOp
-  generateInsertOperation: true
-
-- type: ForEach@1
-  iterationPath: $.items
-  targetPath: $.updates
-  transformations:
-    - type: CreateUpdateInfo@1
-      targetPath: $.key.update
-      updateKindPath: $.key.modOp
-      rtIdPath: $.key.rtId
-      ckTypeId: MyModel/MyType
-      attributeUpdates:
-        - attributeName: Name
-          attributeValueType: String
-          valuePath: $.key.Name
-
-- type: Flatten@1
-  path: $.updates[*].update
-  targetPath: $.entityUpdates
-
-- type: ApplyChanges@2
-  entityUpdatesPath: $.entityUpdates
-```
+The standard CRUD shape is: `GetRtEntitiesByWellKnownName@1` (with `generateInsertOperation: true` to write `rtId`/`modOp` per item) → `ForEach@1` building one `CreateUpdateInfo@1` per item into `$.key.update` → `Flatten@1` the per-item updates into `$.entityUpdates` → `ApplyChanges@2`. See `references/pipeline-examples.md` (example 3) for the full annotated version, and the mandatory-association workflow above when the new entity type requires associations.
 
 ### Inter-Pipeline Communication (DataFlow)
 
@@ -531,13 +344,31 @@ triggers:
 
 Both pipelines must belong to the **same DataFlow** (linked via `System/ParentChild` association). The DataFlow's shared topic exchange routes messages by `targetPipelineRtId`.
 
-### Dual Store (Time Series + MongoDB)
-
-Save high-frequency data to both time series and entity store:
+**Await-result (synchronous) mode:** set `awaitResult: true` on `ToPipelineDataEvent@1` to send a command and block until the target pipeline finishes, placing its result at `resultTargetPath` (default `$.pipelineResult`). The receiver `FromPipelineDataEvent@1` needs no extra config — it consumes both the fire-and-forget exchange and the command address. Optional `timeoutSeconds` bounds the wait.
 
 ```yaml
-- type: SaveInTimeSeries@1
+- type: ToPipelineDataEvent@1
+  path: $.request
+  targetPath: $.input
+  targetPipelineRtId: aa0000000000000000000003
+  awaitResult: true
+  timeoutSeconds: 30
+  resultTargetPath: $.pipelineResult
+```
+
+### Dual Store (Archive + MongoDB)
+
+Save high-frequency data to both a CrateDB archive and the entity store. `SaveStreamDataInArchive@1` requires `archiveRtId` pointing at an **Activated** `CkArchive`; backfill missing columns first if upstream events carry only one attribute.
+
+```yaml
+# Optional: complete each row's columns from the persistent entity
+- type: BackfillFromRtEntity@1
   path: $._updates
+  archiveRtId: cc0000000000000000000aa1   # the CkArchive
+
+- type: SaveStreamDataInArchive@1
+  path: $._updates
+  archiveRtId: cc0000000000000000000aa1   # must be Activated
 
 - type: FilterLatestUpdateInfo@1
   path: $._updates
@@ -556,31 +387,21 @@ When validating a pipeline YAML (user-written or generated), use the **build-tim
 | Adapter | Schema Path |
 |---------|------------|
 | Mesh Adapter | `octo-mesh-adapter/bin/DebugL/net10.0/pipeline-schema.json` |
-| EDA Adapter | `octo-adapter-eda/bin/DebugL/net10.0/pipeline-schema.json` |
 | Zenon Adapter | `octo-plug-zenon/src/Octo.Edge.Adapter.Zenon.WindowsService/bin/DebugL/net10.0/pipeline-schema.json` |
 | Simulation Adapter | `octo-sdk/src/Sdk.Plug.Simulation/bin/DebugL/net10.0/pipeline-schema.json` |
 
-**Which schema to use:** Pick the adapter implementation that will execute the pipeline. The Mesh Adapter schema is the most common choice as it has the richest set of nodes. If the adapter hasn't been built locally, fall back to the node reference docs.
+**Which schema to use:** Pick the adapter that will execute the pipeline (Mesh Adapter has the richest node set). If it hasn't been built locally, fall back to the node reference docs.
 
-**Validation steps:**
-1. **Look up each node** by its `type` value (e.g., `CheckDuplicate@1`) in the schema's `$defs.TriggerNode.oneOf` or `$defs.TransformationNode.oneOf`.
-2. **Check required properties** — the `required` array lists mandatory keys.
-3. **Check property names** — any property not in the schema's `properties` object is invalid.
-4. **Check enum values** — enum-typed properties list valid values in their `$defs` entry.
-
-For schema structure details, extraction commands, and fallback rules, read `references/pipeline-schema-guide.md`.
+**Validation:** look up each node by its `type` const in `$defs.TriggerNode.oneOf` / `$defs.TransformationNode.oneOf`, then verify all `required` keys are present, every property exists in the node's `properties`, and enum values match. For the extraction commands and fallback rules, read `references/pipeline-schema-guide.md`.
 
 ## Pipeline Creation Workflow
 
-1. **Plan the DataFlow** — Will this pipeline work alone or chain with others? If chaining, group all related pipelines under a single DataFlow entity.
-2. **Identify the trigger** — What starts this pipeline? Manual command (`FromExecutePipelineCommand@1`), cron schedule (`FromPipelineTriggerEvent@1` + PipelineTrigger entity), data from another pipeline (`FromPipelineDataEvent@1`), polling, HTTP, entity change watch, or email?
-3. **Plan the data flow** — What data comes in? What entities need to be read/created/updated?
-4. **Choose nodes** — Select from the node reference tables above
-5. **Research node properties** — For every node you plan to use, read the C# configuration class to confirm exact property names, types, and defaults. Do NOT rely on memory alone. See "Source Code Research" section.
-6. **Define DataContext paths** — Plan `$.path` names for each step's input and output
-7. **Handle iterations** — Use ForEach for arrays; plan `$.full`/`$.key` access patterns
-8. **Build update operations** — Use CreateUpdateInfo + CreateAssociationUpdate for entity CRUD
-9. **Persist with ApplyChanges@2** — Always Flatten updates before applying; use Append for collecting
+1. **Plan the DataFlow** — does this pipeline work alone or chain with others? Group related pipelines under one DataFlow.
+2. **Identify the trigger** — manual (`FromExecutePipelineCommand@1`), cron (`FromPipelineTriggerEvent@1` + PipelineTrigger), inter-pipeline (`FromPipelineDataEvent@1`), polling, HTTP, entity-watch, or email.
+3. **Plan the data flow and `$.path` names** for each step's input/output; use ForEach for arrays (plan `$.full`/`$.key`).
+4. **Research node properties** — read the C# config class for every node before writing it (see "Source Code Research"). Do NOT rely on memory.
+5. **Build update operations** with CreateUpdateInfo + CreateAssociationUpdate, **Flatten** before persisting, then **ApplyChanges@2** (use Append to collect).
+6. **Persist OutputData** with `SetPipelineExecutionResult@1` if the result must be readable via `GetLatestPipelineExecution`.
 
 For annotated real-world examples covering all these patterns, read `references/pipeline-examples.md`.
 
@@ -603,15 +424,32 @@ After writing pipeline YAML, use the **`octo` skill** to deploy and test it. Thi
 
 5. **Check execution** — `octo-cli -c GetLatestPipelineExecution --identifier <pipelineId> --json` → status, duration, errors
 
-6. **Inspect debug points** — `octo-cli -c GetPipelineDebugPoints --identifier <pipelineId> --executionId <guid> --json` → shows which nodes ran and their data
+6. **Inspect debug points** — `octo-cli -c GetPipelineDebugPoints --identifier <pipelineId> --executionId <guid> --json` → shows which nodes ran and their data. Debug capture must be **enabled** for a pipeline to record debug points (see toggle below).
 
 7. **Activate triggers** (if using cron) — `octo-cli -c DeployTriggers`
 
+### Pipeline debug toggle (no redeploy)
+
+Enable/disable per-node debug capture on a **live** pipeline without redeploying:
+
+| Operation | Command / REST |
+|-----------|----------------|
+| Enable/disable debug | `octo-cli -c SetPipelineDebug --identifier <pipelineId> --enabled true|false` (REST `PATCH {tenantId}/v1/pipeline/{id}/debug`) — Mutating |
+| Read debug state | `octo-cli -c GetPipelineDebug --identifier <pipelineId> --json` (REST `GET {tenantId}/v1/pipeline/{id}/debug`) — Read-only |
+
+If the adapter is offline, the setting is persisted and applies on the next deploy.
+
+### Reassigning and deploying at the DataFlow level
+
+| Operation | Command | Safety |
+|-----------|---------|--------|
+| Move pipelines to another adapter | `octo-cli -c MovePipelines --pipelineRtIds <id,id> --targetAdapterRtId <adapterId> [--redeploy] [--yes]` (REST `PATCH {tenantId}/v1/pipeline/move-to-adapter`) | Mutating. Per-pipeline failures do not abort the batch; source and target adapter must share the same CkTypeId. `--redeploy` is best-effort and does not roll the move back on failure |
+| Deploy / undeploy a whole DataFlow | `octo-cli -c DeployDataFlow --identifier <dataFlowId>` / `UndeployDataFlow --identifier <dataFlowId>` | Mutating |
+| DataFlow status | `octo-cli -c GetDataFlowStatus --identifier <dataFlowId> --json` | Read-only |
+
 ### Discovering available nodes at runtime
 
-`octo-cli -c GetPipelineSchema --adapterId <rtId>` returns a JSON Schema (draft/2020-12) that describes all pipeline nodes available on a specific adapter. This complements the build-time schema files — use it when you need to discover what's available in the target environment, especially if the adapter has custom plugins loaded.
-
-To hand off to the `octo` skill for any of these operational commands, tell the user to invoke `/octo <their intent>` (e.g., `/octo deploy this pipeline`, `/octo run pipeline X`).
+`octo-cli -c GetPipelineSchema --adapterId <rtId>` returns a JSON Schema (draft/2020-12) of all nodes available on a specific adapter — use it to discover what the target environment supports (e.g. custom plugins). To hand off any operational command, tell the user to invoke `/octo <intent>` (e.g. `/octo deploy this pipeline`).
 
 ## Pipeline Troubleshooting
 
@@ -648,14 +486,12 @@ logFiles/MeshAdapter.log
 
 ## References
 
-**Priority order** — when you need to understand a node, use sources in this order:
+**Priority order** when understanding a node:
 
-1. **C# source code** (ground truth) — configuration classes for properties/defaults, handler classes for behavior. See "Source Code Research" section above.
-2. **Pipeline JSON Schema** (auto-generated from source) — authoritative for property names, types, required fields: `references/pipeline-schema-guide.md`
-3. **Reference docs** (hand-maintained summaries) — useful for quick lookups but may lag behind the source:
-   - SDK nodes: `references/node-reference-sdk.md`
-   - Mesh Adapter nodes: `references/node-reference-mesh.md`
+1. **C# source code** (ground truth) — config classes for properties/defaults, handlers for behavior. See "Source Code Research".
+2. **Pipeline JSON Schema** (auto-generated, authoritative for property names/types/required): `references/pipeline-schema-guide.md`
+3. **Reference docs** (hand-maintained summaries, may lag): SDK nodes `references/node-reference-sdk.md`, Mesh Adapter nodes `references/node-reference-mesh.md`
 4. **DataContext mechanics** (paths, write modes, field filters, iterations): `references/data-context-guide.md`
-5. **Real examples** (annotated pipelines from deployments): `references/pipeline-examples.md`
+5. **Real examples** (annotated pipelines): `references/pipeline-examples.md`
 
 **If there is ANY doubt about a node's properties or behavior, read the source code. Do not guess.**

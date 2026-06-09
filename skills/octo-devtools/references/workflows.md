@@ -2,21 +2,29 @@
 
 Multi-step workflows for typical development scenarios.
 
+> **Agent note:** Whenever Claude or a CI job starts services, ALWAYS use `Start-Octo -nonInteractive $true` and stop them with `Stop-Octo` from a separate invocation. Never use `Invoke-BuildAndStartOcto` from an agent session — it chains into the interactive `Start-Octo` and blocks indefinitely. The interactive `Start-Octo` (no `-nonInteractive`) is only for a human running it directly in a terminal.
+
 ## 1. First-Time Setup
 
 For a brand new development environment:
 
 ```
-1. Invoke-CloneMainRepos                           # Clone all repos
-2. Install-OctoInfrastructure                      # Set up Docker containers
-3. Start-OctoInfrastructure                        # Start MongoDB, RabbitMQ, CrateDB
-4. Invoke-BuildAll -configuration DebugL           # Build everything
-5. Start-Octo                                      # Start all services (interactive)
+1. Invoke-CloneMainRepos                                  # Clone all repos (incl. octo-helm-core)
+2. Install-OctoInfrastructure                             # Set up Docker containers
+3. Start-OctoInfrastructure                               # Start MongoDB, RabbitMQ, CrateDB
+4. Invoke-BuildAll -configuration DebugL                  # Build everything
+5. Start-Octo -nonInteractive $true -configuration DebugL # Start all services (agent-safe)
 ```
 
-After services are running, authenticate the CLI:
+After services are running, authenticate the CLI (in a separate invocation — step 5 is blocking):
 ```
-6. Invoke-OctoCliLoginLocal                        # Configure + log in to local env
+6. Invoke-OctoCliLoginLocal
+   # or, recommended: Register-OctoCliContext -Installation local -TenantId meshtest
+```
+
+When finished, stop the services:
+```
+7. Stop-Octo                                              # Writes the .octo-stop signal file
 ```
 
 ## 2. Daily Development Start
@@ -24,16 +32,18 @@ After services are running, authenticate the CLI:
 When infrastructure is already installed:
 
 ```
-1. Start-OctoInfrastructure                        # Start Docker containers
-2. Get-OctoInfrastructureStatus                    # Verify containers are healthy
-3. Invoke-BuildAll -configuration DebugL           # Build all repos
-4. Start-Octo                                      # Start services (interactive)
+1. Start-OctoInfrastructure                               # Start Docker containers
+2. Get-OctoInfrastructureStatus                           # Verify containers are healthy
+3. Invoke-BuildAll -configuration DebugL                  # Build all repos
+4. Start-Octo -nonInteractive $true -configuration DebugL # Start services (agent-safe)
 ```
 
-Or build + start in one step:
+Stop the services when done with `Stop-Octo`.
+
+A human working interactively in a terminal can instead build + start in one step (this BLOCKS until a keypress, so never run it from an agent session):
 ```
 1. Start-OctoInfrastructure
-2. Invoke-BuildAndStartOcto -configuration DebugL  # Build + start (interactive)
+2. Invoke-BuildAndStartOcto -configuration DebugL         # Build + start (interactive only)
 ```
 
 ## 3. Pull Latest Changes
@@ -103,21 +113,30 @@ When builds are broken or stale:
 
 ## 8. Switch Environment (CLI Auth)
 
+`Register-OctoCliContext` is the recommended unified path for all installations (uses the current `*.octo-mesh.com` cluster domains):
+
 ```
 # Local
-Invoke-OctoCliLoginLocal
+Register-OctoCliContext -Installation local -TenantId meshtest
 
-# Test-2
-Invoke-OctoCliLoginTest2
+# Test-2 (optionally a PR sub-env)
+Register-OctoCliContext -Installation test-2 -TenantId voest -UriSuffix pr123
 
 # Staging
-Invoke-OctoCliLoginStaging
+Register-OctoCliContext -Installation staging-1 -TenantId meshtest
 
 # Production (use with caution!)
-Invoke-OctoCliLoginProduction
+Register-OctoCliContext -Installation prod-1 -TenantId meshmakers
 ```
 
-Each login cmdlet creates/updates a named context via `octo-cli -c AddContext`, activates it with `octo-cli -c UseContext`, and then authenticates with `octo-cli -c LogIn -i`. The context name follows the `{environment}_{tenantId}` convention (e.g., `local_meshtest`).
+The older per-environment cmdlets still work; `Invoke-OctoCliLoginStaging` / `Invoke-OctoCliLoginProduction` are **legacy** (old `*.meshmakers.cloud` domains):
+
+```
+Invoke-OctoCliLoginLocal              # -tenantId (default meshtest), -includeReporting
+Invoke-OctoCliLoginTest2
+```
+
+Each login/register cmdlet creates a named context via `octo-cli -c AddContext`, activates it with `octo-cli -c UseContext`, and then authenticates with `octo-cli -c Login -i`. The context name follows the `{installation}_{tenantId}` convention (e.g., `local_meshtest`), so each environment+tenant keeps its tokens independently.
 
 ## 9. Push Changes
 
@@ -148,6 +167,39 @@ For a fresh start:
 3. Install-OctoInfrastructure                      # Reinstall
 4. Start-OctoInfrastructure                        # Start fresh
 ```
+
+To snapshot/restore the data volumes (safe rollback before risky changes — stop infra first):
+```
+1. Stop-OctoInfrastructure
+2. Backup-OctoInfrastructure -Name before-upgrade  # -Name optional (defaults to a timestamp)
+3. # ... do risky work, then if it goes wrong: ...
+4. Restore-OctoInfrastructure -Name before-upgrade # Destructive — overwrites current volumes
+5. Get-OctoInfrastructureBackup                    # List backups
+```
+
+## 13. Local Kubernetes (kind) dev environment
+
+Alternative to docker-compose infra — the two **cannot run at the same time** (same host ports). Stop docker-compose infra first.
+
+```
+1. Stop-OctoInfrastructure                         # kind refuses to start while compose infra is up
+2. Install-OctoKubernetes                          # Cluster + CRDs + in-cluster infra + ingress + operator
+3. Get-OctoKubernetesStatus                        # Pods, Helm releases, host-port reachability
+4. Invoke-BuildAll -configuration DebugL
+5. Start-Octo -nonInteractive $true -configuration DebugL   # .NET services still run as host processes
+```
+
+Re-deploy just the operator after an operator change:
+```
+Deploy-OctoOperator                                # From the dev registry at :main-latest
+```
+
+Tear down (destroys all cluster data):
+```
+Uninstall-OctoKubernetes                           # Add -KeepCaTrust to keep the local CA trusted
+```
+
+Full runbook: `C:\dev\meshmakers\octo-tools\kubernetes\README.md`; from-scratch: `C:\dev\meshmakers\octo-tools\kubernetes\QUICKSTART.md`.
 
 ## 11. Build Without Frontend
 

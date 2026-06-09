@@ -2,27 +2,30 @@
 
 ## What This Is
 
-A Claude Code plugin providing a natural language interface to the OctoMesh platform. Users invoke `/octo <natural language>` and Claude translates intent into `octo-cli` commands, data model exploration queries, or runtime instance lookups — with confirmation for mutating operations.
+A Claude Code plugin providing skills for working with the OctoMesh platform. Users invoke skills like `/octo <natural language>` and Claude translates intent into `octo-cli` commands, data model exploration queries, build/devops operations, pipeline YAML, or development guidance — with confirmation for mutating operations.
 
 ## Plugin Structure
 
 ```
-.claude-plugin/plugin.json   — Plugin manifest (name, version, description)
-hooks/hooks.json              — SessionStart hook for venv auto-setup
-skills/octo/
-  SKILL.md                    — Skill definition (frontmatter triggers + full usage guide)
-  references/
-    command-reference.md      — Complete octo-cli flag reference
-    environments.md           — URL mappings per environment (local, test-2, staging, prod)
-  scripts/
-    run_python.sh             — Venv wrapper (creates .venv, installs deps, delegates to venv Python)
-    requirements.txt          — Python dependencies (requests)
-    _octo_common.py           — Shared foundation: reads active context from ~/.octo-cli/contexts.json, builds auth headers, GraphQL helpers
-    ck_explorer.py            — CK model exploration via GraphQL (models, types, enums, search)
-    rt_explorer.py            — Runtime instance browsing via GraphQL (list, count, get, search, filter, query)
-    gql_introspect.py         — GraphQL schema introspection (top-level fields, type fields)
-    _verify_step*.py          — Verification/integration test scripts
-    _verify_rt_explorer.py    — RT explorer verification script
+.claude-plugin/plugin.json   — Plugin manifest (name, version, metadata; $schema-validated)
+.claude-plugin/marketplace.json — Marketplace listing (kept in version sync with plugin.json)
+hooks/hooks.json              — SessionStart hooks (venv pre-warm, pwsh probe)
+skills/
+  octo/                       — Hub skill: octo-cli NL interface, CK/RT exploration, routing to siblings
+    SKILL.md                  — Skill definition (frontmatter + operational guide)
+    references/               — command-reference.md (full flag detail), environments.md (URLs per env),
+                                temp-tenants.md (non-interactive temp-tenant lifecycle via client credentials)
+    scripts/                  — Python explorers (ck_explorer, rt_explorer, gql_introspect,
+                                pipeline_validate) + run_python.sh venv wrapper + _octo_common.py
+  octo-devtools/              — Build, services (incl. non-interactive), infra, git, kind/Kubernetes
+  octo-agent/                 — Debugging/investigation: CK internals, MongoDB, build chain, rollback
+  octo-commit/                — Commit/PR workflow with Azure DevOps work-item linking
+  pipeline-expert/            — ETL pipeline YAML authoring, nodes, DataContext, validation
+  octo-mcp/                   — Developing/extending the OctoMesh MCP server (octo-mcp-service)
+  refinery-studio/            — Angular development on the Data Refinery Studio frontend
+  octo-operator/              — Kubernetes Communication Operator + octo-helm-core charts
+  octo-app-builder/           — End-to-end OctoMesh app building: CK model → catalog → blueprint →
+                                HTTP-API pipelines → operator-deployed Application workload
 ```
 
 ## Python Script Development
@@ -64,24 +67,36 @@ bash skills/octo/scripts/run_python.sh skills/octo/scripts/_verify_e2e_real.py  
 
 These require a running OctoMesh environment and valid authentication.
 
+Validate the plugin manifests after any manifest or skill-structure change:
+
+```bash
+claude plugin validate . --strict
+```
+
 ## Skill Authoring
 
-- **SKILL.md frontmatter** (`---` block): The `description` field controls when Claude triggers this skill. It should list all relevant keywords and intents.
-- **Reference docs** in `references/`: Detailed content that SKILL.md points to for drill-down (command flags, environment URLs). Keep SKILL.md as the overview; put exhaustive details in references.
-- **Progressive drill-down**: Exploration workflows should go broad-to-narrow: models → types in model → type detail → instances → instance detail.
+- **SKILL.md frontmatter description**: prose-first — one or two sentences stating what the skill does and the key use case FIRST, then a `Trigger on:` tail with the most important keywords. Keep the whole description **under 1200 characters** (Claude Code truncates the combined listing entry at 1536 chars; leave headroom). Highest-value triggers go earliest.
+- **SKILL.md body**: keep **under 500 lines** — the body is loaded into context every turn, so every line is recurring token cost. State what to do, don't narrate why.
+- **Reference docs** in `references/`: detailed content that SKILL.md points to for drill-down (command flags, node properties, URL mappings). Keep SKILL.md as the operational overview; put exhaustive details in references — Claude loads them on demand.
+- **Progressive drill-down**: exploration workflows go broad-to-narrow: models → types in model → type detail → instances → instance detail.
+- **Accuracy**: every command, flag, parameter, node property, port, and version documented in a skill must be verified against the OctoMesh source repos or read-only `octo-cli <Command> --help` output before writing. Never document from memory.
 
 ## Hooks
 
-`hooks/hooks.json` defines a `SessionStart` hook that runs `run_python.sh --version` on every session start. This pre-creates the Python venv so the first real script invocation is fast. The hook is silent on failure (`|| true`).
+`hooks/hooks.json` defines `SessionStart` hooks that pre-create the Python venv (so the first real script invocation is fast) and probe the PowerShell version. Hooks are silent on failure (`|| true`).
 
 ## Versioning
 
-Bump the `version` field in **both** `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` with every commit. These must stay in sync — Claude Code reads the version from `marketplace.json` to detect available updates.
+The `version` field in `.claude-plugin/plugin.json` is the release gate: **bump it (semver) when releasing a meaningful change set, not on every commit**. Users on a pinned version only receive updates when the version increases.
+
+Keep `marketplace.json`'s plugin entry version in sync for clarity — but note that when both files declare a version, **`plugin.json` wins** per the Claude Code plugin spec.
+
+Record every release in `CHANGELOG.md`. Run `claude plugin validate . --strict` before tagging a release.
 
 ## Naming Conventions
 
 | Pattern | Meaning |
 |---------|---------|
 | `_*.py` | Internal/verification scripts (not direct user entry points) |
-| `*.py` (no prefix) | Public scripts invoked by the skill (ck_explorer, rt_explorer, gql_introspect) |
+| `*.py` (no prefix) | Public scripts invoked by the skill (ck_explorer, rt_explorer, gql_introspect, pipeline_validate) |
 | `_octo_common.py` | Shared library module imported by all scripts |

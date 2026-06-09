@@ -6,7 +6,7 @@ Real-world annotated pipeline examples from OctoMesh deployments.
 
 Watches for new Alarm entities, navigates the association tree to find context (machine, department, plant), then sends a templated email notification.
 
-**Source:** `maco-deployment/data/pipelines/rt-alarm-emails.yaml`
+**Origin:** maco deployment (external — not in this monorepo)
 
 ```yaml
 triggers:
@@ -112,7 +112,7 @@ transformations:
 
 Two-part DataFlow with cross-adapter communication: a pipeline on the Mesh Adapter watches for entity changes and sends data via the event hub; a pipeline on the Zenon Adapter receives it and writes to PLC variables. Both pipelines belong to the same DataFlow.
 
-**Source:** `maco-deployment/data/pipelines/rt-zenon-ATSA-sync-article-quantity.yaml`
+**Origin:** maco deployment (external — not in this monorepo)
 
 ### Mesh Adapter Pipeline (sends data)
 
@@ -193,7 +193,7 @@ transformations:
 
 Cross-adapter DataFlow: one pipeline polls SAP for production orders, iterates with conditional processing, and sends data to a second pipeline that creates entities and associations.
 
-**Source:** `maco-deployment/data/pipelines/rt-sap-sbg-import-production-orders.yaml`
+**Origin:** maco deployment (external — not in this monorepo)
 
 ### SAP Polling Pipeline (data extraction)
 
@@ -400,9 +400,9 @@ transformations:
 
 ## 4. Variable Import with Type Switch
 
-Receives Zenon variable data via inter-pipeline communication (DataFlow event hub), looks up each variable, switches on data type to create type-specific updates, saves to both time series and MongoDB.
+Receives Zenon variable data via inter-pipeline communication (DataFlow event hub), looks up each variable, switches on data type to create type-specific updates, saves to both a CrateDB archive and MongoDB.
 
-**Source:** `maco-deployment/data/pipelines/rt-zenon-ATSA-import-variables.yaml`
+**Origin:** maco deployment (external — not in this monorepo)
 
 ```yaml
 triggers:
@@ -494,9 +494,10 @@ transformations:
     path: $.Data[*]._entityUpdates[*]
     targetPath: $._entityUpdates
 
-  # Save to time series database
-  - type: SaveInTimeSeries@1
+  # Save to a CrateDB archive (archiveRtId must reference an Activated CkArchive)
+  - type: SaveStreamDataInArchive@1
     path: $._entityUpdates
+    archiveRtId: cc0000000000000000000aa1
 
   # Keep only latest per entity for MongoDB
   - type: FilterLatestUpdateInfo@1
@@ -508,7 +509,7 @@ transformations:
     entityUpdatesPath: $._entityUpdates
 ```
 
-**Key patterns:** Switch with array case values, timestampPath for time series, SaveInTimeSeries + FilterLatestUpdateInfo + ApplyChanges@2 triple for dual-store pattern.
+**Key patterns:** Switch with array case values, timestampPath for archive rows, SaveStreamDataInArchive + FilterLatestUpdateInfo + ApplyChanges@2 triple for the dual-store pattern (`SaveStreamDataInArchive@1` replaces the removed `SaveInTimeSeries@1` and requires `archiveRtId`).
 
 ---
 
@@ -516,7 +517,7 @@ transformations:
 
 Complex billing calculation pipeline: loads config, queries data with joins, iterates billing documents and their line items, performs math calculations, creates entities and associations.
 
-**Source:** `energy-community-deployment/pipelines/meshadapter/energy-create-billing-items.yml`
+**Origin:** energy-community deployment (external — not in this monorepo)
 
 ```yaml
 triggers:
@@ -707,7 +708,7 @@ transformations:
 
 Processes EDA messages with parsing, joining, and conditional entity creation based on mapped values.
 
-**Source:** `energy-community-deployment/data/_eda/handle-ec-podlist-pipeline.yaml`
+**Origin:** energy-community deployment (external — not in this monorepo). Uses EDA nodes that ship in an external `octo-adapter-eda` repo — node properties here are illustrative and unverified against source.
 
 ```yaml
 triggers:

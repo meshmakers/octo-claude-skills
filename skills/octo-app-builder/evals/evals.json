@@ -1,0 +1,38 @@
+{
+  "skill_name": "octo-app-builder",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "I want a small OctoMesh demo app called 'guestbook': visitors can POST a message (name + text) via HTTP, anyone can GET the list of messages, and there should be a simple web UI showing them. The whole thing must be installable into a tenant as a blueprint (like our other OctoMesh app bundles). Author ALL artifacts: the Construction Kit model source, the blueprint (manifest + seed data with the dataflow, pipelines, and the web app as an operator-deployed workload), and a COMMANDS.md with the exact commands to compile/publish/install/deploy, in the right order. IMPORTANT: do NOT run any command that changes a tenant, catalog, docker, or cluster state \u2014 only read-only checks are allowed. Write everything to the output directory given to you.",
+      "expected_output": "CK model 3-file source; blueprint.yaml with ckModelDependencies; seed-data with DataFlow+Pipelines (Executes->670...002, PipelineDefinition block scalars ending in Project@1 clear) and an Application entity (Manages->670...001, HelmRepository->670...003, hostname template, ValuesYaml with upstreamUrl+image); COMMANDS.md covering octo-ckc Compile/Publish, blueprint catalog copy + cache delete, InstallBlueprint, DeployDataFlow, DeployWorkload, image double-tagging + kind load.",
+      "files": [],
+      "assertions": [
+        "CK model source uses the 3-file layout (ckModel.yaml with modelId <Name>-1.0.0 + System dependency, attributes/*.yaml, types/*.yaml) with the construction-kit schemas",
+        "Type derives from ${System}/Entity-1 and references its own attributes as ${this}/<AttrId>-1",
+        "blueprint.yaml declares the custom CK model in ckModelDependencies with a version range (so InstallBlueprint auto-imports it from the catalog)",
+        "Seed Pipeline entities carry BOTH associations: System/ParentChild-1 to the seed DataFlow rtId AND System.Communication/Executes-1 to Mesh Adapter 670000000000000000000002",
+        "Every FromHttpRequest pipeline definition ends with Project@1 clear: true listing only the intended response fields",
+        "Application entity is wired correctly: Manages-1 to Pool 670000000000000000000001, HelmRepository-1 to 670000000000000000000003, IngressEnabled, Hostname containing ${octo.tenantId} and {{domain.default}}, ValuesYaml with tenant-scoped upstreamUrl and an image override",
+        "COMMANDS.md covers the full ordered chain: octo-ckc Compile + Publish, copy into ~/.octo/local-blueprint-catalog layout, DELETE the local-blueprint-catalog-cache.json file, InstallBlueprint, DeployDataFlow, DeployWorkload",
+        "Image commands tag BOTH meshmakers/<app> and docker.mm.cloud/meshmakers/<app> and kind-load them (registry-prefix injection handled)",
+        "Seed rtIds are hand-assigned 24-char hex strings and cross-references are consistent (pipeline ParentChild targetRtId equals the DataFlow rtId)",
+        "ckTypeId inside pipeline YAML is unversioned (Model/Type) while seed entity ckTypeIds are versioned (System.Communication/Pipeline-1)"
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "My OctoMesh HTTP pipeline setup is acting weird and I need help. Setup: tenant 'test', pipelines on the Mesh Adapter via FromHttpRequest. Two problems: (1) GET /test/orders works fine, but POST /test/orders suddenly returns HTTP 200 with a completely empty body, instantly (sub-millisecond). It worked yesterday; today I re-imported my dataflow with ImportRt -r after editing one of the other pipelines and redeployed the dataflow. (2) Separately, my list endpoint's JSON response contains the entire request context \u2014 I can see the request body and my internal lookup results in the response instead of just the array I want to return. Explain what is wrong in both cases and exactly how to fix each. Write your diagnosis and fix to diagnosis.md in the output directory. Do not change anything on the tenant.",
+      "expected_output": "Diagnosis identifies (1) the deploy-rotation behavior: route method not registered after ImportRt -r + DeployDataFlow removed the unchanged pipeline; fix = re-run DeployDataFlow and re-test all routes / prefer fresh install path; verify via adapter log 'Removing pipeline'. (2) Response = full final DataContext; fix = end pipeline with Project@1 clear: true listing only response fields.",
+      "files": [],
+      "assertions": [
+        "Problem 1 root cause: the POST route's (method,path) registration is gone \u2014 the empty instant 200 is the adapter's path-matched-but-method-unregistered fallback",
+        "Problem 1 connects the missing registration to the ImportRt -r + DeployDataFlow redeploy behavior (deploy can remove an unchanged pipeline while re-registering a changed one)",
+        "Problem 1 fix is actionable: re-run DeployDataFlow and re-test ALL routes (or undeploy + fresh deploy), not just vague 'restart things'",
+        "Recommends verifying via the adapter log (kubectl logs / MeshAdapter log) for 'Removing pipeline' / registration entries",
+        "Problem 2 root cause: the HTTP response of a FromHttpRequest pipeline is the ENTIRE final DataContext serialized",
+        "Problem 2 fix: end the pipeline with Project@1 clear: true including only the response fields",
+        "Does not invent unsupported mechanisms (no claims of setting HTTP status codes or content-type from pipeline YAML, no nonexistent response nodes)"
+      ]
+    }
+  ]
+}

@@ -155,6 +155,25 @@ Each entry: `path`, `targetPath`, `targetValueWriteMode`, `targetValueKind`, `do
       targetPath: $.output2
 ```
 
+### Group@1
+
+A purely structural, no-op container for grouping nodes in the graphical editor (like a named region). It has **NO effect on the pipeline data or execution** — running nodes inside a Group is identical to listing them inline (children run in order on the same data context, no re-clone, no reallocation; enclosing ForEach `$.full` aliases stay visible). Nestable. The schema emits an `x-nodeKind: group` extension so the editor can collapse it.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `transformations` | array | required | Grouped child nodes, executed in order on the same context |
+| `name` | string | optional | Display label shown in the editor |
+
+```yaml
+- type: Group@1
+  name: "Compute totals"
+  transformations:
+    - type: Math@1
+      # ...
+    - type: SumAggregation@1
+      # ...
+```
+
 ---
 
 ## Extract Nodes
@@ -221,6 +240,35 @@ Inject raw JSON from a string.
   targetPath: $.config
 ```
 
+### GetPipelineConfigByWellKnownName@1
+
+Load a pipeline configuration (raw JSON) from the GlobalConfiguration by well-known name. SDK node — available on **all** adapters (not Mesh-specific). The config must be reachable via the pipeline's `Uses` association; otherwise the node throws.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `wellKnownName` | string | optional | Static well-known name |
+| `wellKnownNamePath` | string | optional | JSONPath to the name (either `wellKnownName` or `wellKnownNamePath` must be set) |
+| `targetPath` | string | required | Where to store the JSON config |
+| `documentMode` | enum | Extend | Extend/Replace |
+| `targetValueKind` | enum | Simple | Simple/Array |
+| `targetValueWriteMode` | enum | Overwrite | Overwrite/Append/Prepend/Merge |
+
+```yaml
+- type: GetPipelineConfigByWellKnownName@1
+  wellKnownName: EnergyCommunityConfiguration
+  targetPath: $.config
+```
+
+### Distinct@1
+
+Remove duplicate objects by a unique property value. SDK node (moved from MeshAdapter to `Sdk.Common`) — available on **all** adapters.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `distinctValuePath` | string | required | JSONPath to the unique value |
+| `path` | string | `$` | Source array path (inherited) |
+| `targetPath` | string | required | Where to write the distinct array |
+
 ---
 
 ## Trigger Nodes
@@ -229,7 +277,7 @@ Inject raw JSON from a string.
 
 Receive data from another pipeline within the same DataFlow. The pipeline automatically binds to the DataFlow's shared topic exchange using its own RtId as routing key. Pairs with `ToPipelineDataEvent@1` on the sending pipeline. Works across different adapter instances.
 
-No additional configuration properties.
+No additional configuration properties. The node consumes **both** the fire-and-forget exchange **and** the command address used by `ToPipelineDataEvent@1`'s await-result mode — so the same receiver handles both calling styles. In await-result mode the pipeline's result is serialized and returned to the caller automatically.
 
 ```yaml
 triggers:
@@ -263,14 +311,26 @@ Send data to another pipeline within the same DataFlow. Routes via the DataFlow'
 |----------|------|---------|-------------|
 | `path` | string | `$` | Source data path |
 | `targetPath` | string | `$` | Where to place data in the receiver's DataContext |
-| `targetPipelineRtId` | string | required | RtId of the target pipeline (must be in the same DataFlow) |
+| `targetPipelineRtId` | string | required | RtId of the target pipeline (must be in the same DataFlow; empty value throws) |
+| `awaitResult` | bool | false | When true, send a command and **block until the target pipeline completes**, then place its result at `resultTargetPath` (synchronous request/response over RabbitMQ). When false (default), fire-and-forget pub/sub |
+| `timeoutSeconds` | int? | optional | Timeout for the await-result call (only used when `awaitResult: true`) |
+| `resultTargetPath` | string | `$.pipelineResult` | Where the target pipeline's result is written (only used when `awaitResult: true`) |
 
 ```yaml
+# Fire-and-forget (default)
 - type: ToPipelineDataEvent@1
-  description: Send sensor data to consumer pipeline
   path: $.sensor
   targetPath: $.input
   targetPipelineRtId: aa0000000000000000000003
+
+# Await-result (synchronous request/response)
+- type: ToPipelineDataEvent@1
+  path: $.request
+  targetPath: $.input
+  targetPipelineRtId: aa0000000000000000000003
+  awaitResult: true
+  timeoutSeconds: 30
+  resultTargetPath: $.pipelineResult
 ```
 
 ### ToWebhook@1
@@ -290,6 +350,21 @@ Send data to an HTTP endpoint via POST.
   uri: https://api.example.com/webhook
   apiKey: my-secret-key
   timeoutSeconds: 60
+```
+
+### SetPipelineExecutionResult@1
+
+Capture the data-context value at `path` and store it as the pipeline's **OutputData** on the `PipelineExecution` entity (read later via `GetLatestPipelineExecution`). **This is the only way OutputData is persisted** — without this node, nothing is stored (by design, to avoid persisting large results from high-frequency pipelines). This is the common explanation for "why is OutputData empty?".
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `path` | string | required | Source path whose value becomes OutputData (inherited from `PathNodeConfiguration`) |
+| `maxLength` | int | 1048576 | Max serialized length in characters; the result is truncated (with a warning) if it exceeds this |
+
+```yaml
+- type: SetPipelineExecutionResult@1
+  path: $.result
+  # maxLength: 1048576
 ```
 
 ---
@@ -659,7 +734,7 @@ Retrieve and process previously buffered data.
 
 ### Simulation@1
 
-Generate simulated data values using the Bogus library. Useful for testing pipelines without real data sources.
+Generate simulated data values. Implemented as an **Extract node** (source: `octo-sdk/src/Sdk.SimulationNodes/Nodes/Extracts/SimulationNode.cs`), not a Transform node. Useful for testing pipelines without real data sources.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -694,6 +769,9 @@ Each simulation entry:
 |-----|-------------|---------------|
 | `Energy.MeteringPointNumber` | Metering point number | `{"length": 33, "countryCode": "AT"}` |
 | `Energy.DateTime` | Date/time in range | `{"startDate": "...", "endDate": "..."}` |
+| `Energy.SteppedDateTime` | `startDate + index * stepSize` (UTC) — equally-spaced slot boundaries, e.g. inside a `For@1` loop | `{"startDate": "...", "stepSize": "PT15M", "index": 0}` |
+| `Energy.LoadProfile` | Energy (kWh) for one 15-min slot of a BDEW load profile | `{"profile": "H0", "dailyEnergyKwh": 10.0, "slotIndex": 0}` (profiles H0/G0/L0) |
+| `Energy.PvProfile` | PV-production energy (kWh) for one 15-min slot | `{"peakKwp": 5.0, "dayOfYear": 172, "slotIndex": 0}` |
 
 **Person generators (Bogus):**
 | Key | Description |

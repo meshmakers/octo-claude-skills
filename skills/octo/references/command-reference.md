@@ -13,21 +13,38 @@ octo-cli -c AddContext -n <name> [-isu <identityServicesUri>] [-asu <assetServic
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
-| `-n` | `name` | Name of the context (e.g. `local_meshtest`, `staging_customer1`) | Yes |
+| `-n` | `name` | Name of the context (e.g. `local_meshtest`, `staging-1_customer1`) | Yes |
 | `-isu` | `identityServicesUri` | URI of identity services (e.g. `https://localhost:5003/`) | No |
 | `-asu` | `assetServicesUri` | URI of asset repository services (e.g. `https://localhost:5001/`) | No |
 | `-bsu` | `botServicesUri` | URI of bot services (e.g. `https://localhost:5009/`) | No |
 | `-csu` | `communicationServicesUri` | URI of communication services (e.g. `https://localhost:5015/`) | No |
 | `-rsu` | `reportingServicesUri` | URI of reporting services (e.g. `https://localhost:5007/`) | No |
+| `-aisu` | `aiServicesUri` | URI of AI services (e.g. `https://localhost:5019/`) | No |
 | `-apu` | `adminPanelUri` | URI of admin panel (e.g. `https://localhost:5005/`) | No |
 | `-tid` | `tenantId` | ID of tenant (e.g. `meshtest`) | No |
 
-Context naming convention: `{environment}_{tenantId}` (e.g., `local_meshtest`, `staging_meshtest`, `production_customer1`, `test2_v2_meshtest`).
+Context naming convention: `{installation}_{tenantId}` (e.g., `local_meshtest`, `staging-1_meshtest`, `prod-1_meshmakers`, `test-2_pr123_meshtest`).
 
-If this is the first context or no active context is set, it is automatically activated. Each context stores its own authentication tokens independently.
+If this is the first context or no active context is set, it is automatically activated. Each context stores its own authentication tokens independently. In the OctoMesh developer shell, `Register-OctoCliContext` wraps `AddContext` + `UseContext` + login for the known installations using the current cluster domains.
+
+### Config
+Configures the **active** context's service URLs and tenant in-place (no `-n` — operates on whatever context is active). Same fields as `AddContext` minus `-n`; `-isu` is required.
+```
+octo-cli -c Config -isu <identityServicesUri> [-asu <assetServicesUri>] [-bsu <botServicesUri>] [-csu <communicationServicesUri>] [-rsu <reportingServicesUri>] [-aisu <aiServicesUri>] [-apu <adminPanelUri>] [-tid <tenantId>]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-isu` | `identityServicesUri` | URI of identity services | Yes |
+| `-asu` | `assetServicesUri` | URI of asset repository services | No |
+| `-bsu` | `botServicesUri` | URI of bot services | No |
+| `-csu` | `communicationServicesUri` | URI of communication services | No |
+| `-rsu` | `reportingServicesUri` | URI of reporting services | No |
+| `-aisu` | `aiServicesUri` | URI of AI services (e.g. `https://localhost:5019/`) | No |
+| `-apu` | `adminPanelUri` | URI of admin panel | No |
+| `-tid` | `tenantId` | ID of tenant | No |
 
 ### UseContext
-Switch the active context or list all available contexts.
+Switch the active context. Omit `-n` to list contexts (legacy fallback — prefer `ListContexts`).
 ```
 octo-cli -c UseContext [-n <name>]
 ```
@@ -35,7 +52,15 @@ octo-cli -c UseContext [-n <name>]
 |---|---|---|---|
 | `-n` | `name` | Name of the context to activate | No |
 
-Without `-n`: lists all contexts with their identity URL and tenant ID, marking the active one with `*`.
+### ListContexts
+Lists all configured contexts with their identity URL, tenant ID, and auth status (none / authenticated / expired, derived from the token expiry). Tokens themselves are never written to output.
+```
+octo-cli -c ListContexts [-n <name>] [-j]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-n` | `name` | Show details for a single context. Omit to list all. | No |
+| `-j` | `json` | Output as raw JSON | No |
 
 ### RemoveContext
 Remove a named context.
@@ -61,8 +86,18 @@ octo-cli -c LogIn [-i]
 |---|---|---|---|
 | `-i` | `interactive` | Interactive login by opening a browser for device log-in | No |
 
+### LogInClientCredentials
+Non-interactive login using the OAuth2 client_credentials flow — for headless/CI scenarios. Requires a client created with `AddClientCredentialsClient`. The tenant comes from the active context (its `TenantId` must be set). When the credentials are supplied via env vars, the authentication service auto-reacquires tokens on expiry.
+```
+octo-cli -c LogInClientCredentials [-id <clientId>] [-s <secret>]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `clientId` | Client ID. Falls back to env var `OCTO_CLI_CLIENT_ID`. | No |
+| `-s` | `secret` | Client secret. Falls back to env var `OCTO_CLI_CLIENT_SECRET`. | No |
+
 ### AuthStatus
-Gets authentication status. No arguments.
+Gets authentication status. No arguments. For client_credentials tokens, the output shows an "Auth Method" line and omits the User Info section (there is no userinfo for these tokens).
 ```
 octo-cli -c AuthStatus
 ```
@@ -211,13 +246,14 @@ octo-cli -c AddAuthorizationCodeClient -id <clientId> -n <name> -u <clientUri> [
 
 #### AddClientCredentialsClient
 ```
-octo-cli -c AddClientCredentialsClient -id <clientId> -n <name> -s <secret>
+octo-cli -c AddClientCredentialsClient -id <clientId> -n <name> -s <secret> [-apic]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-id` | `clientId` | Client ID, must be unique | Yes |
 | `-n` | `name` | Display name of client | Yes |
 | `-s` | `secret` | Secret for client credential auth | Yes |
+| `-apic` | `autoProvision` | If set, this client is auto-provisioned (mirrored) into every new sub-tenant of the calling tenant. Use for service-to-service / CI-CD identities that must reach many tenants with one ClientId/secret pair. | No |
 
 #### AddDeviceCodeClient
 ```
@@ -258,6 +294,59 @@ octo-cli -c AddScopeToClient -id <clientId> -n <name>
 |---|---|---|---|
 | `-id` | `clientId` | Client ID | Yes |
 | `-n` | `name` | Scope name | Yes |
+
+### Client Mirror Management
+
+Cross-tenant auto-provisioning for ClientCredentials clients (System.Identity CK model 2.6.0 introduced `ClientMirror` plus the `AutoProvisionInChildTenants` / `ProvisionedByParentTenantId` attributes on `Client`). Set the flag with `AddClientCredentialsClient -apic` or `SetClientAutoProvision`; flipping the flag does **not** backfill — call `ProvisionClientInExistingTenants` for that.
+
+#### GetClientMirrors
+Lists the sub-tenants a ClientCredentials client has been auto-provisioned into.
+```
+octo-cli -c GetClientMirrors -id <clientId>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `clientId` | The ClientId whose mirror sub-tenants to list | Yes |
+
+#### SetClientAutoProvision
+Flips the `AutoProvisionInChildTenants` flag on an existing client. Flipping to `true` does not auto-backfill.
+```
+octo-cli -c SetClientAutoProvision -id <clientId> -e <enabled>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `clientId` | The ClientId to set the flag on | Yes |
+| `-e` | `enabled` | `true` to enable auto-provisioning into child tenants, `false` to disable | Yes |
+
+#### ProvisionClientInExistingTenants
+Backfill: provisions a flagged client into every existing sub-tenant of the active context tenant. Idempotent.
+```
+octo-cli -c ProvisionClientInExistingTenants -id <clientId>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `clientId` | The ClientId to backfill. Must already have `AutoProvisionInChildTenants` enabled. | Yes |
+
+#### ProvisionClientInTenant
+Manually provisions a flagged client into one specific sub-tenant.
+```
+octo-cli -c ProvisionClientInTenant -id <clientId> -ctid <childTenantId>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `clientId` | The ClientId to provision. Must already have `AutoProvisionInChildTenants` enabled. | Yes |
+| `-ctid` | `child-tenant-id` | ID of the child tenant to provision the client into | Yes |
+
+#### UnprovisionClientFromTenant
+Removes a single client mirror (drops the child-side client + the parent's tracking row). **Destructive.**
+```
+octo-cli -c UnprovisionClientFromTenant -id <clientId> -ctid <childTenantId> [-y]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `clientId` | The mirrored ClientId | Yes |
+| `-ctid` | `child-tenant-id` | ID of the child tenant whose mirror should be removed | Yes |
+| `-y` | `yes` | Skip confirmation prompt | No |
 
 ### Identity Providers
 
@@ -656,11 +745,11 @@ octo-cli -c DeleteEmailDomainGroupRule -id <identifier>
 
 #### GetExternalTenantUserMappings
 ```
-octo-cli -c GetExternalTenantUserMappings -stid <sourceTenantId> [-skip <skip>] [-take <take>]
+octo-cli -c GetExternalTenantUserMappings [-stid <sourceTenantId>] [-skip <skip>] [-take <take>]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
-| `-stid` | `sourceTenantId` | Source tenant ID | Yes |
+| `-stid` | `sourceTenantId` | Filter by source tenant ID | No |
 | `-skip` | `skip` | Number of items to skip | No |
 | `-take` | `take` | Number of items to take | No |
 
@@ -783,14 +872,6 @@ octo-cli -c Attach -tid <tenantId> -db <database>
 |---|---|---|---|
 | `-tid` | `tenantId` | Tenant ID | Yes |
 | `-db` | `database` | Database name | Yes |
-
-#### Detach
-```
-octo-cli -c Detach -tid <tenantId>
-```
-| Flag | Long | Description | Required |
-|---|---|---|---|
-| `-tid` | `tenantId` | Tenant ID | Yes |
 
 #### Delete
 ```
@@ -958,19 +1039,251 @@ To extract the YAML from the ZIP:
 python3 -c "import zipfile, sys; z=zipfile.ZipFile(sys.argv[1]); [print(z.read(n).decode()) for n in z.namelist()]" export.zip
 ```
 
-### Time Series
+### CK Catalog / Library Management
+
+Browse CK model catalogs, check dependencies/upgrades, import models, and report installed-library status. The **DataModelManagement** role (scope `octo_api.data_model_management`) is required for catalog import/refresh.
+
+#### ListCatalogs
+Lists available CK model catalog sources. No arguments.
+```
+octo-cli -c ListCatalogs
+```
+
+#### ListCatalogModels
+```
+octo-cli -c ListCatalogModels [-cn <catalogName>] [-q <search>]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-cn` | `catalogName` | Catalog name to filter by | No |
+| `-q` | `search` | Search term | No |
+
+#### CheckDependencies
+Shows the dependency tree for a CK model from a catalog.
+```
+octo-cli -c CheckDependencies -cn <catalogName> -m <modelId>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-cn` | `catalogName` | Catalog name | Yes |
+| `-m` | `modelId` | Model ID (e.g. `Industry.Energy-2.0.0`) | Yes |
+
+#### CheckUpgrade
+Pre-flight check for a CK model upgrade/migration. Same flags as `CheckDependencies`.
+```
+octo-cli -c CheckUpgrade -cn <catalogName> -m <modelId>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-cn` | `catalogName` | Catalog name | Yes |
+| `-m` | `modelId` | Model ID (e.g. `Industry.Energy-2.0.0`) | Yes |
+
+#### LibraryStatus
+Shows installed CK model libraries with catalog availability and update status. Tolerant of broken catalog deps: affected rows carry `UnresolvedDependencies` + `HasCatalogInconsistency` instead of failing the whole response.
+```
+octo-cli -c LibraryStatus [-na] [-io]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-na` | `needs-action` | Show only models that need action | No |
+| `-io` | `installed-only` | Show only installed models | No |
+
+#### ImportFromCatalog
+Imports a CK model from a catalog with all dependencies. Background job — use `-w` to wait.
+```
+octo-cli -c ImportFromCatalog -cn <catalogName> -m <modelId> [-w]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-cn` | `catalogName` | Catalog name | Yes |
+| `-m` | `modelId` | Model ID (e.g. `Industry.Energy-2.0.0`) | Yes |
+| `-w` | `wait` | Wait for the import job to complete | No |
+
+#### RefreshCatalogs
+Refreshes CK model catalog caches.
+```
+octo-cli -c RefreshCatalogs [-cn <catalogName>]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-cn` | `catalogName` | Catalog name to refresh (refreshes all if omitted) | No |
+
+#### FixAll
+Imports all CK models that need update or fix. Background job.
+```
+octo-cli -c FixAll [-w] [-y]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-w` | `wait` | Wait for the import job to complete | No |
+| `-y` | `yes` | Skip confirmation prompt | No |
+
+### Blueprints
+
+Blueprints package CK models + seed data and install/update/uninstall them per tenant. Blueprint state is stored tenant-locally in `System/BlueprintInstallation`, `System/BlueprintHistory`, `System/BlueprintBackup` (System CK 2.2.0). The blueprint folder name equals `blueprintId.Name` (no version suffix; the version lives in `blueprint.yaml`). History/preview/update used to live in `octo-bpm` (now removed there — `octo-bpm` only has `Apply`, `Init`, `version`).
+
+#### ListBlueprints
+Lists blueprints available across configured catalogs. No arguments.
+```
+octo-cli -c ListBlueprints
+```
+
+#### ListBlueprintInstallations
+Lists blueprints currently installed on the active tenant (distinct from the catalog list above). No arguments.
+```
+octo-cli -c ListBlueprintInstallations
+```
+
+#### ListBlueprintBackups
+Lists tenant backups created before blueprint updates. No arguments.
+```
+octo-cli -c ListBlueprintBackups
+```
+
+#### GetBlueprintHistory
+Shows the blueprint application history for the current tenant. No arguments.
+```
+octo-cli -c GetBlueprintHistory
+```
+
+#### InstallBlueprint
+Installs a blueprint into the current tenant. CK models are loaded and seed data imported via upsert.
+```
+octo-cli -c InstallBlueprint -b <blueprintId> [-f]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-b` | `blueprintId` | Fully-qualified blueprint id, e.g. `MyBlueprint-1.0.0` | Yes |
+| `-f` | `force` | Re-apply seed data via upsert even if the same version is recorded (recovery) | No |
+
+#### PreviewBlueprintUpdate
+Previews the changes an update would make without applying them.
+```
+octo-cli -c PreviewBlueprintUpdate -tv <targetVersion> [-m <updateMode>]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-tv` | `targetVersion` | Fully-qualified target blueprint id, e.g. `MyBlueprint-2.0.0` | Yes |
+| `-m` | `updateMode` | `Safe`, `Merge` (default), `Full`, or `Migration` | No |
+
+#### UpdateBlueprint
+Applies a blueprint update to the active tenant.
+```
+octo-cli -c UpdateBlueprint -tv <targetVersion> [-m <updateMode>] [-nb] [-dr]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-tv` | `targetVersion` | Fully-qualified target blueprint id | Yes |
+| `-m` | `updateMode` | `Safe`, `Merge` (default), `Full`, or `Migration` | No |
+| `-nb` | `no-backup` | Skip the pre-update tenant backup (not recommended) | No |
+| `-dr` | `dry-run` | Simulate the update without persisting changes | No |
+
+#### RollbackBlueprint
+Rolls the active tenant back to a previously-created blueprint backup. **Destructive.**
+```
+octo-cli -c RollbackBlueprint -bid <backupId> [-y]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-bid` | `backupId` | Identifier of the backup to restore from | Yes |
+| `-y` | `yes` | Skip confirmation prompt | No |
+
+#### UninstallBlueprint
+Removes a blueprint from the active tenant. **Destructive.**
+```
+octo-cli -c UninstallBlueprint -n <blueprintName> [-c] [-y]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-n` | `blueprintName` | Blueprint name without version, e.g. `MyBlueprint` | Yes |
+| `-c` | `cascade` | Also uninstall blueprints that depend on the target, and orphan dependencies | No |
+| `-y` | `yes` | Skip confirmation prompt | No |
+
+### Time Series / Stream-Data Archives
+
+`EnableStreamData` loads the `System.StreamData` CK model (`Archive` abstract → `RawArchive` / `RollupArchive` / `TimeRangeArchive`, backed by CrateDB). Archive lifecycle mutations require the **StreamDataAdminRole** (auto-provisioned in every tenant alongside `StreamDataWriterRole` / `StreamDataReaderRole`). All `-id` values are the runtime id of the relevant `CkArchive` entity. DateTime args are ISO-8601, parsed as UTC.
 
 #### EnableStreamData
-Enable stream data services for current tenant. No arguments.
+Enable stream data services for the current tenant. No arguments.
 ```
 octo-cli -c EnableStreamData
 ```
 
 #### DisableStreamData
-Disable stream data services for current tenant. No arguments.
+Disable stream data services for the current tenant. No arguments.
 ```
 octo-cli -c DisableStreamData
 ```
+
+#### ActivateArchive
+Provisions the per-archive CrateDB table and transitions the archive to Activated. Run once after rt-importing the archive entity.
+```
+octo-cli -c ActivateArchive -id <rtId>
+```
+
+#### EnableArchive
+Re-enables a previously disabled archive (Disabled → Activated). Re-validates column paths; no DDL. Allowed only from Disabled.
+```
+octo-cli -c EnableArchive -id <rtId>
+```
+
+#### DisableArchive
+Disables an archive (→ Disabled, data preserved). Allowed only from Activated.
+```
+octo-cli -c DisableArchive -id <rtId>
+```
+
+#### RetryArchiveActivation
+Retries activation after a previous DDL failure. Allowed only from Failed.
+```
+octo-cli -c RetryArchiveActivation -id <rtId>
+```
+
+#### DeleteArchive
+Drops the per-archive CrateDB table and soft-deletes the archive entity. **Destructive — historical data is lost.**
+```
+octo-cli -c DeleteArchive -id <rtId> [-y]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `identifier` | Runtime id of the `CkArchive` entity to delete | Yes |
+| `-y` | `yes` | Skip confirmation prompt | No |
+
+#### ListRollupsForArchive
+Lists every rollup archive attached to a source archive (runtime id, status, schedule, watermark, freeze state).
+```
+octo-cli -c ListRollupsForArchive -id <archiveRtId>
+```
+
+#### FreezeRollupArchive
+Freezes a rollup archive at a timestamp. Monotonic — rejected if the new value is earlier than the current FrozenUntil. The orchestrator stops producing buckets whose bucketEnd falls in the frozen range; already-aggregated rows are preserved.
+```
+octo-cli -c FreezeRollupArchive -id <rtId> -u <until>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `identifier` | Runtime id of the `CkRollupArchive` entity to freeze | Yes |
+| `-u` | `until` | Inclusive upper bound, ISO-8601 (e.g. `2026-05-11T14:00:00Z`) | Yes |
+
+#### UnfreezeRollupArchive
+Clears FrozenUntil on a rollup archive. Idempotent.
+```
+octo-cli -c UnfreezeRollupArchive -id <rtId> [-ag]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `identifier` | Runtime id of the `CkRollupArchive` entity to unfreeze | Yes |
+| `-ag` | `acceptGaps` | Acknowledge that unfreezing may produce visible gaps once the orchestrator catches up | No |
+
+#### RewindRollupWatermark
+Resets the rollup's watermark (truncated down to the bucket boundary) so subsequent orchestrator ticks re-aggregate the rewound range. **Destructive — rows in that range are temporarily out of sync until the orchestrator catches up.**
+```
+octo-cli -c RewindRollupWatermark -id <rtId> -t <toBucketEnd>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `identifier` | Runtime id of the `CkRollupArchive` entity to rewind | Yes |
+| `-t` | `toBucketEnd` | Target bucket-end (exclusive), ISO-8601; truncated down to the bucket boundary | Yes |
 
 ### Fixup Scripts
 
@@ -989,51 +1302,6 @@ octo-cli -c CreateFixupScript -e <enabled> -n <name> -f <file> -o <orderNumber> 
 ---
 
 ## Bot Services
-
-### Service Hooks
-
-#### GetServiceHooks
-Lists service hooks. No arguments.
-```
-octo-cli -c GetServiceHooks
-```
-
-#### CreateServiceHook
-```
-octo-cli -c CreateServiceHook -e <enabled> -n <name> -ck <ckId> -f <filter> [-u <uri>] [-a <action>] [-k <apiKey>]
-```
-| Flag | Long | Description | Required |
-|---|---|---|---|
-| `-e` | `enabled` | Enabled state | Yes |
-| `-n` | `name` | Display name | Yes |
-| `-ck` | `ckId` | CK ID the hook applies to | Yes |
-| `-f` | `filter` | Filter: `"'AttrName' Operator 'Value'"` (multi-value) | Yes |
-| `-u` | `uri` | Base URI of service hook | No |
-| `-a` | `action` | Action URI | No |
-| `-k` | `apiKey` | API key (HTTP header) | No |
-
-#### UpdateServiceHook
-```
-octo-cli -c UpdateServiceHook -id <serviceHookId> [-e <enabled>] [-n <name>] [-ck <ckId>] [-f <filter>] [-u <uri>] [-a <action>] [-k <apiKey>]
-```
-| Flag | Long | Description | Required |
-|---|---|---|---|
-| `-id` | `serviceHookId` | Service hook ID | Yes |
-| `-e` | `enabled` | Enabled state | No |
-| `-n` | `name` | Display name | No |
-| `-ck` | `ckId` | CK ID | No |
-| `-f` | `filter` | Filter (multi-value) | No |
-| `-u` | `uri` | Base URI | No |
-| `-a` | `action` | Action URI | No |
-| `-k` | `apiKey` | API key | No |
-
-#### DeleteServiceHook
-```
-octo-cli -c DeleteServiceHook -id <serviceHookId>
-```
-| Flag | Long | Description | Required |
-|---|---|---|---|
-| `-id` | `serviceHookId` | Service hook ID | Yes |
 
 ### Tenant Backup
 
@@ -1073,7 +1341,7 @@ octo-cli -c RunFixupScripts [-w]
 
 ## Communication Services
 
-All communication commands accept plain runtime object IDs — the SDK handles composite RtEntityId construction internally.
+All communication commands accept plain runtime object IDs — the SDK handles composite RtEntityId construction internally. Most flags have a short form (shown in the tables); `--json` is `-j`, `--identifier` is `-id`. `GetAdapters` / `GetPools` return human-readable enum names (e.g. `Online`, `Offline`), not integers.
 
 #### EnableCommunication
 Enables communication controller for current tenant. No arguments.
@@ -1090,113 +1358,149 @@ octo-cli -c DisableCommunication
 ### Adapters
 
 #### GetAdapters
-List all adapters for the tenant.
+Gets all adapters for the current tenant.
 ```
-octo-cli -c GetAdapters [--json]
+octo-cli -c GetAdapters [-j]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
-| `--json` | `json` | Output in JSON format | No |
+| `-j` | `json` | Output as raw JSON | No |
 
 #### GetAdapter
 Get adapter configuration, including linked pipelines.
 ```
-octo-cli -c GetAdapter --identifier <rtId> [--json]
+octo-cli -c GetAdapter -id <rtId> [-j]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
-| `--identifier` | `identifier` | Runtime object ID of the adapter | Yes |
-| `--json` | `json` | Output in JSON format | No |
+| `-id` | `identifier` | Runtime object ID of the adapter | Yes |
+| `-j` | `json` | Output as raw JSON | No |
 
 #### GetAdapterNodes
-List all available pipeline node types from connected adapters.
+Aggregated node descriptors from all connected adapters.
 ```
-octo-cli -c GetAdapterNodes
+octo-cli -c GetAdapterNodes [-j]
 ```
-No flags.
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-j` | `json` | Output as raw JSON | No |
 
 #### GetPipelineSchema
 Get the JSON Schema describing valid pipeline YAML for an adapter. The schema defines all available node types and their configuration properties.
 ```
-octo-cli -c GetPipelineSchema --adapterId <rtId> [--outputFile <path>]
+octo-cli -c GetPipelineSchema -aid <rtId> [-o <path>]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
-| `--adapterId` | `adapterId` | Runtime object ID of the adapter | Yes |
-| `--outputFile` | `outputFile` | File path to write the schema to | No |
+| `-aid` | `adapterId` | Runtime object ID of the adapter | Yes |
+| `-o` | `outputFile` | File path to write the schema to | No |
 
-#### DeployAdapter
-Push configuration update to an adapter.
+#### GetPools
+Gets all pools for the current tenant.
 ```
-octo-cli -c DeployAdapter --identifier <rtId>
+octo-cli -c GetPools [-j]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
-| `--identifier` | `identifier` | Runtime object ID of the adapter | Yes |
+| `-j` | `json` | Output as raw JSON | No |
+
+> **Note:** There is no manual adapter-deploy command. The legacy `DeployAdapter`, `GetPool`, `DeployPoolAdapters`, and `UndeployPoolAdapters` were removed (2026-05-13); adapters are Helm-deployed by the Communication Operator when a pool is deployed. Use the **Workloads** commands below to (re)deploy adapter/application workloads.
 
 ### Pipelines
 
 #### GetPipelineStatus
 Get the deployment state of a pipeline.
 ```
-octo-cli -c GetPipelineStatus --identifier <rtId> [--json]
+octo-cli -c GetPipelineStatus -id <rtId> [-j]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
-| `--identifier` | `identifier` | Runtime object ID of the pipeline | Yes |
-| `--json` | `json` | Output in JSON format | No |
+| `-id` | `identifier` | Runtime object ID of the pipeline | Yes |
+| `-j` | `json` | Output as raw JSON | No |
 
 #### DeployPipeline
-Deploy pipeline YAML to an adapter.
+Deploy a pipeline definition to the corresponding adapter.
 ```
-octo-cli -c DeployPipeline --adapterId <rtId> --pipelineId <rtId> --file <path>
+octo-cli -c DeployPipeline -aid <rtId> -pid <rtId> -f <path>
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
-| `--adapterId` | `adapterId` | Runtime object ID of the adapter | Yes |
-| `--pipelineId` | `pipelineId` | Runtime object ID of the pipeline | Yes |
-| `--file` | `file` | Path to the pipeline YAML file | Yes |
+| `-aid` | `adapterId` | Runtime object ID of the adapter | Yes |
+| `-pid` | `pipelineId` | Runtime object ID of the pipeline | Yes |
+| `-f` | `file` | Path to the pipeline definition file (YAML/JSON) | Yes |
 
 #### ExecutePipeline
 Execute a pipeline. Returns an execution ID and metadata.
 ```
-octo-cli -c ExecutePipeline --identifier <rtId> [--inputFile <path>]
+octo-cli -c ExecutePipeline -id <rtId> [-f <path>]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
-| `--identifier` | `identifier` | Runtime object ID of the pipeline | Yes |
-| `--inputFile` | `inputFile` | Path to JSON file with input data for the execution | No |
+| `-id` | `identifier` | Runtime object ID of the pipeline | Yes |
+| `-f` | `inputFile` | Path to a pipeline input file | No |
 
 #### GetPipelineExecutions
 List execution history for a pipeline (status, duration, errors).
 ```
-octo-cli -c GetPipelineExecutions --identifier <rtId> [--json]
+octo-cli -c GetPipelineExecutions -id <rtId> [-j]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
-| `--identifier` | `identifier` | Runtime object ID of the pipeline | Yes |
-| `--json` | `json` | Output in JSON format | No |
+| `-id` | `identifier` | Runtime object ID of the pipeline | Yes |
+| `-j` | `json` | Output as raw JSON | No |
 
 #### GetLatestPipelineExecution
 Get the most recent execution for a pipeline.
 ```
-octo-cli -c GetLatestPipelineExecution --identifier <rtId> [--json]
+octo-cli -c GetLatestPipelineExecution -id <rtId> [-j]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
-| `--identifier` | `identifier` | Runtime object ID of the pipeline | Yes |
-| `--json` | `json` | Output in JSON format | No |
+| `-id` | `identifier` | Runtime object ID of the pipeline | Yes |
+| `-j` | `json` | Output as raw JSON | No |
 
 #### GetPipelineDebugPoints
 Get the debug node tree for a specific pipeline execution.
 ```
-octo-cli -c GetPipelineDebugPoints --identifier <rtId> --executionId <guid> [--json]
+octo-cli -c GetPipelineDebugPoints -id <rtId> -eid <guid> [-j]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
-| `--identifier` | `identifier` | Runtime object ID of the pipeline | Yes |
-| `--executionId` | `executionId` | GUID of the execution to inspect | Yes |
-| `--json` | `json` | Output in JSON format | No |
+| `-id` | `identifier` | Runtime object ID of the pipeline | Yes |
+| `-eid` | `executionId` | GUID of the execution to inspect | Yes |
+| `-j` | `json` | Output as raw JSON | No |
+
+#### GetPipelineDebug
+Gets a pipeline's debug-capture state (independent of executing it).
+```
+octo-cli -c GetPipelineDebug -id <rtId> [-j]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `identifier` | Runtime object ID of the pipeline | Yes |
+| `-j` | `json` | Output as raw JSON | No |
+
+#### SetPipelineDebug
+Enables or disables debug capture for a pipeline.
+```
+octo-cli -c SetPipelineDebug -id <rtId> -e <enabled>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `identifier` | Runtime object ID of the pipeline | Yes |
+| `-e` | `enabled` | `true` to enable debug capture, `false` to disable | Yes |
+
+#### MovePipelines
+Reassigns one or more pipelines from their current adapter to a new target adapter. Each pipeline is moved atomically; per-pipeline failures do not abort the batch (results print line by line, the command exits non-zero if any fail). Source and target adapter must share the same CkTypeId.
+```
+octo-cli -c MovePipelines -ids <rtId,rtId,...> -aid <rtId> [-rd] [-y]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-ids` | `pipelineRtIds` | Comma-separated list of pipeline runtime object IDs to move | Yes |
+| `-aid` | `targetAdapterRtId` | Runtime object ID of the new owning adapter | Yes |
+| `-rd` | `redeploy` | Re-deploy each pipeline onto the new adapter after the move (a redeploy failure does not roll the move back) | No |
+| `-y` | `yes` | Skip confirmation prompt | No |
 
 ### Triggers
 
@@ -1219,30 +1523,90 @@ No flags.
 #### DeployDataFlow
 Deploy a data flow.
 ```
-octo-cli -c DeployDataFlow --identifier <rtId>
+octo-cli -c DeployDataFlow -id <rtId>
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
-| `--identifier` | `identifier` | Runtime object ID of the data flow | Yes |
+| `-id` | `identifier` | Runtime object ID of the data flow | Yes |
 
 #### UndeployDataFlow
 Undeploy a data flow.
 ```
-octo-cli -c UndeployDataFlow --identifier <rtId>
+octo-cli -c UndeployDataFlow -id <rtId>
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
-| `--identifier` | `identifier` | Runtime object ID of the data flow | Yes |
+| `-id` | `identifier` | Runtime object ID of the data flow | Yes |
 
 #### GetDataFlowStatus
 Get aggregated status of a data flow, including state, pipeline states, and statistics.
 ```
-octo-cli -c GetDataFlowStatus --identifier <rtId> [--json]
+octo-cli -c GetDataFlowStatus -id <rtId> [-j]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
-| `--identifier` | `identifier` | Runtime object ID of the data flow | Yes |
-| `--json` | `json` | Output in JSON format | No |
+| `-id` | `identifier` | Runtime object ID of the data flow | Yes |
+| `-j` | `json` | Output as raw JSON | No |
+
+### Workloads
+
+A workload is an Adapter or Application; deploys flow through its parent pool, executed by the Communication Operator (Helm).
+
+#### GetWorkloadsByChart
+Lists every Adapter / Application in the active tenant whose ChartName matches.
+```
+octo-cli -c GetWorkloadsByChart -cn <chartName>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-cn` | `chartName` | Helm chart name to filter by, e.g. `octo-mesh-adapter` | Yes |
+
+#### UpdateWorkloadChartVersion
+Sets ChartVersion on a single workload. Does **not** trigger a deploy — call `DeployWorkload` afterwards if needed.
+```
+octo-cli -c UpdateWorkloadChartVersion -id <rtId> -cv <chartVersion>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `workloadRtId` | The workload's runtime object ID | Yes |
+| `-cv` | `chartVersion` | New chart version (SemVer, e.g. `1.2.3` or `1.2.3-beta.1`) | Yes |
+
+#### DeployWorkload
+Triggers a deploy of one workload through its parent pool.
+```
+octo-cli -c DeployWorkload -id <rtId>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `workloadRtId` | The workload's runtime object ID | Yes |
+
+#### UndeployWorkload
+Undeploys one workload through its parent pool. **Destructive — the operator helm-uninstalls the chart.**
+```
+octo-cli -c UndeployWorkload -id <rtId> [-y]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `workloadRtId` | The workload's runtime object ID | Yes |
+| `-y` | `yes` | Skip confirmation prompt | No |
+
+---
+
+## AI Services
+
+The AI Adapter is managed per tenant. **`EnableAi` requires the communication controller to be enabled first** (run `EnableCommunication`; the server returns HTTP 409 otherwise), and the active context must have an AI service URL set via `-aisu` on `Config`/`AddContext` (local default `https://localhost:5019/`).
+
+#### EnableAi
+Enables the AI Adapter for the current tenant. No arguments.
+```
+octo-cli -c EnableAi
+```
+
+#### DisableAi
+Disables the AI Adapter for the current tenant. The seeded AgentConfig and CK model are not removed; re-enabling is idempotent. No arguments.
+```
+octo-cli -c DisableAi
+```
 
 ---
 

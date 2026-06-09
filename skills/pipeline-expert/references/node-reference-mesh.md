@@ -21,6 +21,8 @@ Retrieve runtime entities by CK type ID.
 | `targetValueKind` | enum | Simple | Simple/Array |
 | `targetValueWriteMode` | enum | Overwrite | Overwrite/Append/Prepend/Merge |
 
+Each `sortOrders` entry has `attributeName` (the attribute to sort by — **not** `attributePath`) and `sortOrder` (`Ascending`/`Descending`). `GetAssociationTargets@1` uses the same `SortOrderDto` shape.
+
 ```yaml
 - type: GetRtEntitiesByType@1
   ckTypeId: Industry.Basic/Machine
@@ -30,6 +32,9 @@ Retrieve runtime entities by CK type ID.
     - attributePath: Status
       operator: Equals
       comparisonValue: Active
+  sortOrders:
+    - attributeName: CreatedAt      # attributeName, not attributePath
+      sortOrder: Descending
 ```
 
 ### GetRtEntitiesById@1
@@ -159,7 +164,7 @@ Execute a saved query by its runtime ID.
 | `fieldFilters` | array | optional | Additional field filters |
 | `targetPath` | string | required | Where to store QueryResult |
 
-QueryResult contains `Rows` array, each row has `RtId` and `Values` array.
+Handles all three query types: `RtSimpleRtQuery`, `RtAggregationRtQuery`, and `RtGroupingAggregationRtQuery`. QueryResult contains a `Rows` array; each row has `RtId`, `CkTypeId`, and a `Values` array. For aggregation/grouping queries, **`RtId` and `CkTypeId` on a row may be null** (there is no single source entity). Throws a `MeshAdapterPipelineExecutionException` if the query is not found. The query cache is disabled for this node, so it always reads fresh data.
 
 ```yaml
 - type: GetQueryById@1
@@ -174,22 +179,7 @@ QueryResult contains `Rows` array, each row has `RtId` and `Values` array.
 
 ### GetPipelineConfigByWellKnownName@1
 
-Retrieve pipeline configuration from global config store by well-known name.
-
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `wellKnownName` | string | optional | Static well-known name |
-| `wellKnownNamePath` | string | optional | JSONPath to name |
-| `targetPath` | string | required | Where to store JSON config |
-| `documentMode` | enum | Extend | Extend/Replace |
-| `targetValueKind` | enum | Simple | Simple/Array |
-| `targetValueWriteMode` | enum | Overwrite | Overwrite/Append/Prepend/Merge |
-
-```yaml
-- type: GetPipelineConfigByWellKnownName@1
-  wellKnownName: EnergyCommunityConfiguration
-  targetPath: $.config
-```
+> **This is an SDK node, not Mesh-specific.** It lives in `octo-sdk/src/Sdk.Common/EtlDataPipeline/Nodes/Extracts/` and is available on **all** adapters. See `node-reference-sdk.md` for its full property table. (Listed here only because pipelines commonly combine it with the Mesh extract nodes below.)
 
 ### GetPipelineConfigByCkTypeId@1
 
@@ -219,19 +209,20 @@ Retrieve notification template (subject and body) by name.
   subjectTargetPath: $.subject
 ```
 
-### EnrichWithMongoData@1
+### BackfillFromRtEntity@1
 
-Enrich entity update info with current MongoDB entity data.
+Backfill missing attributes on a list of `EntityUpdateInfo<RtEntity>` items from each item's persistent MongoDB entity, using the target archive's column spec to decide which attributes are needed. **Replaces the removed `EnrichWithMongoData@1`** — the contract is now archive-driven (no per-attribute config). Designed to sit immediately before `SaveStreamDataInArchive@1` in event-sourced pipelines where each upstream event carries only one attribute; the result is a complete row snapshot that satisfies the archive's NOT NULL columns.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `rtIdPath` | string | optional | JSONPath to RtId |
-| `rtId` | string | optional | Static RtId |
-| `ckTypeId` | string | optional | Static CK type ID |
-| `ckTypeIdPath` | string | optional | JSONPath to CK type ID |
-| `attributeUpdates` | array | optional | Attributes to fetch from DB |
-| `path` | string | `$` | Source path for update infos (inherited) |
-| `targetPath` | string | required | Where to write enriched data |
+| `archiveRtId` | string | required | RtId of the target `CkArchive`. Its `Columns` list is the schema that drives backfill — every column not yet populated on an update item is loaded from the persistent entity by its `RtId` |
+| `path` | string | `$` | Source path for the `EntityUpdateInfo` list (inherited from `PathNodeConfiguration`) |
+
+```yaml
+- type: BackfillFromRtEntity@1
+  path: $._updates
+  archiveRtId: cc0000000000000000000aa1
+```
 
 ---
 
@@ -389,6 +380,8 @@ Filter duplicate entity updates, keeping only the latest for each entity.
 ```
 
 ### Distinct@1
+
+> **Now an SDK node, available on all adapters** (moved from MeshAdapter.Sdk to `Sdk.Common`). Documented here for continuity; it is not Mesh-specific.
 
 Remove duplicate objects based on a unique property value.
 
@@ -635,28 +628,35 @@ Generate reports via reporting service and store to file system.
 
 ### AnthropicAiQuery@1
 
-Query Claude AI for document analysis and information extraction.
+Query Claude AI for document analysis, information extraction, and (optionally) live OctoMesh data queries via MCP.
+
+**Only `question` is required.** The API key is optional — prefer `apiKeyConfigurationName` (references an `AiConfiguration` CK entity; the key is never exposed in the pipeline data context) over the inline `apiKey`.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `apiKey` | string | required | Anthropic API key |
+| `question` | string | **required** | Question/prompt for the AI |
+| `apiKeyConfigurationName` | string | optional | Name of the `AiConfiguration` entity in GlobalConfiguration to load the API key from. **Takes precedence over `apiKey`** — preferred, secure |
+| `apiKey` | string | optional | Inline Anthropic API key (nullable). Avoid — exposes the key in the pipeline definition |
 | `model` | string | `claude-sonnet-4-20250514` | Claude model ID |
-| `question` | string | required | Question/prompt for AI |
-| `dataPaths` | string[] | optional | Additional context paths |
-| `systemPrompt` | string | optional | System prompt |
+| `dataPaths` | string[] | optional | Additional context paths to include in the query |
+| `systemPrompt` | string | (built-in default) | System prompt |
 | `maxTokens` | int | 1000 | Max response tokens |
 | `temperature` | double | 0.1 | Response temperature (0.0-1.0) |
 | `responseFormat` | string | `json` | Expected format: `json` or `text` |
-| `jsonFormatSample` | string | optional | Example JSON structure |
-| `includeRawResponse` | bool | false | Store raw AI response |
-| `rawResponseOutputPath` | string | optional | Where to store raw response |
-| `continueOnError` | bool | false | Continue if query fails |
+| `jsonFormatSample` | string | (built-in sample) | Example JSON structure for structured responses |
+| `includeRawResponse` | bool | false | Store the raw AI response |
+| `rawResponseOutputPath` | string | optional | Where to store the raw response |
+| `continueOnError` | bool | false | Continue the pipeline if the query fails |
+| `mcpServerUrl` | string | optional | OctoMesh MCP server URL (e.g. `https://localhost:5017`). When set, Claude can call MCP tools to query live OctoMesh data; the tenant ID is appended automatically as `{url}/{tenantId}/mcp` |
+| `maxToolRounds` | int | 10 | Max MCP tool-use rounds (loop guard) |
+| `mcpToolNames` | string[] | optional | Whitelist of MCP tool names to expose (reduces context; e.g. `["query_entities_simple"]`). If unset, all tools are available |
+| `conversationHistoryPath` | string | optional | JSONPath to a conversation-history array (entries `{role, content}`) for multi-turn conversations |
 | `path` | string | `$` | Source path for main content (inherited) |
-| `targetPath` | string | required | Where to store response |
+| `targetPath` | string | required | Where to store the response |
 
 ```yaml
 - type: AnthropicAiQuery@1
-  apiKey: ${ANTHROPIC_API_KEY}
+  apiKeyConfigurationName: anthropic-prod   # references an AiConfiguration entity
   model: claude-sonnet-4-20250514
   question: "Extract the invoice number and total from this document"
   systemPrompt: "You are a document analysis assistant."
@@ -665,6 +665,75 @@ Query Claude AI for document analysis and information extraction.
   path: $.documentText
   targetPath: $.extractedData
 ```
+
+### ApplyDataPointMappings@1
+
+Evaluate `System.Communication/DataPointMapping` entities for a source entity, apply their mXparser expressions, and produce `EntityUpdateInfo` for the mapped target entities. Used for live data acquisition (e.g. Loxone control → target attribute).
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `sourceRtIdPath` | string | optional | JSONPath to the source entity's RtId |
+| `sourceCkTypeIdPath` | string | optional | JSONPath to the source entity's CkTypeId |
+| `sourceValuePath` | string | optional | JSONPath to the polled source value — the default mapping input and the `value` variable in expressions |
+| `sourceStateNamePath` | string | optional | JSONPath to the incoming state name. When set, only mappings whose `SourceAttributePath` equals it are applied (multi-state sources like Loxone controls). If unset, all mappings for the source are applied |
+| `targetPath` | string | required | Where to write the produced update items |
+
+### BuildMappingTargets@1
+
+Resolve all active DataPointMappings into `MappingTarget` records (external identifiers) so an external adapter can acquire data. Generic for Loxone/MQTT/OPC-UA/Modbus. Each target is a plain identifier, or a `identifier|stateName|stateId` triple for sub-state sources.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `sourceCkTypeId` | string | required | CkTypeId of the source entities mappings map from (e.g. `Loxone/Control`) |
+| `sourceIdentifierAttribute` | string | required | Attribute on the source holding the external id (e.g. `LoxoneUuid`) |
+| `statesAttribute` | string | optional | RecordArray attribute holding sub-states; enables triple output |
+| `stateKeyAttribute` | string | optional | State-name attribute within each state record (required when `statesAttribute` is set) |
+| `stateValueAttribute` | string | optional | State-id/UUID attribute within each state record (required when `statesAttribute` is set) |
+| `defaultAttributePath` | string | `currentValue` | Attribute path that maps to the main value; produces a plain identifier |
+| `targetPath` | string | required | Where to write the target list |
+
+### GenerateDataPointMappings@1
+
+Deterministic, rule-based DataPointMapping suggestion generator — the **non-AI alternative to `AnthropicAiQuery@1`** for mapping generation (the output shape is identical, so the downstream GetOrCreate + CreateUpdateInfo + CreateAssociationUpdate pipeline consumes either). Matches source containers to targets by name/normalized/regex/manual strategy, walks the hierarchy to reach controls, and evaluates control rules per (rule, state) pair.
+
+Key config: `sourceContainerCkTypeId`, `sourceControlCkTypeId` (required); optional `sourceCategoryCkTypeId`, `hierarchyAssociationRoleId` (default `System/ParentChild`); `targetCkTypeId` (required); `statesAttribute` (default `States`), `stateNameAttribute` (default `Name`), `defaultSourceAttributePath` (default `CurrentValue`); `containerMatchingStrategies` (ordered, first match wins: `ExactName`/`NormalizedName`/`Regex`/`Manual`); `controlMappingRules` (each `{id, when{controlType,stateName,categoryType,categoryNameRegex,controlNameRegex}, map{targetAttribute,expression,childTargetCkTypeId,childTargetAssociationRoleId}}`); optional `statisticsTargetPath`; `targetPath` (required). Read the config source for the full strategy/rule shapes before authoring rules.
+
+### ValidateDataPointCoverage@1
+
+Traverse a tree hierarchy and, for every node, evaluate which target attribute paths are covered by inbound `MapsTo` DataPointMappings against per-CK-type `CoverageRule` profiles. Emits a JSON report (per-node `status`: ok/warning/error/info) suitable for persisting via `SetPipelineExecutionResult@1` so the Studio can colour-code the tree.
+
+Key config: `rootRtId` or `rootRtIdPath`, `rootCkTypeId` (required); `childRoleId` (default `System/ParentChild`), `childCkTypeId` (default `Basic/TreeNode`), `maxDepth` (default 16); `mappingRoleId` (default `System.Communication/MapsTo`), `mappingCkTypeId` (default `System.Communication/DataPointMapping`), `includeDisabledMappings` (default false); `rules` (list of `CoverageRule {ckTypeId, requiredAttributes[], recommendedAttributes[], requiredAssociations[{associationRoleId, targetCkTypeId}]}`); `targetPath` (required).
+
+### MapToRecordArray@1
+
+Convert a JSON key/value map into a CK RecordArray — each map entry becomes one record with a key attribute and a value attribute.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `ckRecordId` | string | required | Semantic-versioned full name of the CK record type (e.g. `Loxone/LoxoneState`) |
+| `keyAttributeName` | string | required | Record attribute that receives the map key |
+| `valueAttributeName` | string | required | Record attribute that receives the map value |
+| `path` | string | `$` | Source map (inherited) |
+| `targetPath` | string | required | Where to write the RecordArray |
+
+### UpdateRecordArrayItem@1
+
+Find one record in a CK RecordArray by a key attribute match and update specified attributes without overwriting the whole array (the array is rebuilt from existing items + the patched item). If no record matches, it is skipped.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `matchAttributeName` | string | required | Record attribute to match against (e.g. `Name`, `ExternalId`) |
+| `matchValue` | string | optional | Static value to match |
+| `matchValuePath` | string | optional | JSONPath to the match value (takes precedence over `matchValue`) |
+| `attributeUpdates` | array | required | Each `{attributeName, value, valuePath}` (`valuePath` wins over `value`) |
+| `path` | string | `$` | Source RecordArray (inherited) |
+| `targetPath` | string | required | Where to write the updated array |
+
+### SimulateEnergyMeasurements@1
+
+Generate per-15-min-slot `EnergyMeasurement` Insert candidates (and their parent `ParentChild` association candidates) for a set of MeteringPoints over a time window, using BDEW H0/G0/L0 load-profile or PV-curve math. Output flows into `UpdateRtEntityIfNewer@1` (dedup) → `ApplyChanges@2` (RT write) → `SaveTimeRangeStreamDataInArchive@1` (archive write).
+
+Key config: `startDate`, `numDays` (required); `energyMeasurementCkTypeId`, `timeRangeCkRecordId`, `amountCkRecordId`, `parentAssociationRoleId` (required); `amountUnit` (default 1), `dataQuality` (default 1); `entityUpdatesOutputPath`, `associationUpdatesOutputPath` (required); `meteringPoints` (≥1 entry of `{meteringPointRtId, meteringPointCkTypeId, profileKind ("Load:H0"/"Load:G0"/"Load:L0"/"PV"), profileParameter (daily kWh or peak kWp), obisCodes[]}`).
 
 ---
 
@@ -698,18 +767,46 @@ Apply both entity and association updates with transactional support.
   associationUpdatesPath: $.assocUpdates
 ```
 
-### SaveInTimeSeries@1
+### SaveStreamDataInArchive@1
 
-Save entity data to time series database (CrateDB) for analytics.
+Route the source entities into a single named CrateDB `CkArchive` (no auto fan-out — one archive per node). **Replaces the removed `SaveInTimeSeries@1`** (breaking YAML rename, same `@1` version, plus a new required `archiveRtId`).
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `path` | string | required | Source path for entity update infos |
+| `archiveRtId` | string | **required** | RtId of the `CkArchive` that receives the data points. The archive must exist on the tenant and be in status **`Activated`** at runtime — otherwise the node throws `ArchiveNotActivatedException` |
+| `path` | string | `$` | Source path for the entity update infos (inherited) |
 
 ```yaml
-- type: SaveInTimeSeries@1
+- type: SaveStreamDataInArchive@1
   path: $._entityUpdates
+  archiveRtId: cc0000000000000000000aa1   # must be an Activated CkArchive
 ```
+
+> Archives are managed via octo-cli (`ActivateArchive`, `DisableArchive`, `EnableStreamData`, etc.) — hand off to the `octo` skill. Attribute capture is type-agnostic: every column the archive declares becomes a queryable CrateDB column; there is no per-attribute "stream data" flag.
+
+### SaveTimeRangeStreamDataInArchive@1
+
+Write externally pre-aggregated time-range data points into a `TimeRangeArchive`. Each upstream entity must carry window boundaries (default top-level attributes `From`/`To`). Re-deliveries of the same `(from, to, rtId, ckTypeId)` upsert.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `archiveRtId` | string | **required** | RtId of the target `TimeRangeArchive` (must be Activated; raw/rollup archives are rejected) |
+| `fromAttributePath` | string | `From` | Attribute carrying the inclusive UTC window start. Supports dot notation for record attributes (e.g. `TimeRange.From`) |
+| `toAttributePath` | string | `To` | Attribute carrying the exclusive UTC window end |
+| `path` | string | `$` | Source path (inherited) |
+
+### UpdateRtEntityIfNewer@1
+
+Filter a list of `EntityUpdateInfo` candidates by comparing each against the existing RT entity with the same `RtWellKnownName`. Strictly-newer candidates go to the RT-write path; older ones are kept (with the existing RtId) on the all-output path so a downstream archive write can still land the corrected slot. Implements the time-range-archive "keep the most recent on the RT entity, full series in the archive" semantics.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `inputPath` | string | **required** | JSONPath to the candidate `EntityUpdateInfo` list |
+| `filteredOutputPath` | string | **required** | Where the RT-write list is written (Insert + strictly-newer Update) |
+| `outputPathAll` | string | **required** | Where the complete list (including skipped, with existing RtId) is written for the archive write |
+| `comparisonAttributePath` | string | **required** | Attribute holding the monotonic comparison value (typically a UTC DateTime). Supports dot notation for record attributes (e.g. `TimeRange.From`) |
+| `candidateAssociationsInputPath` | string | optional | JSONPath to candidate parent `AssociationUpdateInfo` list (for filtering association inserts) |
+| `filteredAssociationsOutputPath` | string | optional | Where the filtered association list is written (required when `candidateAssociationsInputPath` is set) |
 
 ### SendEMail@1
 
@@ -793,6 +890,37 @@ Deprovision (delete) a Grafana organization for the current tenant, removing all
   targetPath: $.grafanaResult
 ```
 
+### DeployPipeline@1
+
+Deploy another pipeline **within the same DataFlow** to its assigned adapter, via the Communication Controller REST API. Cannot deploy itself; the target must be in the same DataFlow.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `pipelineRtId` | string | optional | Static RtId of the pipeline to deploy |
+| `pipelineRtIdPath` | string | optional | JSONPath to the pipeline RtId |
+| `serviceAccountConfigName` | string | `ServiceAccountConfig` | Well-known name of the `ServiceAccountConfiguration` entity used for OAuth2 auth |
+
+### ToDiscord@1
+
+Post a message, embed, and/or single file attachment to a Discord channel via the Bot API, using a `DiscordConfiguration` CK entity (bot token + optional guild id) resolved by name. Threads are channels — pass a thread snowflake as `channelId` to post into a thread. **Prerequisite:** a `System.Communication/DiscordConfiguration` entity (and `System.Reporting` loaded when sending attachments). Most fields follow the `{Field}` + `{Field}Path` convention (the `*Path` variant reads from the data context).
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `serverConfiguration` | string | required | Global config key for the `DiscordConfiguration` entity |
+| `channelId` / `channelIdPath` | string | optional | Discord channel (or thread) snowflake |
+| `content` / `contentPath` | string | optional | Message content |
+| `embedTitle` / `embedTitlePath` | string | optional | Embed title |
+| `embedDescription` / `embedDescriptionPath` | string | optional | Embed description |
+| `embedColor` (int) / `embedColorPath` | — | optional | Embed color (24-bit RGB int; path accepts `0xRRGGBB`/`#RRGGBB`/decimal) |
+| `attachmentFileSystemItemRtId` / `…Path` | string | optional | RtId of a `System.Reporting/FileSystemItem` to attach (the bound binary is posted — **not** a raw binary RtId) |
+| `attachmentFilename` / `attachmentFilenamePath` | string | optional | Override the sent filename |
+| `mentionPolicy` | enum | `None` | `None`/`Users`/`Roles`/`UsersAndRoles`/`All`/`Custom` — controls which mentions can ping |
+| `allowedMentionsPath` | string | optional | Raw Discord `allowed_mentions` object (only when `mentionPolicy: Custom`) |
+| `timeoutSeconds` | int | 30 | HTTP timeout |
+| `targetPath` | string | required | Where to write the result |
+
+**Attachment filename precedence:** `attachmentFilename` override → FileSystemItem `Name` attribute → FileSystemItem `Content.Filename`.
+
 ---
 
 ## Trigger Nodes
@@ -857,6 +985,8 @@ triggers:
 
 Trigger pipeline on manual execution command (via service API or UI). The pipeline must belong to a DataFlow. The adapter listens on a DataFlow-scoped message queue for execution requests.
 
+> **Now an SDK node** (moved to `Sdk.Common`) — available on **all** adapters (Edge and Mesh), not Mesh-only. The DataFlow requirement still holds.
+
 No additional properties.
 
 ```yaml
@@ -881,7 +1011,7 @@ Trigger pipeline on a cron schedule via a **PipelineTrigger** entity. The Pipeli
 
 **How it works:** The Bot Service evaluates the cron expression and sends a `PipelineTriggerSchedule` message to a pipeline-specific RabbitMQ queue. The pipeline **must** include `FromPipelineTriggerEvent@1` as a trigger — this registers the adapter as a consumer on that queue. Without it, the scheduled message is sent but never consumed.
 
-The cron expression is interpreted in the **server's local timezone** (`TimeZoneInfo.Local`, e.g. `Europe/Vienna`). Cron format: `minute hour dayOfMonth month dayOfWeek year` (6 fields).
+The cron expression is interpreted in the **server's local timezone** (`TimeZoneInfo.Local`, e.g. `Europe/Vienna`). Cron format: standard 5-field `minute hour dayOfMonth month dayOfWeek` (no year field; e.g. `0 * * * *` = top of every hour), scheduled via the MassTransit/Hangfire recurring scheduler.
 
 No additional properties.
 
@@ -957,14 +1087,14 @@ triggers:
 
 ### Zenon Nodes
 
+Shipped by the **Zenon Adapter** (`octo-plug-zenon`), config records under `src/Octo.Edge.Adapter.Zenon.WindowsService/Nodes/`. The variable/AML nodes:
+
 **FromZenonAml@1** (trigger) — Trigger on Zenon AML data.
 
 **ReadZenonAmlMessages@1** — Read AML messages from Zenon.
 
 **SetZenonVariables@1** — Write variable values to Zenon.
-- `dataPointConfigurations`: array — Variable write configurations
-
-Each data point: `{variablePath, valuePath, valueType}`.
+- `dataPointConfigurations`: array — each `{variablePath, valuePath, valueType}`
 
 ```yaml
 - type: SetZenonVariables@1
@@ -977,20 +1107,35 @@ Each data point: `{variablePath, valuePath, valueType}`.
       valueType: String
 ```
 
-### EDA Energy Nodes
+**Archive (historian) nodes.** Both inherit `SourceTargetPathNodeConfiguration` (`path`/`targetPath` + write modifiers):
 
-**EdaStartProcess@1** — Start an EDA process.
+**ReadZenonArchiveInfo@1** — List the archives available in the Zenon runtime; writes them to `targetPath`. No extra properties.
 
-**EdaParseMessage@1** — Parse EDA messages.
-- `messageRtIdPath`, `messageTypePath`, `processRtIdPath`, `rawMessagePath`, `targetPath`
+**ReadZenonArchiveData@1** — Query archived values for variables over a time window. Each literal property has an optional `*Path` JSONPath override read from the object at `path`.
+- `archiveName` / `archiveNamePath` — archive to query (required, else node errors)
+- `variableNames` (string[]) / `variableNamesPath` — variables to read (required)
+- `startTimeOffset` (default `-1h`) / `startTimeOffsetPath`, `endTimeOffset` (default `now`) / `endTimeOffsetPath` — offsets like `-30m`, `-7d`, or `now`
+- `raster` (int) / `rasterPath` — aggregation raster
 
-**ExtractProcesses@1** — Extract processes from EDA data.
+**Editor dynamic-property nodes.** Operate on the Zenon Editor via `IZenonEditorApi`. All inherit `SourceTargetPathNodeConfiguration`; the inputs below are JSONPaths into the object at `path` (defaults are relative keys, not `$`-rooted):
 
-**AggregateConsumptionRecord@1** — Aggregate energy consumption records.
+**ListZenonProjects@1** — List Editor projects to `targetPath`. No extra properties.
 
-**FilterEnergyData@1** — Filter energy data by criteria.
+**GetZenonDynamicProperties@1** — List the child dynamic-property nodes under a path.
+- `projectIdOrNamePath` (default `projectIdOrName`), `pathPath` (default `path`)
 
-**SearchExistingEnergyQuantities@1** — Search for existing energy quantity records.
+**GetZenonDynamicProperty@1** — Read a single dynamic-property value (and optional parameter).
+- `projectIdOrNamePath` (default `projectIdOrName`), `pathPath` (default `path`), `targetParameterPath` (default `$.parameter`)
+
+**SetZenonDynamicProperty@1** — Write a dynamic-property value (with type coercion). **Mutating.**
+- `projectIdOrNamePath` (default `projectIdOrName`), `pathPath` (default `path`), `typePath` (default `type`), `valuePath` (default `value`)
+
+### EDA Energy Nodes (external adapter — not in this monorepo, cannot be verified locally)
+
+> **`EdaParseMessage@1`, `EdaStartProcess@1`, `ExtractProcesses@1`, `AggregateConsumptionRecord@1`, `FilterEnergyData@1`, `SearchExistingEnergyQuantities@1` ship in a separate EDA adapter repo (`octo-adapter-eda`) that is NOT checked out in this monorepo.** Their property names and behavior cannot be confirmed against source here. The shape below is from pipeline-examples.md usage only — verify against the EDA adapter's `pipeline-schema.json` or source before relying on it.
+
+- `EdaParseMessage@1` — parse EDA messages; observed properties `messageRtIdPath`, `messageTypePath`, `processRtIdPath`, `rawMessagePath`, `targetPath`.
+- `EdaStartProcess@1`, `ExtractProcesses@1`, `AggregateConsumptionRecord@1`, `FilterEnergyData@1`, `SearchExistingEnergyQuantities@1` — EDA process orchestration and energy-data filtering (properties unverified).
 
 ### Microsoft Teams Nodes
 

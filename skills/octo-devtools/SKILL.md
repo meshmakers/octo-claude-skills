@@ -1,6 +1,6 @@
 ---
 name: octo-devtools
-description: This skill should be used when the user asks about building OctoMesh repositories, starting or stopping services, managing Docker infrastructure, syncing git repositories, creating or managing test branches, managing NuGet packages, cleaning build artifacts, or any development workflow task. Trigger on mentions of build, compile, dotnet build, start services, stop services, infrastructure, docker compose, git sync, pull repos, push repos, branch management, test branch, NuGet packages, clean build, kill dotnet, certificates, clone repos, git status across repos, or development environment setup. Also trigger when user mentions Invoke-BuildAll, Invoke-Build, Start-Octo, Start-OctoInfrastructure, Sync-AllGitRepos, Get-AllGitRepStatus, or any OctoMesh PowerShell commandlet name.
+description: Drives OctoMesh local development through the octo-tools PowerShell cmdlets — building repos in dependency order, starting and stopping services (always non-interactively for agents via Start-Octo -nonInteractive $true / Stop-Octo), managing Docker or local kind Kubernetes infrastructure, syncing and branching git repos, NuGet package propagation, certificates, and octo-cli context/auth setup. Use it for any OctoMesh dev-environment or DevOps task. Trigger on build, compile, dotnet build, start services, stop services, Start-Octo, Stop-Octo, Invoke-BuildAll, Invoke-Build, infrastructure, docker compose, kind, Kubernetes, Install-OctoKubernetes, Deploy-OctoOperator, git sync, pull repos, push repos, Get-AllGitRepStatus, branch management, test branch, NuGet packages, clean build, kill dotnet, certificates, clone repos, register context, login local/staging/production, infrastructure backup, or any OctoMesh PowerShell cmdlet name.
 allowed-tools:
   - "Read(${CLAUDE_PLUGIN_ROOT}/skills/octo-devtools/references/*)"
   - "Bash(bash ${CLAUDE_PLUGIN_ROOT}/skills/octo-devtools/scripts/run_pwsh.sh:*)"
@@ -60,7 +60,7 @@ Invoke-BuildAll -configuration DebugL -excludeFrontend $true -excludeAdditional 
 **Use `Invoke-BuildAll` for:**
 - After pulling latest changes (`Sync-AllGitRepos`)
 - After switching branches
-- When changes touch library repos (mm-common, octo-construction-kit-engine, octo-sdk, octo-common-services, octo-distributedEventHub, octo-construction-kit-engine-mongodb)
+- When changes touch repos in the explicit build order (mm-common, octo-distributedEventHub, octo-construction-kit-engine, octo-sdk, octo-construction-kit-engine-mongodb, octo-common-services, octo-mesh-adapter, octo-bot-services, octo-communication-controller-services) — these produce NuGet packages consumed downstream
 - When unsure whether changes affect NuGet packages
 - Clean builds after deleting bin/obj folders
 - First build after clone
@@ -94,14 +94,15 @@ For common multi-step workflows, read `references/workflows.md` in this skill di
 | `Invoke-Build` | Build a single repo WITHOUT NuGet handling — only for isolated service changes | Mutating (local) |
 | `Invoke-BuildFrontend` | Build Angular frontends | Mutating (local) |
 | `Invoke-Publish` | Publish a .NET project | Mutating (local) |
-| `Invoke-BuildAndStartOcto` | Build all + start services | **Interactive** |
+| `Invoke-BuildAndStartOcto` | Build all + start services — chains into **interactive** `Start-Octo`. **Do NOT use from an agent session** (see safety rules) | **Interactive** |
 | `Invoke-BuildZenonPlug` | Build Zenon plug-in | Mutating (local) |
 
 ### Service Management
 
 | Cmdlet | Description | Safety |
 |---|---|---|
-| `Start-Octo` | Start all OctoMesh services | **Interactive** |
+| `Start-Octo` | Start OctoMesh services. **From an agent always pass `-nonInteractive $true`** | Mutating (interactive only when `-nonInteractive` is not set) |
+| `Stop-Octo` | Stop services started in non-interactive mode (writes a `.octo-stop` signal file) | Mutating |
 | `Start-OctoInfrastructure` | Start Docker containers (MongoDB, RabbitMQ, CrateDB) | Mutating |
 | `Stop-OctoInfrastructure` | Stop Docker containers | Mutating |
 
@@ -113,6 +114,23 @@ For common multi-step workflows, read `references/workflows.md` in this skill di
 | `Uninstall-OctoInfrastructure` | Remove Docker containers + volumes | **Destructive** |
 | `Get-OctoInfrastructureStatus` | Show container status | Read-only |
 | `Invoke-CleanupInfraContainerDisks` | Clean unused Docker disk space | **Destructive** |
+| `Backup-OctoInfrastructure` | Back up infra Docker volumes (Mongo + CrateDB) | Mutating (local) |
+| `Restore-OctoInfrastructure` | Restore infra volumes from a named backup | **Destructive** |
+| `Get-OctoInfrastructureBackup` | List available infra backups | Read-only |
+| `Remove-OctoInfrastructureBackup` | Delete a named infra backup | **Destructive** |
+
+### Local Kubernetes (kind) dev environment
+
+An alternative to the docker-compose infra: MongoDB / RabbitMQ / CrateDB, the CRDs, and the Communication Operator run inside a local [kind](https://kind.sigs.k8s.io/) cluster (the .NET services still run as host processes via `Start-Octo`). **The two infra modes share the same host ports and CANNOT run at the same time** — `Install-OctoKubernetes` refuses to start while docker-compose infra containers are up. Full runbook: `C:\dev\meshmakers\octo-tools\kubernetes\README.md`; from-scratch setup: `C:\dev\meshmakers\octo-tools\kubernetes\QUICKSTART.md`.
+
+| Cmdlet | Description | Safety |
+|---|---|---|
+| `Install-OctoKubernetes` | Create kind cluster + CRDs + in-cluster infra + ingress-nginx/cert-manager, then deploy the operator | Mutating |
+| `Deploy-OctoOperator` | (Re)deploy the Communication Operator from the dev registry (`:main-latest`) | Mutating |
+| `Get-OctoKubernetesStatus` | Show pods, Helm releases, and host-port reachability | Read-only |
+| `Uninstall-OctoKubernetes` | Delete the kind cluster and ALL its data (Mongo + CrateDB PVCs) | **Destructive** |
+| `Import-OctoImageToKind` | Load a locally-built image into the kind node | Mutating |
+| `Add-OctoLocalCaTrust` / `Remove-OctoLocalCaTrust` | Trust / untrust the local root CA in the OS store | Mutating (Destructive for Remove) |
 
 ### Git Repository Management
 
@@ -154,15 +172,19 @@ For common multi-step workflows, read `references/workflows.md` in this skill di
 | `Invoke-KillDotnet` | Kill all dotnet processes | Mutating |
 | `Remove-BinAndObjFolders` | Delete all bin/ and obj/ folders | **Destructive** |
 
-### Authentication / Environment
+### Authentication / Context (octo-cli)
 
 | Cmdlet | Description | Safety |
 |---|---|---|
-| `Invoke-OctoCliLoginLocal` | Log in to local environment | Mutating |
+| `Register-OctoCliContext` | **Recommended** — register a named octo-cli context for any installation (`local`, `test-2`, `staging-1`, `prod-1`, `prod-2`) | Mutating |
+| `Invoke-OctoCliLoginLocal` | Log in to local environment (`-tenantId`, `-includeReporting`) | Mutating |
 | `Invoke-OctoCliLoginTest2` | Log in to test-2 environment | Mutating |
-| `Invoke-OctoCliLoginStaging` | Log in to staging environment | Mutating |
-| `Invoke-OctoCliLoginProduction` | Log in to production environment | Mutating |
-| `Invoke-OctoCliReconfigureLogLevel` | Reconfigure service log levels | Mutating |
+| `Invoke-OctoCliLoginStaging` | **Legacy** — old `*.meshmakers.cloud` domains; prefer `Register-OctoCliContext -Installation staging-1` | Mutating |
+| `Invoke-OctoCliLoginProduction` | **Legacy** — old `*.meshmakers.cloud` domains; prefer `Register-OctoCliContext -Installation prod-1`/`prod-2` | Mutating |
+| `Invoke-OctoCliReconfigureLogLevel` | Reconfigure service log levels (3 mandatory params) | Mutating |
+| `Invoke-SetDebugConfiguration` | Register the Admin Panel debug OAuth client + scopes (run after local login) | Mutating |
+| `Register-AiBastion` | Register an Anthropic subscription token on a tenant (device-code OAuth) | Mutating (remote) |
+| `Get-AiBastionStatus` | Read current AI Bastion lease metadata for a tenant | Read-only |
 
 ### Certificates
 
@@ -170,14 +192,25 @@ For common multi-step workflows, read `references/workflows.md` in this skill di
 |---|---|---|
 | `New-RootCertificate` | Generate root CA certificate | Mutating |
 | `New-ServerCertificate` | Generate server certificate | Mutating |
-| `AspNetDeveloperCertificate` | Set up ASP.NET dev HTTPS cert | Mutating |
+| `New-AspNetDeveloperCertificate` | Set up ASP.NET dev HTTPS cert | Mutating |
+| `Test-AspNetDeveloperCertificate` | Check the ASP.NET dev cert status | Read-only |
+| `Remove-AspNetDeveloperCertificate` | Remove the ASP.NET dev cert | **Destructive** |
 
-### Kubernetes
+### Kubernetes helpers / DB access
 
 | Cmdlet | Description | Safety |
 |---|---|---|
 | `Join-KubeConfigs` | Merge kubeconfig files | Mutating |
+| `Remove-KubeConfig` | Delete a named context/cluster/user from `~/.kube/config` (interactive prompt) | **Destructive** |
 | `Invoke-MongoPortForward` | Port-forward MongoDB from K8s | Mutating |
+
+### Diagnostics & Comparison
+
+| Cmdlet | Description | Safety |
+|---|---|---|
+| `Compare-CkVersions` | Diff CK model (`ckModel.yaml`) versions between two branch checkouts | Read-only |
+| `Compare-Pipelines` | Diff local pipeline YAML against the deployed versions in a tenant | Read-only |
+| `Get-BranchAvailability` | List repos where a given branch exists on remote | Read-only |
 
 ### Versioning & Templates
 
@@ -189,21 +222,42 @@ For common multi-step workflows, read `references/workflows.md` in this skill di
 ## Safety Rules
 
 ### Read-only (execute directly, no confirmation)
-`Get-AllGitRepStatus`, `Get-OctoInfrastructureStatus`, `Find-AllGitRepos`, `Compare-BranchStatus`
+`Get-AllGitRepStatus`, `Get-OctoInfrastructureStatus`, `Get-OctoKubernetesStatus`, `Get-OctoInfrastructureBackup`, `Find-AllGitRepos`, `Compare-BranchStatus`, `Compare-CkVersions`, `Compare-Pipelines`, `Get-BranchAvailability`, `Test-AspNetDeveloperCertificate`, `Get-AiBastionStatus`
 
 ### Mutating — local (execute with brief confirmation)
-`Invoke-BuildAll`, `Invoke-Build`, `Invoke-BuildFrontend`, `Invoke-Publish`, `Start-OctoInfrastructure`, `Stop-OctoInfrastructure`, `Install-OctoInfrastructure`, `Sync-AllGitRepos`, `Sync-GitRepo`, `Invoke-CloneMainRepos`, `Sync-AllSubmodules`, `New-TestBranch`, `Sync-TestBranch`, `Invoke-SwitchAllBranches`, `Copy-AllNuGetPackages`, `Copy-NuGetPackages`, `Sync-NuGetPackages`, `Invoke-OctoCliLogin*`, `New-RootCertificate`, `New-ServerCertificate`, `AspNetDeveloperCertificate`, `Join-KubeConfigs`, `Invoke-MongoPortForward`, `Sync-YamlTemplates`, `Update-MeshmakerVersion`, `Invoke-KillDotnet`
+`Invoke-BuildAll`, `Invoke-Build`, `Invoke-BuildFrontend`, `Invoke-Publish`, `Invoke-BuildZenonPlug`, `Start-OctoInfrastructure`, `Stop-OctoInfrastructure`, `Install-OctoInfrastructure`, `Backup-OctoInfrastructure`, `Install-OctoKubernetes`, `Deploy-OctoOperator`, `Import-OctoImageToKind`, `Add-OctoLocalCaTrust`, `Sync-AllGitRepos`, `Sync-GitRepo`, `Invoke-CloneMainRepos`, `Sync-AllSubmodules`, `New-TestBranch`, `Sync-TestBranch`, `Invoke-SwitchAllBranches`, `Copy-AllNuGetPackages`, `Copy-NuGetPackages`, `Sync-NuGetPackages`, `Register-OctoCliContext`, `Invoke-OctoCliLogin*`, `Invoke-OctoCliReconfigureLogLevel`, `Invoke-SetDebugConfiguration`, `New-RootCertificate`, `New-ServerCertificate`, `New-AspNetDeveloperCertificate`, `Join-KubeConfigs`, `Invoke-MongoPortForward`, `Sync-YamlTemplates`, `Update-MeshmakerVersion`, `Invoke-KillDotnet`, `Stop-Octo`
 
 ### Mutating — remote (confirm with emphasis)
-`Push-AllGitRepos`, `Push-GitRepo`
+`Push-AllGitRepos`, `Push-GitRepo`, `Register-AiBastion` (writes a token to a remote tenant — see note below)
 
 ### Destructive (explicit confirmation + warning)
-`Remove-BinAndObjFolders`, `Remove-GlobalNuGetPackages`, `Invoke-CleanAllGitRepos`, `Uninstall-OctoInfrastructure`, `Remove-TestBranch`, `Invoke-CleanupInfraContainerDisks`
+`Remove-BinAndObjFolders`, `Remove-GlobalNuGetPackages`, `Invoke-CleanAllGitRepos`, `Uninstall-OctoInfrastructure`, `Restore-OctoInfrastructure`, `Remove-OctoInfrastructureBackup`, `Uninstall-OctoKubernetes`, `Remove-KubeConfig`, `Remove-TestBranch`, `Invoke-CleanupInfraContainerDisks`, `Remove-AspNetDeveloperCertificate`, `Remove-OctoLocalCaTrust`
 
-### Interactive (warn about session blocking)
-`Start-Octo`, `Invoke-BuildAndStartOcto` — these commands block the terminal session until services are stopped via keypress. **Always display this warning before executing:**
+### Service startup — non-interactive is the agent default — CRITICAL
+
+`Start-Octo` blocks the session waiting for a keypress **only when `-nonInteractive` is not set**. When Claude (or any agent / CI job) starts services it MUST ALWAYS run:
+
+```
+Start-Octo -nonInteractive $true -configuration DebugL
+```
+
+In this mode `Start-Octo` blocks until a service fails or a `.octo-stop` signal file appears — it never waits for a keypress. Stop the services from another invocation with:
+
+```
+Stop-Octo
+```
+
+`Stop-Octo` is a standalone cmdlet that writes the `.octo-stop` signal file (it has a `-branch` parameter mirroring `Start-Octo`/`Install-OctoKubernetes`). This non-interactive start + `Stop-Octo` pair is a firm repo convention — never start services interactively from an agent session.
+
+**NEVER use `Invoke-BuildAndStartOcto` from an agent session** — it chains into the interactive `Start-Octo` (no `-nonInteractive` pass-through) and will block the session indefinitely. Build with `Invoke-BuildAll`, then start with `Start-Octo -nonInteractive $true` instead.
+
+### Interactive (only when a human runs it directly)
+Interactive blocking applies to `Start-Octo` (without `-nonInteractive $true`) and `Invoke-BuildAndStartOcto`. If a human explicitly asks for an interactive foreground run, warn first:
 
 > **Warning:** This command will block the current session until you press a key to stop the services. The session will not be available for other commands while services are running.
+
+### AI Bastion secret handling
+`Register-AiBastion` drives the Anthropic device-code OAuth flow and POSTs the token to the AI Adapter's `POST /{tenantId}/v1/credentials/register`. The bearer token comes from `-BearerToken` or `$env:OCTO_BASTION_TOKEN`; token material is held in memory only and zeroed in a `finally` block. Never echo, log, or persist the bearer token or the device-code output.
 
 ## Smart Behaviors
 
@@ -216,12 +270,22 @@ For common multi-step workflows, read `references/workflows.md` in this skill di
 - "git status" / "repo status" → `Get-AllGitRepStatus`
 - "pull latest" / "sync repos" → `Sync-AllGitRepos`
 - "push everything" → `Push-AllGitRepos` (confirm first!)
+- "start services" / "start octo" → `Start-Octo -nonInteractive $true -configuration DebugL` (agent default; never block the session)
+- "stop services" / "stop octo" → `Stop-Octo`
 - "start infra" / "start docker" → `Start-OctoInfrastructure`
 - "stop infra" / "stop docker" → `Stop-OctoInfrastructure`
 - "infra status" / "docker status" → `Get-OctoInfrastructureStatus`
+- "backup infra" / "backup before testing" → `Backup-OctoInfrastructure` (stop infra first)
+- "restore infra" / "list backups" → `Restore-OctoInfrastructure -Name <name>` / `Get-OctoInfrastructureBackup`
+- "set up local kubernetes" / "kind cluster" / "install k8s" → `Install-OctoKubernetes` (refuses if docker-compose infra is up)
+- "deploy operator" → `Deploy-OctoOperator`
+- "k8s status" / "kubernetes status" → `Get-OctoKubernetesStatus`
+- "tear down kind" / "uninstall kubernetes" → `Uninstall-OctoKubernetes` (destructive — confirm)
 - "clean build" → confirm, then `Remove-BinAndObjFolders` + `Invoke-BuildAll -configuration DebugL`
 - "clean everything" → confirm each destructive step separately
-- "switch to local" / "login local" → `Invoke-OctoCliLoginLocal`
+- "switch to local" / "login local" → `Invoke-OctoCliLoginLocal` (or `Register-OctoCliContext -Installation local -TenantId <tenant>`)
+- "register context for staging" / "add context for production" → `Register-OctoCliContext -Installation staging-1|prod-1|prod-2 -TenantId <tenant>`
+- "compare CK versions" / "diff ck models between branches" → `Compare-CkVersions <otherBranch>`
 - "create test branch" → `New-TestBranch` with user-provided version + description
 
 ### Default configuration
@@ -238,6 +302,6 @@ When the user describes a high-level goal (e.g., "set up a fresh dev environment
 1. **Parse intent** — Map natural language to cmdlet(s) from the tables above
 2. **Check safety level** — Determine if read-only, mutating, destructive, or interactive
 3. **Confirm if needed** — For mutating/destructive ops, show the command + summary, wait for confirmation
-4. **Warn if interactive** — For `Start-Octo` and `Invoke-BuildAndStartOcto`, display blocking warning
+4. **Non-interactive services** — When starting services, always use `Start-Octo -nonInteractive $true` and stop with `Stop-Octo`. Never run `Invoke-BuildAndStartOcto` from an agent session. Only warn about session blocking if a human explicitly requests an interactive foreground run.
 5. **Execute** — Run via the wrapper script and present results clearly
 6. **Suggest next steps** — After completion, suggest logical follow-up actions (e.g., after build → start services)
