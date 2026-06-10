@@ -29,6 +29,7 @@ This skill is the hub for all OctoMesh tasks. Before doing any work, check if th
 | **Refinery Studio Angular frontend** development (code in `octo-frontend-refinery-studio`), components, GraphQL codegen, Angular build/lint/test for the studio app | `Skill("refinery-studio", args: "<user's request>")` |
 | **Kubernetes Communication Operator** + Helm chart development/deployment (operator code, CRDs, Helm values, K8s manifests) | `Skill("octo-operator", args: "<user's request>")` |
 | **Building a new OctoMesh-powered app/workload end to end** — custom CK model + blueprint authoring (`blueprint.yaml`, seed data, `ckModelDependencies`), HTTP APIs from `FromHttpRequest@1` pipelines, operator-deployed Application web apps, CK/blueprint catalog publishing | `Skill("octo-app-builder", args: "<user's request>")` |
+| **Deploying/promoting an app to the test-2 environment** — publishing CK models/blueprints to the shared GitHub catalogs (`octo-ckc`/`octo-bpm`), pushing images to `docker.mm.cloud`, test-2 context setup, install + verify on a test-2 tenant | `Skill("octo-deploy", args: "<user's request>")` |
 
 **Routing rule for Communication / Pipelines:** If the user wants to *write or understand pipeline YAML*, route to `pipeline-expert`. If they want to *deploy, run, inspect status, or debug executions*, handle it here in `octo`. For end-to-end workflows ("set up a new data flow"), `octo` orchestrates and routes to `pipeline-expert` only for the YAML authoring step.
 
@@ -234,6 +235,8 @@ All communication commands accept plain runtime object IDs — the SDK builds th
 | `UndeployWorkload` | Undeploy a workload — operator helm-uninstalls (`-id`) | Destructive |
 
 > Adapters are now Helm-deployed by the Communication Operator when a pool is deployed; there is **no** manual adapter-deploy command anymore (legacy `DeployAdapter`, `GetPool`, `DeployPoolAdapters`, `UndeployPoolAdapters` were removed). Use `DeployWorkload`/`UndeployWorkload` for adapter/application workloads.
+>
+> **Deploying the pool itself is REST-only** (no octo-cli command): `POST {CommunicationServiceUrl}{tenantId}/v1/Pool/deploy?poolRtId=<rtId>` with the bearer token from `~/.octo-cli/contexts.json` → 204 (`undeploy` likewise). **Order matters:** on a freshly comm-enabled tenant the pool starts `Undeployed`, and `DeployWorkload` triggers fired in that state are **silently lost** — the workload sits in `Pending` forever with no error. Deploy the pool first, then (re-)run `DeployWorkload`.
 
 ### AI Services
 

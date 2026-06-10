@@ -17,6 +17,7 @@ detail work routes to sibling skills.
 | octo-cli flag details, CK/RT exploration, deploy/status commands | `Skill("octo", ...)` |
 | Operator/Helm-chart internals, CRDs, values layering | `Skill("octo-operator", ...)` |
 | Build/start services, kind cluster setup, Docker infra | `Skill("octo-devtools", ...)` |
+| Promoting the finished app to the shared test-2 environment | `Skill("octo-deploy", ...)` |
 | Something is broken and needs investigation | `Skill("octo-agent", ...)` |
 
 Stay in this skill for: designing the app, authoring CK models for it, authoring

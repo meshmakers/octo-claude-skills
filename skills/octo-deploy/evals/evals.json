@@ -1,0 +1,37 @@
+{
+  "skill_name": "octo-deploy",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "My app 'inventory-lite' works on my local kind setup, built per our app-builder conventions: CK model Demo.Inventory (compiled output in ck\\out\\ck-demo.inventory.yaml), blueprint InventoryLite-1.0.0 in blueprint\\InventoryLite\\1.0.0\\ (image tag 0.1.0 pinned in the seed's ValuesYaml), app image meshmakers/inventory-lite-app:0.1.0. I now need it running on test-2, tenant 'acmedemo' — the tenant does not exist yet. Write me a complete RUNBOOK.md with every command in order, including one-time setup, what to check after each step, and what can go wrong at each step. There is no CI pipeline yet. I am working from home today. Do NOT execute anything — just write the runbook.",
+      "expected_output": "RUNBOOK.md: octo-ckc/octo-bpm publishing to shared catalogs (or ImportCk shortcut for CK), Tailscale + docker push to docker.mm.cloud, Register-OctoCliContext test-2, tenant creation via octosystem + EnableCommunication on target tenant, RefreshCatalogs (server-side), InstallBlueprint/DeployDataFlow/DeployWorkload, kubectl-free verification.",
+      "files": [],
+      "assertions": [
+        "Registers a test-2 context via Register-OctoCliContext -Installation test-2 (or AddContext with the correct *.test-2.mm.cloud service URLs) and authenticates",
+        "Tenant creation done from an octosystem context on test-2, then EnableCommunication runs with the TARGET tenant context active",
+        "CK model path is one of the two valid ones: octo-ckc Publish -c PrivateGitHubCatalog (with token config) OR direct octo-cli ImportCk on the test-2 tenant",
+        "Blueprint published via octo-bpm -c publish ... -c PrivateGitHubBlueprintCatalog; no ImportCk-style shortcut claimed for the blueprint",
+        "Image step pushes docker.mm.cloud/meshmakers/inventory-lite-app:0.1.0 AND mentions connecting Tailscale first",
+        "Refreshes the SERVER-side catalog cache via octo-cli RefreshCatalogs before InstallBlueprint; no local cache-file deletion for test-2",
+        "Overall order: publish artifacts, context/tenant setup, RefreshCatalogs, InstallBlueprint, DeployDataFlow, DeployWorkload",
+        "Does NOT instruct DeployWorkload on the system Mesh Adapter 670000000000000000000002",
+        "Verification uses kubectl-free signals (GetAdapters/GetDataFlowStatus/GetWorkloadsByChart/lastDeploymentError) plus the app URL on test-2.mm.cloud",
+        "Mentions the requires: octo.environment gate ([dev, test]) or checking for WasSkipped: true on install"
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "Two problems on test-2 (tenant 'acmedemo'), need diagnosis + fixes written to diagnosis.md. (1) I published my blueprint with octo-bpm about an hour ago, but ListBlueprints on my test-2 context still doesn't show it. Locally I always fixed catalog staleness by deleting the catalog cache json file, but I can't find any such file for test-2. (2) After DeployWorkload, my app pod never comes up; in Studio the Application entity's lastDeploymentError mentions ImagePullBackOff for docker.mm.cloud/meshmakers/inventory-lite-app:0.1.0 — the app runs fine on my local kind cluster with exactly this image. I'm working from home. Do not change anything anywhere — just write diagnosis.md.",
+      "expected_output": "diagnosis.md: (1) server-side catalog cache, fix = octo-cli RefreshCatalogs; local file-delete trick is local-dev only. (2) image never reached docker.mm.cloud (kind load is local-only), fix = Tailscale + docker push exact name/tag, then re-trigger DeployWorkload.",
+      "files": [],
+      "assertions": [
+        "Problem 1: server-side blueprint catalog cache; fix = octo-cli RefreshCatalogs (optionally -cn PrivateGitHubBlueprintCatalog)",
+        "Problem 1: explains the local cache-file-delete trick does not apply on test-2 (cache lives in the asset-repo service)",
+        "Problem 2: root cause = image absent from docker.mm.cloud under exactly meshmakers/inventory-lite-app:0.1.0; kind load never reaches the shared registry",
+        "Problem 2: fix = docker push docker.mm.cloud/meshmakers/inventory-lite-app:0.1.0, with Tailscale connected first (working from home)",
+        "Problem 2: re-trigger the deploy after the push (DeployWorkload again or undeploy/redeploy)",
+        "No invented mechanisms: no kubectl fixes presented as available on test-2, no nonexistent commands"
+      ]
+    }
+  ]
+}

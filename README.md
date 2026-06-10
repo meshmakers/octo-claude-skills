@@ -1,6 +1,6 @@
 # octo-claude-skills
 
-Claude Code plugin for the [OctoMesh](https://meshmakers.io) data mesh platform. Nine skills turn natural language into verified `octo-cli` commands, GraphQL exploration, build/devops operations, pipeline YAML, and development guidance — with confirmation gates for everything mutating.
+Claude Code plugin for the [OctoMesh](https://meshmakers.io) data mesh platform. Ten skills turn natural language into verified `octo-cli` commands, GraphQL exploration, build/devops operations, pipeline YAML, and development guidance — with confirmation gates for everything mutating.
 
 ## Skills
 
@@ -15,6 +15,7 @@ Claude Code plugin for the [OctoMesh](https://meshmakers.io) data mesh platform.
 | `/refinery-studio` | Angular development on the Data Refinery Studio (`octo-frontend-refinery-studio`): OctoGraphQlDataSource pattern, GraphQL codegen, LCARS theme system, lint/test gates. |
 | `/octo-operator` | The Kubernetes Communication Operator (`octo-communication-operator`): KubeOps, CommunicationPool CRDs, Helm values layering, TUnit/MTP testing, plus the `octo-helm-core` charts. |
 | `/octo-app-builder` | Building a complete OctoMesh-powered app: custom CK model → catalog, HTTP API as Mesh-Adapter pipelines, web UI as operator-deployed Application, packaged as one installable blueprint — the verified end-to-end recipe plus its pitfalls. |
+| `/octo-deploy` | Promoting an app from local dev to the shared **test-2** environment: shared-catalog publishing (`octo-ckc`/`octo-bpm`), `docker.mm.cloud` image push, test-2 context + tenant setup, install + kubectl-free verification. Staging/prod deliberately out of scope. |
 
 When in doubt, start with `/octo` — it routes to the right place.
 

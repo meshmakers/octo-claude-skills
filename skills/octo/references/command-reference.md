@@ -1406,6 +1406,19 @@ octo-cli -c GetPools [-j]
 
 > **Note:** There is no manual adapter-deploy command. The legacy `DeployAdapter`, `GetPool`, `DeployPoolAdapters`, and `UndeployPoolAdapters` were removed (2026-05-13); adapters are Helm-deployed by the Communication Operator when a pool is deployed. Use the **Workloads** commands below to (re)deploy adapter/application workloads.
 
+#### Deploying / undeploying a pool (REST only — no octo-cli command)
+
+```powershell
+# PoolController: POST {tenantId}/v1/Pool/deploy?poolRtId=<rtId>  (undeploy analogous)
+$ctx   = Get-Content "$env:USERPROFILE\.octo-cli\contexts.json" | ConvertFrom-Json
+$token = $ctx.Contexts.($ctx.ActiveContext).Authentication.AccessToken
+Invoke-WebRequest -Method POST -Headers @{Authorization="Bearer $token"} `
+  -Uri "{CommunicationServiceUrl}{tenantId}/v1/Pool/deploy?poolRtId=670000000000000000000001"
+# 204 No Content on success; GetPools -j then shows Online/Deployed
+```
+
+> **Order matters (live-verified 2026-06-10):** on a freshly comm-enabled tenant the pool starts `Undeployed`. `DeployWorkload` triggers fired while the pool is undeployed are **silently lost** — the workload's DeploymentState sits in `Pending` forever with no pod and no error. Deploy the pool first, then (re-)run `DeployWorkload -id <adapterRtId>`.
+
 ### Pipelines
 
 #### GetPipelineStatus

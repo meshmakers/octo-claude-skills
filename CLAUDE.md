@@ -26,6 +26,8 @@ skills/
   octo-operator/              — Kubernetes Communication Operator + octo-helm-core charts
   octo-app-builder/           — End-to-end OctoMesh app building: CK model → catalog → blueprint →
                                 HTTP-API pipelines → operator-deployed Application workload
+  octo-deploy/                — Promotion local → test-2: shared-catalog publishing (octo-ckc/octo-bpm),
+                                docker.mm.cloud image push, test-2 context/tenant setup, kubectl-free verify
 ```
 
 ## Python Script Development

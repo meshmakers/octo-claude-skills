@@ -2,6 +2,29 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.17.0] — 2026-06-10
+
+### TL;DR
+
+One new skill: **`octo-deploy`** — guides the promotion of an OctoMesh-powered app (built with `octo-app-builder`) from local dev to the shared **test-2** environment. Staging and production are deliberately out of scope for now. Research-verified against octo-tools cmdlet sources, the engine's catalog implementations, the `blueprint-libraries-build` commit history, live registry probes, and the test-2 cluster values in `meshmakers_staging`.
+
+### Added
+
+**New skill `octo-deploy`** (SKILL.md + 2 references)
+- The promotion model: what must move (CK model → shared catalog or direct ImportCk, blueprint → `meshmakers/blueprint-libraries-build` via `octo-bpm`, image → `docker.mm.cloud`) vs. what is environment-portable by design (`${octo.tenantId}`, `{{domain.default}}`, the `670…001/002/003` seed associations, ChartName/ChartVersion, pipeline YAML, operator-injected registry prefix).
+- Two lanes: the CI lane (Azure DevOps pipeline publishing on `main`, worked example `one-time-ticket/devops-build/azure-pipelines.yml` with the seed-tag guard) and the manual lane with verified `octo-ckc -c Publish -c PrivateGitHubCatalog` / `octo-bpm -c publish -c PrivateGitHubBlueprintCatalog` commands incl. one-time token config.
+- `references/test-2-environment.md` — service URL table, `Register-OctoCliContext -Installation test-2` (incl. the `test-2_…` vs legacy `test2_…` context-name divergence), headless auth, tenant creation (`-np` for machine tokens), the `octo.environment` gate ambiguity (helm default says `dev`, blueprint comments say `test` — unresolved at runtime; mandate `[dev, test]` + the `WasSkipped` probe), Tailscale requirement for `docker.mm.cloud` off-site.
+- `references/publishing.md` — catalog mechanics (what Publish writes where, per-file Octokit commits, three-level catalog.json indexes), the source-verified `ckModelDependencies` short-circuit that makes direct `ImportCk` a valid catalog-free path for CK models (but not blueprints), server-side `RefreshCatalogs` (the local cache-file-delete trick explicitly does NOT apply to test-2), image-tag rules (static tags for app workloads; same-tag re-push doesn't restart pods).
+- kubectl-free verification story for test-2: `GetAdapters`/`GetDataFlowStatus`/`GetWorkloadsByChart` plus the workload entities' `deploymentState`/`statusMessage`/`lastDeploymentError` attributes as the `kubectl describe` substitute.
+- Routing rows in the `octo` hub and `octo-app-builder`, README + CLAUDE.md entries.
+
+### Changed — live-validated against a real first-time deployment (one-time-ticket → `tickets` tenant, https://tickets.test-2.mm.cloud)
+
+- **Pool-first bring-up** (corrects the research draft): `EnableCommunication` only seeds entities; the pool starts `Undeployed` and `DeployWorkload` triggers fired in that state are silently lost (workload `Pending` forever, no error). Pool deploy is REST-only (`POST …/v1/Pool/deploy?poolRtId=…` — no octo-cli command); then (re-)run `DeployWorkload -id 670…002`. Also documented in the `octo` hub + command reference (Pools section).
+- **`RefreshCatalogs` covers CK MODEL catalogs only** — blueprint catalogs have no refresh API anywhere (engine `RefreshAllCatalogCachesAsync` never exposed). New blueprint ids/versions stay invisible until the asset-repo pod restarts (`kubectl --context test-2 -n octo rollout restart deploy/octo-mesh-asset-rep-services`); only the index is cached — content of already-listed versions is fetched live from Pages (`InstallBlueprint -f`).
+- **kubectl access to test-2 exists** via Rancher kubeconfig download (`rancher.mm.cloud`, no VPN; downloaded yaml must be merged into `~/.kube/config`). The kubectl-free signals remain documented as the fallback.
+- CI-agent gotchas in publishing.md: octo-ckc 3.3.x `-lce false` crashes on cold-cache agents (configure via `~/.octo-ckc/settings.json` instead); `octo-bpm -c publish` soft-fails with exit 0 (grep for "published successfully").
+
 ## [0.16.0] — 2026-06-10
 
 ### TL;DR
