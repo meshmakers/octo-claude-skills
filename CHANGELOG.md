@@ -2,6 +2,29 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.18.0] — 2026-06-17
+
+### TL;DR
+
+One new skill: **`octo-ck-miro`** — visualizes all Construction Kits in `octo-construction-kit` as detailed UML class diagrams on a Miro board (types with attributes/datatypes, records, enums, inheritance, associations with multiplicity, cross-CK references). Picks a git branch (default `main`) and reads YAMLs non-destructively via `git show`; targets a new Miro board or an existing one by URL.
+
+### Added
+
+**New skill `octo-ck-miro`** (SKILL.md + `scripts/ck_to_miro.py` + `run_python.sh` wrapper + `requirements.txt`)
+- Parser reads every CK under `src/ConstructionKits/<dir>/ConstructionKit/` from a given git branch via `git ls-tree` + `git show` — never checks out, never touches the working tree.
+- Handles both YAML schema variants: standard (top-level `types:/records:/enums:/attributes:/associationRoles:` arrays, `${CkName}/Element` refs) AND compact (filename-as-id, `derivedFrom: CK/Name`, `attributeName`, enum `value`) used by `Octo.Energy.Demo`.
+- Emits Miro UML class DSL per CK: types blue, records green, enums yellow, external CK refs gray. Inheritance via `<|--`, associations with resolved multiplicity (`N`→`*`, `One`→`1`, `ZeroOrOne`→`0..1`, etc.). Attribute datatypes resolved through the attribute registry, including `«Record»` and `<Enum>` references with cross-CK qualification (e.g. `Basic.Address`).
+- Single-column layout (x=0, y step 3500) — avoids Miro auto-layout overlap that hits multi-column grids when wider CKs (Basic auto-arranges to ~8500 px) collide with neighbors.
+- Generates two top-of-board doc cards: legend (color/notation key) and dependency tree (sourced from `ckModel.yaml` `dependencies`) + content stats table.
+- `--ck <name>` flag for single-CK mode.
+- Operational notes in SKILL.md: sequential diagram calls (Miro 403s on bursts; ~20 s cool-off on failure), no in-place update on existing boards (no MCP delete for diagrams — "update existing" means add alongside), board URL input format validation.
+
+### Changed
+
+- README: switched "Ten skills" → "Eleven skills"; added `/octo-ck-miro` row with one-line summary.
+- CLAUDE.md plugin-structure block: added `octo-ck-miro/` entry.
+- `plugin.json` + `marketplace.json`: bumped to `0.18.0`, description extended with "Construction Kit UML visualization on Miro boards", added `miro` and `uml` keywords.
+
 ## [0.17.0] — 2026-06-10
 
 ### TL;DR
