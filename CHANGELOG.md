@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.18.1] — 2026-06-18
+
+### Changed
+
+- `octo-ck-miro` SKILL.md: bumped the Miro 403 cool-off from ~20 s to **~45–60 s** based on empirical observation during the v0.18.0 live test (12-CK board creation). 20 s was too short and triggered repeat 403s on the next call; ~60 s recovered cleanly. Both the workflow Step 4 note and the Common Pitfalls entry updated.
+
 ## [0.18.0] — 2026-06-17
 
 ### TL;DR

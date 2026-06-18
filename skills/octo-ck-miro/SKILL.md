@@ -109,7 +109,7 @@ mcp__claude_ai_Miro__diagram_create(
 )
 ```
 
-Issue calls **sequentially** (not in parallel) — Miro's API rate-limits hard and returns 403 under load. If a 403 hits, wait ~20 s and retry that one CK.
+Issue calls **sequentially** (not in parallel) — Miro's API rate-limits hard and returns 403 under load. If a 403 hits, wait ~45–60 s and retry that one CK. (Verified empirically on a 12-CK run: 20 s was too short and triggered repeat 403s; ~60 s recovered cleanly.)
 
 The layout is single-column (x=0, y stepped 3500 px) — this avoids the auto-layout overlap problems that come with multi-column placement (Miro's auto-layout sizes diagrams unpredictably; some are 8000+ px wide).
 
@@ -145,7 +145,7 @@ When `--ck <name>` is passed: only one diagram, no dependency-tree doc needed, o
 - **Quotes in DSL**: never put double quotes inside attribute strings — the parser already replaces them with single quotes.
 - **Empty attribute string**: a class with no attributes needs `" "` (a single space) not `""` — the empty string breaks the Miro DSL parser.
 - **External CK refs**: parents and association targets in other CKs render as gray stub boxes inside each diagram. Cross-board CK→CK arrows would require connecting board-level items and we do not draw them — the gray boxes plus the dependency-tree doc convey the dependencies.
-- **Rate limits**: Miro 403s under burst. Always sequential calls, ~20 s cool-off on failure.
+- **Rate limits**: Miro 403s under burst. Always sequential calls; on a 403 wait ~45–60 s before retrying that single CK. (20 s was empirically too short.)
 - **Branch read**: always use `git show <branch>:<path>` — never check out the branch, the user's working tree must not change.
 
 ## Updating vs Creating
