@@ -2,8 +2,8 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "octo-claude-skills",
   "displayName": "OctoMesh Skills",
-  "description": "OctoMesh platform skills for Claude Code: CLI natural language interface, data model exploration, runtime instance browsing, ETL pipeline YAML authoring, end-to-end app/blueprint building, test-2 deployment, build/devops tooling, debugging, MCP server development, Refinery Studio frontend, Kubernetes operator development, and structured commit workflow with Azure DevOps work item linking",
-  "version": "0.17.0",
+  "description": "OctoMesh platform skills for Claude Code: CLI natural language interface, data model exploration, runtime instance browsing, ETL pipeline YAML authoring, end-to-end app/blueprint building, test-2 deployment, build/devops tooling, debugging, MCP server development, Refinery Studio frontend, Kubernetes operator development, structured commit workflow with Azure DevOps work item linking, and Construction Kit UML visualization on Miro boards",
+  "version": "0.18.1",
   "author": {
     "name": "Meshmakers",
     "email": "reimar.klammer@meshmakers.io"
@@ -18,6 +18,8 @@
     "etl-pipelines",
     "azure-devops",
     "mcp",
-    "kubernetes"
+    "kubernetes",
+    "miro",
+    "uml"
   ]
 }

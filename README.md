@@ -1,6 +1,6 @@
 # octo-claude-skills
 
-Claude Code plugin for the [OctoMesh](https://meshmakers.io) data mesh platform. Ten skills turn natural language into verified `octo-cli` commands, GraphQL exploration, build/devops operations, pipeline YAML, and development guidance — with confirmation gates for everything mutating.
+Claude Code plugin for the [OctoMesh](https://meshmakers.io) data mesh platform. Eleven skills turn natural language into verified `octo-cli` commands, GraphQL exploration, build/devops operations, pipeline YAML, Miro CK visualizations, and development guidance — with confirmation gates for everything mutating.
 
 ## Skills
 
@@ -16,6 +16,7 @@ Claude Code plugin for the [OctoMesh](https://meshmakers.io) data mesh platform.
 | `/octo-operator` | The Kubernetes Communication Operator (`octo-communication-operator`): KubeOps, CommunicationPool CRDs, Helm values layering, TUnit/MTP testing, plus the `octo-helm-core` charts. |
 | `/octo-app-builder` | Building a complete OctoMesh-powered app: custom CK model → catalog, HTTP API as Mesh-Adapter pipelines, web UI as operator-deployed Application, packaged as one installable blueprint — the verified end-to-end recipe plus its pitfalls. |
 | `/octo-deploy` | Promoting an app from local dev to the shared **test-2** environment: shared-catalog publishing (`octo-ckc`/`octo-bpm`), `docker.mm.cloud` image push, test-2 context + tenant setup, install + kubectl-free verification. Staging/prod deliberately out of scope. |
+| `/octo-ck-miro` | Visualizing Construction Kits as detailed UML class diagrams on a Miro board — types with attributes/datatypes, records, enums, inheritance, associations with multiplicity, cross-CK references. Reads YAMLs from a given git branch in `octo-construction-kit` (non-destructive via `git show`), creates a new board or adds to an existing one. |
 
 When in doubt, start with `/octo` — it routes to the right place.
 

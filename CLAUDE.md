@@ -28,6 +28,8 @@ skills/
                                 HTTP-API pipelines → operator-deployed Application workload
   octo-deploy/                — Promotion local → test-2: shared-catalog publishing (octo-ckc/octo-bpm),
                                 docker.mm.cloud image push, test-2 context/tenant setup, kubectl-free verify
+  octo-ck-miro/               — UML class diagrams of all Construction Kits on a Miro board, read from
+                                a given git branch of octo-construction-kit via `git show` (non-destructive)
 ```
 
 ## Python Script Development
