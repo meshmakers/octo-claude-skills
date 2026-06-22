@@ -30,6 +30,8 @@ This skill is the hub for all OctoMesh tasks. Before doing any work, check if th
 | **Kubernetes Communication Operator** + Helm chart development/deployment (operator code, CRDs, Helm values, K8s manifests) | `Skill("octo-operator", args: "<user's request>")` |
 | **Building a new OctoMesh-powered app/workload end to end** — custom CK model + blueprint authoring (`blueprint.yaml`, seed data, `ckModelDependencies`), HTTP APIs from `FromHttpRequest@1` pipelines, operator-deployed Application web apps, CK/blueprint catalog publishing | `Skill("octo-app-builder", args: "<user's request>")` |
 | **Deploying/promoting an app to the test-2 environment** — publishing CK models/blueprints to the shared GitHub catalogs (`octo-ckc`/`octo-bpm`), pushing images to `docker.mm.cloud`, test-2 context setup, install + verify on a test-2 tenant | `Skill("octo-deploy", args: "<user's request>")` |
+| **Reading/tracing logs from a deployed cluster** (`test-2`/`staging-1`/`prod-1`/`prod-2`) via Loki/logcli — LogQL queries, error rates, tracing an error across pod redeployments, log retention | `Skill("octo-logs", args: "<user's request>")` |
+| **Setting up log-access credentials** — storing `LOKI_USERNAME`/`LOKI_PASSWORD` in the private profile (from Keeper/Vault) when `/octo-logs` reports them missing | `Skill("octo-logs-setup", args: "<user's request>")` |
 
 **Routing rule for Communication / Pipelines:** If the user wants to *write or understand pipeline YAML*, route to `pipeline-expert`. If they want to *deploy, run, inspect status, or debug executions*, handle it here in `octo`. For end-to-end workflows ("set up a new data flow"), `octo` orchestrates and routes to `pipeline-expert` only for the YAML authoring step.
 

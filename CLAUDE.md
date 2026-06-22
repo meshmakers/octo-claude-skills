@@ -30,6 +30,11 @@ skills/
                                 docker.mm.cloud image push, test-2 context/tenant setup, kubectl-free verify
   octo-ck-miro/               — UML class diagrams of all Construction Kits on a Miro board, read from
                                 a given git branch of octo-construction-kit via `git show` (non-destructive)
+  octo-logs/                  — Reading/tracing deployed-cluster logs via Loki + logcli (LogQL, error
+                                rates, cross-deployment tracing). Creds come from the octo-tools profile.
+                                scripts/ = run_logcli.sh (bash) + _logcli.ps1 (profile load + UID discovery)
+  octo-logs-setup/            — Safe one-time setup of LOKI_USERNAME/PASSWORD in the private profile
+                                (sourced from Keeper/Vault); scripts/setup_loki_creds.sh (status|write)
 ```
 
 ## Python Script Development

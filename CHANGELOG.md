@@ -2,6 +2,26 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.19.0] — 2026-06-22
+
+### TL;DR
+
+Two new skills for **deployed-cluster log access** via Loki + `logcli`: **`octo-logs`** (query and trace logs) and **`octo-logs-setup`** (safe one-time credential setup). The query skill never handles credentials — it loads the octo-tools PowerShell profile, which dot-sources the private profile that holds `LOKI_USERNAME`/`LOKI_PASSWORD`, then resolves the cluster's Loki datasource-proxy URL and runs `logcli`. Verified end-to-end against the live `test-2` cluster (label list, error queries, an `instant-query` error breakdown, and a real cross-deployment `ObjectDisposedException` trace).
+
+### Added
+
+**New skill `octo-logs`** (SKILL.md + 2 references + 2 scripts)
+- `scripts/run_logcli.sh` (bash) — finds the monorepo root, preflights `pwsh`/`logcli`, then hands off to `_logcli.ps1` via `pwsh -File` so the LogQL query (braces/pipes/quotes) survives without re-parsing.
+- `scripts/_logcli.ps1` — dot-sources the octo-tools profile (suppressing its chatter), maps cluster → `monitoring.*` base URL, reads `LOKI_USERNAME`/`LOKI_PASSWORD` (with per-cluster `LOKI_*_<CLUSTER>` override + generic fallback), **discovers the Loki datasource UID at runtime** via `GET /api/datasources` (no hard-coded UID), sets `LOKI_ADDR` to the Grafana datasource-proxy path, and runs `logcli`.
+- `references/clusters.md` — the two-Grafana warning (`monitoring.*` has Loki, `grafana.*` doesn't), cluster→URL table, why logcli must target the datasource-proxy path (the wiki's `LOKI_ADDR=monitoring.<domain>` returns Grafana HTML), `mesh-admin` login source (Keeper/Vault), ~7-day retention + ~30-day query-span limit, and the corrected `brew install logcli` formula (not `grafana/tap/logcli`).
+- `references/logql-cheatsheet.md` — label model (`level`/`source` only on parsed `octo` app logs; non-octo namespaces need inline filters), service/level/body-search recipes, `instant-query` rate/count forms, and the **cross-deployment tracing** pattern (drop `pod`, keep `container`, group by `pod` = by ReplicaSet rollout; prefer `|=` over `source=`).
+
+**New skill `octo-logs-setup`** (SKILL.md + 1 script)
+- `scripts/setup_loki_creds.sh` — `status` (reports private-profile path/perms and which `LOKI_*` variable **names** exist, never values) and `write` (reads the password from **STDIN only**, never a CLI arg; idempotently writes `LOKI_USERNAME`/`LOKI_PASSWORD` — or per-cluster `-c <cluster>` variants — into the private profile with perms forced to 600; PowerShell single-quote escaping verified against `pwsh`).
+- SKILL.md encodes the safety contract: secret sourced from Keeper/Vault and piped straight in (Vault-pipe for the assistant, or user-pasted via the `!` session prefix); the assistant must never embed the password in a command or print it.
+
+**Routing/docs** — `octo` hub routing rows for both skills (distinct from `octo-agent`'s local-dev debugging), README + CLAUDE.md entries.
+
 ## [0.18.1] — 2026-06-18
 
 ### Changed
