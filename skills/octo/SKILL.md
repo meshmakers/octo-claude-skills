@@ -183,7 +183,7 @@ Requires the **DataModelManagement** role for catalog import/refresh.
 | `RollbackBlueprint` | Roll tenant back to a backup (`-bid`) | Destructive |
 | `UninstallBlueprint` | Remove a blueprint (`-n`, `-c` cascade) | Destructive |
 
-> Blueprint history/preview/update used to live in `octo-bpm`; those commands were removed — use these octo-cli commands. `octo-bpm` now only has `Apply`, `Init`, `version`.
+> Blueprint history/preview/update used to live in `octo-bpm`; those commands were removed — use these octo-cli commands. `octo-bpm` (authoring CLI) has `new`, `validate`, `pack`, `list`, `version`, `catalogs`, `get`, `publish`, `unpublish`, `config`. `unpublish` removes a blueprint/version from a catalog (inverse of `publish`; dry-run unless `-f`; `-r <version>` for one version, omit `-r` for all).
 
 #### Stream-Data Archives (Time Series)
 

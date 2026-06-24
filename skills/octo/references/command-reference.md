@@ -1120,7 +1120,7 @@ octo-cli -c FixAll [-w] [-y]
 
 ### Blueprints
 
-Blueprints package CK models + seed data and install/update/uninstall them per tenant. Blueprint state is stored tenant-locally in `System/BlueprintInstallation`, `System/BlueprintHistory`, `System/BlueprintBackup` (System CK 2.2.0). The blueprint folder name equals `blueprintId.Name` (no version suffix; the version lives in `blueprint.yaml`). History/preview/update used to live in `octo-bpm` (now removed there — `octo-bpm` only has `Apply`, `Init`, `version`).
+Blueprints package CK models + seed data and install/update/uninstall them per tenant. Blueprint state is stored tenant-locally in `System/BlueprintInstallation`, `System/BlueprintHistory`, `System/BlueprintBackup` (System CK 2.2.0). The blueprint folder name equals `blueprintId.Name` (no version suffix; the version lives in `blueprint.yaml`). History/preview/update used to live in `octo-bpm` (now removed there). `octo-bpm` (authoring CLI) has `new`, `validate`, `pack`, `list`, `version`, `catalogs`, `get`, `publish`, `unpublish`, `config`; `unpublish` removes a blueprint/version from a catalog (inverse of `publish`; dry-run unless `-f`; `-r <version>` for one version, omit `-r` for all).
 
 #### ListBlueprints
 Lists blueprints available across configured catalogs. No arguments.

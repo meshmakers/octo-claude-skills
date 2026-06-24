@@ -191,6 +191,9 @@ blueprints/v1/<Name>/<version>/
 `~/.octo/blueprint-catalog/cache/local-blueprint-catalog-cache.json` is only
 rebuilt when the file is **missing** — `ListBlueprints` serves stale content
 otherwise. Always delete it after adding/changing a blueprint in the catalog.
+(This applies to read paths that do not auto-refresh; `octo-bpm`'s own
+`list`/`get` and the `unpublish` dry-run force a catalog refresh before
+reading, so they do **not** need this manual delete.)
 
 GitHub catalogs (e.g. `meshmakers/blueprint-libraries-build`, layout
 `blueprints/v1/<letter>/<Name>/<major>/<Name>-<version>/`) are where shared
