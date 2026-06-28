@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.19.1] — 2026-06-28
+
+### Changed
+
+- `octo-commit` SKILL.md: aligned the **Branch Naming** convention with the [meshmaker Development Guidelines](https://dev.azure.com/meshmakers/OctoMesh/_wiki/wikis/OctoMesh.wiki/141/Development-Guidelines-for-meshmaker-Teams). Default is now the user-specific pattern `<username>/AB#<wi-id>_<short_meaningful_description>` (no build on push, only on PR); the long-running feature pattern `dev/AB#<wi-id>_<short_meaningful_description>` (build on every push) is documented as the explicit alternative. Replaces the previous `dev/<username>/<feature-name>` scheme across the branch table, work-item resolution hint, `checkout -b` example, and review-checkpoint summary.
+
 ## [0.19.0] — 2026-06-22
 
 ### TL;DR

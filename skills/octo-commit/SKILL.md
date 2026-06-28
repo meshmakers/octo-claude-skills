@@ -58,12 +58,15 @@ AB#<WorkItemId> <New|Fix>: <Description>
 
 ## Branch Naming
 
-| Workflow | Pattern | Example |
-|----------|---------|---------|
-| Feature branch | `dev/<username>/<feature-name>` | `dev/reimar/implement-skill` |
-| Direct to main | no branch creation | only for small, confirmed low-risk changes |
+Per the [meshmaker Development Guidelines](https://dev.azure.com/meshmakers/OctoMesh/_wiki/wikis/OctoMesh.wiki/141/Development-Guidelines-for-meshmaker-Teams):
 
-Derive `<username>` from `git config user.name` (first name, lowercase). Derive `<feature-name>` from the work item title or change context (kebab-case).
+| Workflow | Pattern | Example | Build on push? |
+|----------|---------|---------|----------------|
+| User-specific branch (default) | `<username>/AB#<wi-id>_<short_meaningful_description>` | `reimar/AB#1234_implement-skill` | No — only on PR |
+| Long-running feature branch | `dev/AB#<wi-id>_<short_meaningful_description>` | `dev/AB#1234_implement-skill` | Yes — every push |
+| Direct to main | no branch creation | only for small, confirmed low-risk changes | — |
+
+Default to the **user-specific** pattern unless the user asks for a long-running feature branch (which triggers a build on every push). Derive `<username>` from `git config user.name` (first name, lowercase). `<wi-id>` is the Azure DevOps work item id. Derive `<short_meaningful_description>` from the work item title or change context (kebab-case, no spaces).
 
 ## Workflow
 
@@ -140,7 +143,7 @@ For every repo with pending changes:
 **Resolution order:**
 
 1. Check if user mentioned a work item ID (AB#1234, "work item 1234")
-2. Check current branch name for clues (`dev/reimar/AB1234-feature`)
+2. Check current branch name for clues (`reimar/AB#1234_feature`)
 3. If unknown, analyze the changes and search Azure DevOps with a WIQL query:
 
 ```bash
@@ -203,7 +206,7 @@ Use **AskUserQuestion** if not already clear from context: **Direct to main** (s
 For a feature branch, create it using the Branch Naming convention above:
 
 ```bash
-git -C <repo> checkout -b dev/<username>/<feature-name>
+git -C <repo> checkout -b <username>/AB#<wi-id>_<short_meaningful_description>
 ```
 
 ### Step 6: Verify Completion
@@ -236,7 +239,7 @@ Before any `git push` / `gh pr create` / `az repos pr create`, you must have exp
 > - **Repo:** [repo-name]
 > - **Message:** `AB#1234 New: Add pipeline validation`
 > - **Files:** [file list or summary]
-> - **Branch:** main / dev/reimar/feature-name
+> - **Branch:** main / reimar/AB#1234_feature-name
 > - **Will push + open PR:** yes/no
 
 If the user defers ("I'll look at it later"), STOP — you may commit locally only if explicitly asked, but do **not** push or open a PR.
