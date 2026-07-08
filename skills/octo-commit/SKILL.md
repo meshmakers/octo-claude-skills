@@ -1,6 +1,6 @@
 ---
 name: octo-commit
-description: "Structured workflow for committing finished work across OctoMesh repositories: scans repos for changes, resolves or creates the Azure DevOps work item, builds the AB# commit message, verifies the build/tests, and optionally opens a PR. Enforces the review checkpoint — never pushes or opens a PR without explicit user approval in the current session. Trigger on: commit, push, PR, pull request, merge, finish work, done, ship it, wrap up, AB#, work item, ready to commit, close task, create branch, feature branch, dev/, Azure DevOps."
+description: "Structured workflow for committing finished work across OctoMesh repositories: scans repos for changes, resolves or creates the Azure DevOps work item, builds the AB# commit message, verifies the build/tests, and optionally opens a PR. Enforces the review checkpoint — never pushes or opens a PR without explicit user approval in the current session. Trigger on: commit, push, PR, pull request, merge, finish work, done, ship it, wrap up, AB#, work item, ready to commit, close task, create branch, feature branch, feat/, dev/, Azure DevOps."
 allowed-tools:
   - "Bash(git status:*)"
   - "Bash(git diff:*)"
@@ -58,15 +58,15 @@ AB#<WorkItemId> <New|Fix>: <Description>
 
 ## Branch Naming
 
-Per the [meshmaker Development Guidelines](https://dev.azure.com/meshmakers/OctoMesh/_wiki/wikis/OctoMesh.wiki/141/Development-Guidelines-for-meshmaker-Teams):
+CI in the OctoMesh repos triggers on `dev/*`, `test/*`, and `main` (see each repo's `azure-pipelines.yml`). A `feat/*` branch matches no trigger — pushes build nothing; CI runs once a PR is opened. See also the [meshmaker Development Guidelines](https://dev.azure.com/meshmakers/OctoMesh/_wiki/wikis/OctoMesh.wiki/141/Development-Guidelines-for-meshmaker-Teams).
 
 | Workflow | Pattern | Example | Build on push? |
 |----------|---------|---------|----------------|
-| User-specific branch (default) | `<username>/AB#<wi-id>_<short_meaningful_description>` | `reimar/AB#1234_implement-skill` | No — only on PR |
+| Feature branch (default) | `feat/<username>/<short_meaningful_description>` | `feat/reimar/implement-skill` | No — only on PR |
 | Long-running feature branch | `dev/AB#<wi-id>_<short_meaningful_description>` | `dev/AB#1234_implement-skill` | Yes — every push |
 | Direct to main | no branch creation | only for small, confirmed low-risk changes | — |
 
-Default to the **user-specific** pattern unless the user asks for a long-running feature branch (which triggers a build on every push). Derive `<username>` from `git config user.name` (first name, lowercase). `<wi-id>` is the Azure DevOps work item id. Derive `<short_meaningful_description>` from the work item title or change context (kebab-case, no spaces).
+Default to the **feat** pattern unless the user explicitly wants a CI build on every push (then use the long-running `dev/...` pattern). Derive `<username>` from `git config user.name` (first name, lowercase). Derive `<short_meaningful_description>` from the work item title or change context (kebab-case, no spaces). The AB# work-item link lives in the commit message and PR title, not in the branch name.
 
 ## Workflow
 
@@ -143,7 +143,7 @@ For every repo with pending changes:
 **Resolution order:**
 
 1. Check if user mentioned a work item ID (AB#1234, "work item 1234")
-2. Check current branch name for clues (`reimar/AB#1234_feature`)
+2. Check current branch name for clues (a `dev/AB#1234_...` branch carries the work-item id; default `feat/...` branches don't — infer from the description)
 3. If unknown, analyze the changes and search Azure DevOps with a WIQL query:
 
 ```bash
@@ -206,7 +206,7 @@ Use **AskUserQuestion** if not already clear from context: **Direct to main** (s
 For a feature branch, create it using the Branch Naming convention above:
 
 ```bash
-git -C <repo> checkout -b <username>/AB#<wi-id>_<short_meaningful_description>
+git -C <repo> checkout -b feat/<username>/<short_meaningful_description>
 ```
 
 ### Step 6: Verify Completion
@@ -239,7 +239,7 @@ Before any `git push` / `gh pr create` / `az repos pr create`, you must have exp
 > - **Repo:** [repo-name]
 > - **Message:** `AB#1234 New: Add pipeline validation`
 > - **Files:** [file list or summary]
-> - **Branch:** main / reimar/AB#1234_feature-name
+> - **Branch:** main / feat/reimar/feature-name
 > - **Will push + open PR:** yes/no
 
 If the user defers ("I'll look at it later"), STOP — you may commit locally only if explicitly asked, but do **not** push or open a PR.

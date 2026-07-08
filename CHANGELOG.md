@@ -2,6 +2,13 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.19.2] — 2026-07-08
+
+### Changed
+
+- `octo-commit` SKILL.md: default branch pattern is now **`feat/<username>/<short_meaningful_description>`** (e.g. `feat/reimar/implement-skill`). Every OctoMesh repo's CI triggers on `dev/*` (most also `test/*`) and `main` — `feat/*` matches no trigger, so pushes build nothing and CI runs only when a PR is opened. The long-running `dev/AB#<wi-id>_...` pattern (build on every push) remains the explicit opt-in alternative; the previous default `<username>/AB#<wi-id>_...` row is replaced by `feat/`. Work-item-resolution hint, `checkout -b` example, and review-checkpoint summary updated accordingly.
+- `octo` SKILL.md: routing row for octo-commit now references `feat/` feature branches (was `dev/`).
+
 ## [0.19.1] — 2026-06-28
 
 ### Changed
