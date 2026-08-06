@@ -493,7 +493,7 @@ def main():
     # Safety check: don't run from a previous e2e context
     if original_context.startswith("e2e-"):
         print(f"  WARNING: Active context '{original_context}' looks like a leftover e2e context.")
-        print(f"  Run 'octo-cli -c UseContext -n local_meshtest' first to restore your normal context.")
+        print(f"  Select a normal context first: 'export OCTO_CLI_CONTEXT=local_meshtest' (or 'octo-cli -c UseContext -n local_meshtest').")
         sys.exit(1)
 
     tenant_id = timestamp_id()

@@ -94,9 +94,13 @@ runs the interactive login. Flags, URL table, headless auth, and tenant
 creation (if the tenant doesn't exist yet): see
 [references/test-2-environment.md](references/test-2-environment.md).
 
-From here on, every octo-cli command targets test-2 — **double-check
-`octo-cli -c AuthStatus` before anything mutating**, and switch back to your
-local context when done (`octo-cli -c UseContext -n <local-context>`).
+**Parallel-safe targeting:** rather than relying on the active context (which
+the cmdlet switched, and which a concurrent session could flip), pass
+`--context test-2_<tenantId>` on every command — or `export
+OCTO_CLI_CONTEXT=test-2_<tenantId>` for the shell. That way the active context
+is irrelevant and nothing to switch back. **Double-check `octo-cli -c AuthStatus
+--context test-2_<tenantId>` before anything mutating** (and note the `[test-2]`
+prod-adjacent warning still applies).
 
 ### 3. Prepare the tenant (first time only)
 

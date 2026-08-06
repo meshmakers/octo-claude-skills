@@ -136,7 +136,7 @@ Invoke-OctoCliLoginLocal              # -tenantId (default meshtest), -includeRe
 Invoke-OctoCliLoginTest2
 ```
 
-Each login/register cmdlet creates a named context via `octo-cli -c AddContext`, activates it with `octo-cli -c UseContext`, and then authenticates with `octo-cli -c Login -i`. The context name follows the `{installation}_{tenantId}` convention (e.g., `local_meshtest`), so each environment+tenant keeps its tokens independently.
+Each login/register cmdlet creates a named context via `octo-cli -c AddContext`, activates it with `octo-cli -c UseContext`, and then authenticates with `octo-cli -c Login -i`. The context name follows the `{installation}_{tenantId}` convention (e.g., `local_meshtest`), so each environment+tenant keeps its tokens independently. Because they call `UseContext`, they mutate the global active context — for parallel-safe work, use `Register-OctoCliContext -NoSwitch` and then pass `--context <ctx>` (or `export OCTO_CLI_CONTEXT=<ctx>`) on each octo-cli command, so a concurrent session doesn't flip the context out from under you.
 
 ## 9. Push Changes
 

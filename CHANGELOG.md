@@ -2,6 +2,23 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.20.0] — 2026-08-06
+
+### TL;DR
+
+octo-cli now supports **`--context <name>`**, a per-invocation context selector that runs a single command against a named context **without changing the active context** (resolution order `--context` > env var `OCTO_CLI_CONTEXT` > persisted active context; token is read from — and, for logins, written back to — the selected context, and saves merge per-context). This makes **parallel Claude sessions safe**: previously `UseContext` mutated the one global active context in `~/.octo-cli/contexts.json`, so a second session (or a `_train`/CI job) silently flipped the context — including onto prod. All octo skills now document `--context`/`OCTO_CLI_CONTEXT` as the default for agent, scripted, or parallel use and demote `UseContext` to "human setting a persistent default". Verified against the local octo-cli build (`Runner.cs`/`ContextSelection.cs`/`IContextManager.SaveEffectiveContext`).
+
+### Changed
+
+- **`octo` SKILL.md** — new **Targeting a context** paragraph under Invocation Syntax (full `--context` semantics, precedence, parallel-safety, `OCTO_CLI_CONTEXT` session pin, full-term-only matching); Context Discovery notes the effective-vs-active distinction; Command Reference `UseContext` row demoted; **Environment Switching** and **Temporary Tenants** rewritten to authenticate/work via `--context` instead of `UseContext` round-trips.
+- **`octo/references/command-reference.md`** — added a `--context` global-flag note atop Context Management; `AddContext` and `UseContext` sections updated (create ≠ activate; `UseContext` mutates global state, prefer `--context`).
+- **`octo/references/environments.md`** — all four "Switch to <env>" blocks and the "work against a previously authenticated context" block now use `LogIn -i --context <ctx>` / `AuthStatus --context <ctx>`; `UseContext` only for a persistent default.
+- **`octo/references/temp-tenants.md`** — the full non-interactive lifecycle (one-time client setup, create → mirror-login → work → teardown) now runs entirely via `--context`, never touching the active context; pitfalls updated (per-context tokens, explorer scripts follow `OCTO_CLI_CONTEXT`).
+- **`octo/scripts/_octo_common.py`** — `load_context()` now honors `OCTO_CLI_CONTEXT` (falls back to `ActiveContext`), so the Python explorers and octo-cli resolve the same context without mutating global state; error hints no longer prescribe `UseContext`. `_verify_data_layer.py` leftover-context warning updated.
+- **`octo-deploy`** SKILL.md + `references/test-2-environment.md` — test-2 targeting via `--context test-2_<tenantId>` (create tenant / `EnableCommunication` / `AuthStatus`) instead of relying on the switched active context.
+- **`octo-devtools`** `references/workflows.md` + `references/command-reference.md` — note that the `Invoke-OctoCliLogin*` / `Register-OctoCliContext` cmdlets still `UseContext`; recommend `-NoSwitch` + `--context`/`OCTO_CLI_CONTEXT` for parallel-safe agent use.
+- **`CLAUDE.md`** — `_octo_common.py` description updated to reflect `OCTO_CLI_CONTEXT` resolution.
+
 ## [0.19.2] — 2026-07-08
 
 ### Changed

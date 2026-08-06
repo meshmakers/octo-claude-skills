@@ -330,6 +330,8 @@ Delete all `bin/` and `obj/` folders recursively.
 
 The login cmdlets create a named octo-cli context (via `octo-cli -c AddContext`), activate it (`UseContext`), then run an interactive `Login -i`. Context names follow `{installation}_{tenantId}` (e.g. `local_meshtest`), so each environment+tenant keeps its tokens independently.
 
+> **Parallel safety:** the `UseContext` step mutates the single global active context, so a concurrent session (or a `_train`/CI job) inherits the switch. For agent/scripted work, register with `-NoSwitch` and target the context per-command with `octo-cli ... --context <ctx>` (or `export OCTO_CLI_CONTEXT=<ctx>` for the shell) — this runs against `<ctx>` without changing the active context.
+
 ### `Register-OctoCliContext` (recommended)
 Unified replacement for the per-environment `Invoke-OctoCliLogin*` cmdlets. Builds the service URIs for the chosen installation, registers the context, optionally switches to it and triggers an interactive login.
 - `-Installation` (string, **Mandatory**): one of `local`, `test-2`, `staging-1`, `prod-1`, `prod-2`. Domain mapping: `local` → localhost; `test-2` → `*.test-2.mm.cloud`; `staging-1` → `*.staging.octo-mesh.com`; `prod-1` → `*.prod-1.octo-mesh.com`; `prod-2` → `*.prod-2.octo-mesh.com`
@@ -337,7 +339,7 @@ Unified replacement for the per-environment `Invoke-OctoCliLogin*` cmdlets. Buil
 - `-UriSuffix` (string, optional): for test-2 PR sub-environments (e.g. `pr123` → `assets-pr123.test-2.mm.cloud`); also appended to the context name
 - `-IncludeReporting` (switch): also register the reporting service URI (`-rsu`)
 - `-IncludeAi` (switch): also register the AI service URI (`-aisu`)
-- `-NoSwitch` (switch): skip `UseContext` (leave the active context unchanged)
+- `-NoSwitch` (switch): skip `UseContext` (leave the active context unchanged) — recommended for parallel-safe agent use; then pass `--context <ctx>` on octo-cli commands
 - `-NoLogin` (switch): skip the interactive `Login -i` (for CI / client-credentials flow)
 - **Safety:** Mutating
 - **Examples:**

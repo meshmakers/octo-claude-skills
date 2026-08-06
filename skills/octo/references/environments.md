@@ -39,35 +39,31 @@ The same `-<suffix>` insertion applies to `staging-1`, `prod-1`, and `prod-2` ho
 Default tenant ID is `meshtest` unless the user specifies otherwise.
 Context naming convention: `{installation}_{tenantId}` (e.g. `local_meshtest`, `staging-1_meshtest`, `prod-1_meshmakers`).
 
-If the context already exists with a valid token, skip `LogIn` — just `UseContext` and check `AuthStatus`.
+**`--context` vs `UseContext`.** The blocks below create a context with `AddContext`, then authenticate it with `LogIn -i --context <ctx>` — the token lands in `<ctx>` and the **active context is left unchanged**, which is the parallel-safe default (a concurrent session pinned to another context won't be disturbed). Then work with `--context <ctx>` per command, or `export OCTO_CLI_CONTEXT=<ctx>` for the session. Use `UseContext -n <ctx>` only to change the persistent default for an interactive shell. If the context already exists with a valid token, skip `LogIn` — just `AuthStatus --context <ctx>` to verify.
 
 ### Switch to local
 ```bash
 octo-cli -c AddContext -n local_meshtest -isu "https://localhost:5003/" -asu "https://localhost:5001/" -bsu "https://localhost:5009/" -csu "https://localhost:5015/" -tid meshtest
-octo-cli -c UseContext -n local_meshtest
-octo-cli -c LogIn -i
+octo-cli -c LogIn -i --context local_meshtest
 ```
 
 ### Switch to test-2
 ```bash
 octo-cli -c AddContext -n test-2_meshtest -isu "https://connect.test-2.mm.cloud/" -asu "https://assets.test-2.mm.cloud/" -bsu "https://bots.test-2.mm.cloud/" -csu "https://communication.test-2.mm.cloud/" -tid meshtest
-octo-cli -c UseContext -n test-2_meshtest
-octo-cli -c LogIn -i
+octo-cli -c LogIn -i --context test-2_meshtest
 ```
 
 ### Switch to staging-1
 ```bash
 octo-cli -c AddContext -n staging-1_meshtest -isu "https://connect.staging.octo-mesh.com/" -asu "https://assets.staging.octo-mesh.com/" -bsu "https://bots.staging.octo-mesh.com/" -csu "https://communication.staging.octo-mesh.com/" -tid meshtest
-octo-cli -c UseContext -n staging-1_meshtest
-octo-cli -c LogIn -i
+octo-cli -c LogIn -i --context staging-1_meshtest
 ```
 
 ### Switch to prod-1 / prod-2
 ```bash
 # prod-1 (substitute prod-2 for the Azure AKS cluster)
 octo-cli -c AddContext -n prod-1_meshmakers -isu "https://connect.prod-1.octo-mesh.com/" -asu "https://assets.prod-1.octo-mesh.com/" -bsu "https://bots.prod-1.octo-mesh.com/" -csu "https://communication.prod-1.octo-mesh.com/" -tid meshmakers
-octo-cli -c UseContext -n prod-1_meshmakers
-octo-cli -c LogIn -i
+octo-cli -c LogIn -i --context prod-1_meshmakers
 ```
 
 ### Include reporting / AI services
@@ -75,7 +71,7 @@ Add `-rsu` and/or `-aisu` to the `AddContext` command:
 ```bash
 # Example for test-2 with reporting + AI
 octo-cli -c AddContext -n test-2_meshtest -isu "https://connect.test-2.mm.cloud/" -asu "https://assets.test-2.mm.cloud/" -bsu "https://bots.test-2.mm.cloud/" -csu "https://communication.test-2.mm.cloud/" -rsu "https://reporting.test-2.mm.cloud/" -aisu "https://ai.test-2.mm.cloud/" -tid meshtest
-octo-cli -c UseContext -n test-2_meshtest
+octo-cli -c LogIn -i --context test-2_meshtest
 ```
 
 ### Developer-shell shortcut
@@ -88,10 +84,11 @@ Register-OctoCliContext -Installation local -TenantId meshtest -IncludeAi
 ```
 Switches: `-IncludeReporting` (`-rsu`), `-IncludeAi` (`-aisu`), `-NoSwitch` (skip `UseContext`), `-NoLogin` (skip interactive login).
 
-### Switch back to a previously authenticated context
+### Work against a previously authenticated context
 ```bash
-octo-cli -c UseContext -n local_meshtest
-octo-cli -c AuthStatus   # verify the token is still valid
+octo-cli -c AuthStatus --context local_meshtest   # verify the token is still valid, active context untouched
+# then run commands with --context local_meshtest, or: export OCTO_CLI_CONTEXT=local_meshtest
+# UseContext -n local_meshtest only if you want to change the persistent default
 ```
 
 ## Environment Detection from URLs

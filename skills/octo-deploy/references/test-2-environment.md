@@ -41,18 +41,20 @@ octo-cli -c AddContext -n test-2_<tenantId> `
   -isu "https://connect.test-2.mm.cloud/" -asu "https://assets.test-2.mm.cloud/" `
   -bsu "https://bots.test-2.mm.cloud/" -csu "https://communication.test-2.mm.cloud/" `
   -tid <tenantId>
-octo-cli -c UseContext -n test-2_<tenantId>
-octo-cli -c Login -i
-octo-cli -c AuthStatus
+octo-cli -c Login -i --context test-2_<tenantId>
+octo-cli -c AuthStatus --context test-2_<tenantId>
 ```
 
 Notes:
 - The legacy `Invoke-OctoCliLoginTest2` cmdlet names contexts `test2_…` (no
   hyphen) — a DIFFERENT name than `Register-OctoCliContext`'s `test-2_…`. Don't
   mix; prefer `Register-OctoCliContext`.
-- Context discipline: every subsequent octo-cli call hits whatever context is
-  active. Run `AuthStatus` before mutating commands; switch back to the local
-  context when finished.
+- Context discipline: prefer `--context test-2_<tenantId>` (or `export
+  OCTO_CLI_CONTEXT=test-2_<tenantId>`) on every call so you don't depend on — or
+  mutate — the global active context, which a parallel session could flip.
+  `Register-OctoCliContext` still switches the active context; `--context` on the
+  commands afterward overrides it per-invocation. Run `AuthStatus` before
+  mutating commands. Only `UseContext` if you want a persistent default.
 
 ## Authentication
 
@@ -66,13 +68,16 @@ Notes:
 
 ## Creating a tenant on test-2
 
-1. Activate an **octosystem** context on test-2 (`Register-OctoCliContext
-   -Installation test-2 -TenantId octosystem`).
-2. `octo-cli -c Create -tid <tenantId> -db <tenantId>` — interactive sessions
-   provision the current user as tenant admin. Headless sessions MUST add `-np`
-   (machine tokens carry no user to provision). Tenant IDs are lowercased.
-3. Switch to the new tenant's context, then `octo-cli -c EnableCommunication`
-   — must run with the TARGET tenant context active, not octosystem. This only
+1. Ensure an **octosystem** context on test-2 exists (`Register-OctoCliContext
+   -Installation test-2 -TenantId octosystem`); target it below with `--context
+   test-2_octosystem`.
+2. `octo-cli -c Create -tid <tenantId> -db <tenantId> --context test-2_octosystem`
+   — interactive sessions provision the current user as tenant admin. Headless
+   sessions MUST add `-np` (machine tokens carry no user to provision). Tenant
+   IDs are lowercased.
+3. `octo-cli -c EnableCommunication --context test-2_<tenantId>` — must run
+   against the TARGET tenant context, not octosystem (pass its `--context`, no
+   switching needed). This only
    SEEDS the Pool/Adapter/HelmRepo entities (`670…001/002/003`) — it deploys
    nothing. `GetAdapters` may return 500 until communication is enabled.
 4. **Deploy the Pool** (live-verified 2026-06-10: nothing rolls out while the

@@ -50,6 +50,8 @@ Read `~/.octo-cli/contexts.json` to extract:
   - `OctoToolOptions.IdentityServiceUrl`, `OctoToolOptions.AssetServiceUrl`, `OctoToolOptions.BotServiceUrl`, `OctoToolOptions.CommunicationServiceUrl`, `OctoToolOptions.ReportingServiceUrl`, `OctoToolOptions.AiServiceUrl`, `OctoToolOptions.AdminPanelUrl` — service endpoints
   - `Authentication.AccessToken` — current auth token (if logged in)
 
+Reading `ActiveContext` tells you the *persisted default* — but a command may run against a different context when `--context <name>` is passed or `OCTO_CLI_CONTEXT` is set (see Invocation Syntax). Check the env var and prefer `--context` when targeting a specific environment so you never depend on, or mutate, the global active context.
+
 To list all available contexts: `octo-cli -c ListContexts` — the dedicated command. Shows each context's identity URL, tenant, and auth status (none/authenticated/expired). Add `-n <name>` for single-context detail or `-j` for JSON. (`octo-cli -c UseContext` with no `-n` still lists contexts as a legacy fallback.)
 
 ### 2. Authentication Check
@@ -77,6 +79,8 @@ If not authenticated: inform the user and offer to run `octo-cli -c LogIn -i` (i
 
 `octo-cli -c <CommandValue> [flags]` — flags use the short form with a `-` prefix (`-un userName`, `-e email`, `-tid tenantId`), or the long form (`--userName`). All flags have both long and short forms (e.g. `--json (-j)`, `--identifier (-id)`); the tables below and `references/command-reference.md` give the exact names.
 
+**Targeting a context — `--context <name>` (prefer this over `UseContext`).** `octo-cli -c <Command> --context <name>` runs that one command against the named context **without changing the active context**. Resolution order: `--context` > env var `OCTO_CLI_CONTEXT` > persisted active context. The token is read from — and for `LogIn`/`LogInClientCredentials` written back to — the *selected* context, and saves merge per-context, so **parallel Claude sessions (or a `_train`/CI job) pinned to different contexts never clobber each other**. This is the default for any agent-driven or scripted flow. `UseContext` mutates the single global active context in `~/.octo-cli/contexts.json` — a second session then silently flips it out from under the first; reserve it for a human setting a persistent default. To pin a whole shell session (octo-cli **and** the Python explorer scripts, which honor the same variable) without touching the file: `export OCTO_CLI_CONTEXT=<name>`. Only the full term matches — `--context`/`-context`/`/context`, no abbreviation.
+
 ## Command Reference (Quick Lookup)
 
 Command-name + one-line purpose + safety type only. **For full flag detail, read `references/command-reference.md`** (organized by the same command groups). For environment URLs read `references/environments.md`. Verify flags there before assembling any mutating command.
@@ -87,7 +91,7 @@ Command-name + one-line purpose + safety type only. **For full flag detail, read
 |---|---|---|
 | `AddContext` | Create/update a named context (service URLs incl. `-aisu` AI URL, tenant) | Mutating |
 | `Config` | Edit the **active** context's service URLs + tenant in-place (no `-n`) | Mutating |
-| `UseContext` | Switch active context (`-n`); without `-n` lists contexts (legacy) | Mutating |
+| `UseContext` | Switch the **persisted** active context (`-n`); mutates global state — prefer `--context`/`OCTO_CLI_CONTEXT` for agent/parallel use. Without `-n` lists contexts (legacy) | Mutating |
 | `ListContexts` | List all contexts with auth status; `-n` detail, `-j` JSON | Read-only |
 | `RemoveContext` | Remove a named context | Mutating |
 | `LogIn` | Interactive browser/device login (`-i`) | Mutating |
@@ -287,7 +291,7 @@ All communication commands accept plain runtime object IDs — the SDK builds th
 
 octo-cli uses **named contexts** (like kubectl), each storing its own service URLs, tenant, and auth tokens. Naming convention: `{installation}_{tenantId}` (e.g. `local_meshtest`, `staging-1_meshtest`, `prod-1_meshmakers`); default tenant is `meshtest`.
 
-On "switch to <env>" / "connect to <env>": read `references/environments.md` for URL mappings (installations `local`, `test-2`, `staging-1`, `prod-1`, `prod-2`), then `AddContext -n {ctx}` (add `-aisu` if AI is needed) → `UseContext -n {ctx}` → `AuthStatus`; if the token is invalid, `LogIn -i` (or `LogInClientCredentials` for headless) and re-check. List contexts with `ListContexts`. In the OctoMesh developer shell, the `Register-OctoCliContext` cmdlet wraps this for any installation (it knows the current cluster domains) — route there via `octo-devtools`.
+On "switch to <env>" / "connect to <env>": read `references/environments.md` for URL mappings (installations `local`, `test-2`, `staging-1`, `prod-1`, `prod-2`), then `AddContext -n {ctx}` (idempotent; add `-aisu` if AI is needed). Authenticate and work **against that context without changing the active one**: `AuthStatus --context {ctx}`; if the token is invalid, `LogIn -i --context {ctx}` (or `LogInClientCredentials --context {ctx}` for headless) — the token is stored in `{ctx}`. Then pass `--context {ctx}` on every command, or `export OCTO_CLI_CONTEXT={ctx}` for the session. Only use `UseContext -n {ctx}` when the user explicitly wants to change their persistent default (single-session/interactive). List contexts with `ListContexts`. In the OctoMesh developer shell, the `Register-OctoCliContext` cmdlet wraps context creation + login for any installation (it knows the current cluster domains) — route there via `octo-devtools`.
 
 ## Smart Behaviors
 
@@ -300,7 +304,7 @@ On "switch to <env>" / "connect to <env>": read `references/environments.md` for
 
 ## Temporary Tenants (Non-Interactive)
 
-When a task needs a throwaway tenant, the agent can run the **entire lifecycle without user interaction** (no `LogIn -i`): `LogInClientCredentials` (machine token, env vars `OCTO_CLI_CLIENT_ID`/`OCTO_CLI_CLIENT_SECRET`) + a mirrored client in `octosystem` (`AddClientCredentialsClient ... -apic`) that is auto-provisioned into every new tenant with the same id/secret. Short form: octosystem context → `LogInClientCredentials` → `Create -tid tmp-<x> -db tmp-<x> -np` → `AddContext`/`UseContext` for the new tenant → `LogInClientCredentials` again → work → back to octosystem → `Delete -tid tmp-<x> -y` → `RemoveContext`. Read `references/temp-tenants.md` for the verified workflow, one-time client setup, and pitfalls (`-np` mandatory, per-tenant tokens, no user roles in machine tokens).
+When a task needs a throwaway tenant, the agent can run the **entire lifecycle without user interaction** (no `LogIn -i`): `LogInClientCredentials` (machine token, env vars `OCTO_CLI_CLIENT_ID`/`OCTO_CLI_CLIENT_SECRET`) + a mirrored client in `octosystem` (`AddClientCredentialsClient ... -apic`) that is auto-provisioned into every new tenant with the same id/secret. Short form, all via `--context` so the active context is never touched: `LogInClientCredentials --context <octosystem-ctx>` → `Create -tid tmp-<x> -db tmp-<x> -np --context <octosystem-ctx>` → `AddContext -n <tmp-ctx>` → `LogInClientCredentials --context <tmp-ctx>` → work with `--context <tmp-ctx>` → `Delete -tid tmp-<x> -y --context <octosystem-ctx>` → `RemoveContext -n <tmp-ctx>`. Read `references/temp-tenants.md` for the verified workflow, one-time client setup, and pitfalls (`-np` mandatory, per-context tokens, no user roles in machine tokens).
 
 ## Communication Entity Relationships
 

@@ -48,7 +48,7 @@ bash skills/octo/scripts/run_python.sh skills/octo/scripts/<script.py> [args...]
 The wrapper (`run_python.sh`) automatically creates a virtual environment in `scripts/.venv/`, installs dependencies from `requirements.txt`, and tracks an md5 hash to reinstall only when deps change. Status messages go to stderr so they don't corrupt `--json` output.
 
 All scripts share `_octo_common.py` which provides:
-- Reading the active context from `~/.octo-cli/contexts.json` for endpoint URLs, tenant ID, and auth token
+- Reading the effective context from `~/.octo-cli/contexts.json` for endpoint URLs, tenant ID, and auth token — honoring `OCTO_CLI_CONTEXT` (same variable octo-cli's `--context` resolves to), falling back to the persisted active context. Export `OCTO_CLI_CONTEXT=<name>` to point both octo-cli and the scripts at one context without mutating global state (parallel-session safe).
 - Building HTTP headers with Bearer token
 - GraphQL query execution helpers
 

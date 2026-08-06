@@ -6,6 +6,8 @@ All flags use short form with `-` prefix. Required flags are marked with **(R)**
 
 ## Context Management
 
+> **`--context <name>` — per-invocation context selection (global flag).** Available on **every** command. Runs that single command against the named context without changing the active one. Resolution order: `--context` > env var `OCTO_CLI_CONTEXT` > persisted active context. The token is loaded from — and, for `LogIn`/`LogInClientCredentials`, written back to — the *selected* context; saves merge per-context onto the file, so parallel invocations against different contexts don't clobber each other. Prefer this (or `OCTO_CLI_CONTEXT` for a whole shell session) over `UseContext` in any agent-driven, scripted, or potentially-parallel flow. Only the full term matches (`--context`/`-context`/`/context`; no abbreviation, case-insensitive).
+
 ### AddContext
 Create or update a named context with service URLs and tenant.
 ```
@@ -25,7 +27,7 @@ octo-cli -c AddContext -n <name> [-isu <identityServicesUri>] [-asu <assetServic
 
 Context naming convention: `{installation}_{tenantId}` (e.g., `local_meshtest`, `staging-1_meshtest`, `prod-1_meshmakers`, `test-2_pr123_meshtest`).
 
-If this is the first context or no active context is set, it is automatically activated. Each context stores its own authentication tokens independently. In the OctoMesh developer shell, `Register-OctoCliContext` wraps `AddContext` + `UseContext` + login for the known installations using the current cluster domains.
+If this is the first context or no active context is set, it is automatically activated. Each context stores its own authentication tokens independently. `AddContext` only creates/updates the stored context — to run against it without changing the active context, pass `--context <name>` (or set `OCTO_CLI_CONTEXT`) on subsequent commands instead of `UseContext`. In the OctoMesh developer shell, `Register-OctoCliContext` wraps `AddContext` + `UseContext` + login for the known installations using the current cluster domains.
 
 ### Config
 Configures the **active** context's service URLs and tenant in-place (no `-n` — operates on whatever context is active). Same fields as `AddContext` minus `-n`; `-isu` is required.
@@ -44,7 +46,7 @@ octo-cli -c Config -isu <identityServicesUri> [-asu <assetServicesUri>] [-bsu <b
 | `-tid` | `tenantId` | ID of tenant | No |
 
 ### UseContext
-Switch the active context. Omit `-n` to list contexts (legacy fallback — prefer `ListContexts`).
+Switch the **persisted** active context — mutates global state in `~/.octo-cli/contexts.json`, so a parallel session (or a `_train`/CI job) silently inherits the change. Prefer `--context <name>` / `OCTO_CLI_CONTEXT` for agent, scripted, or parallel use; reserve `UseContext` for a human setting a persistent default in an interactive shell. Omit `-n` to list contexts (legacy fallback — prefer `ListContexts`).
 ```
 octo-cli -c UseContext [-n <name>]
 ```

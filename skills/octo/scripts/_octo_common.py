@@ -10,17 +10,27 @@ import requests
 
 
 def load_context():
-    """Read ~/.octo-cli/contexts.json and return the active context as a dict.
+    """Read ~/.octo-cli/contexts.json and return the effective context as a dict.
+
+    The effective context mirrors octo-cli's own resolution order so scripts and
+    octo-cli agree on the same context without touching global state:
+      1. the OCTO_CLI_CONTEXT environment variable, if set (octo-cli honors the
+         same variable, and its `--context` flag is per-process — export the
+         variable to make a whole session, scripts included, target one context);
+      2. otherwise the persisted ActiveContext.
+    Selecting via OCTO_CLI_CONTEXT never mutates the file, so parallel sessions
+    pinned to different contexts do not race each other.
 
     Returns a dict with "OctoToolOptions" and "Authentication" keys,
     matching the structure expected by get_graphql_url() and get_token().
-    Exits with a clear error if the file is missing, malformed, or has no active context.
+    Exits with a clear error if the file is missing, malformed, or the requested
+    context is absent.
     """
     path = os.path.join(os.path.expanduser("~"), ".octo-cli", "contexts.json")
     if not os.path.isfile(path):
         print(f"Error: contexts file not found at {path}", file=sys.stderr)
         print("Run 'octo-cli -c AddContext -n <name> -isu <url> -asu <url> -tid <tenant>' to create a context,", file=sys.stderr)
-        print("then 'octo-cli -c UseContext -n <name>' and 'octo-cli -c LogIn -i' to authenticate.", file=sys.stderr)
+        print("then authenticate with 'octo-cli -c LogIn -i --context <name>'.", file=sys.stderr)
         sys.exit(1)
     try:
         with open(path) as f:
@@ -29,22 +39,28 @@ def load_context():
         print(f"Error: failed to parse {path}: {e}", file=sys.stderr)
         sys.exit(1)
 
-    active_name = config.get("ActiveContext")
-    if not active_name:
-        print("Error: no active context set.", file=sys.stderr)
-        print("Run 'octo-cli -c UseContext -n <name>' to activate a context.", file=sys.stderr)
+    contexts = config.get("Contexts", {})
+
+    override = os.environ.get("OCTO_CLI_CONTEXT", "").strip()
+    if override:
+        selected_name, source = override, "OCTO_CLI_CONTEXT"
+    else:
+        selected_name, source = config.get("ActiveContext"), "active context"
+
+    if not selected_name:
+        print("Error: no context selected (no active context, OCTO_CLI_CONTEXT unset).", file=sys.stderr)
+        print("Set OCTO_CLI_CONTEXT=<name>, or activate one with 'octo-cli -c UseContext -n <name>'.", file=sys.stderr)
         sys.exit(1)
 
-    contexts = config.get("Contexts", {})
-    active = contexts.get(active_name)
-    if not active:
-        print(f"Error: active context '{active_name}' not found in contexts.", file=sys.stderr)
-        print("Run 'octo-cli -c UseContext' to list available contexts.", file=sys.stderr)
+    selected = contexts.get(selected_name)
+    if not selected:
+        print(f"Error: {source} '{selected_name}' not found in contexts.", file=sys.stderr)
+        print("List available contexts with 'octo-cli -c ListContexts'.", file=sys.stderr)
         sys.exit(1)
 
     return {
-        "OctoToolOptions": active.get("OctoToolOptions", {}),
-        "Authentication": active.get("Authentication", {}),
+        "OctoToolOptions": selected.get("OctoToolOptions", {}),
+        "Authentication": selected.get("Authentication", {}),
     }
 
 
