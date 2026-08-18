@@ -49,18 +49,12 @@ The `Invoke-BuildAll` script enforces this strict order. Each repo's NuGet packa
 For bug isolation, build only what is needed rather than the full chain:
 
 ### Change in a library repo (e.g., octo-construction-kit-engine)
-Build from the changed repo through all downstream dependents:
+Use `Invoke-BuildAll` — it walks the dependency order and propagates the NuGet packages between repos for you:
 ```powershell
-# Build the changed repo
-Invoke-Build -repositoryPath ./octo-construction-kit-engine -configuration DebugL
-# Copy its NuGet packages
-Copy-NuGetPackages -directory ./octo-construction-kit-engine
-# Build downstream consumers
-Invoke-Build -repositoryPath ./octo-sdk -configuration DebugL
-Copy-NuGetPackages -directory ./octo-sdk
-# ... continue down the chain until the service under test
-Invoke-Build -repositoryPath ./octo-asset-repo-services -configuration DebugL
+Invoke-BuildAll -configuration DebugL -excludeFrontend $true
 ```
+
+**Do NOT hand-chain `Invoke-Build` + `Copy-NuGetPackages` down the dependency chain.** `Invoke-Build` does not propagate packages, so every repo you skip keeps consuming the previous version — and skipping one is easy, because the chain between an engine change and the service under test runs through `octo-sdk` and `octo-construction-kit-engine-mongodb`. The result is a service that builds cleanly against stale contracts and then fails at startup or at runtime, far from the change that caused it. The frontend exclusion is the only sanctioned way to shorten this build.
 
 ### Change in a service repo (e.g., octo-asset-repo-services)
 Only that service needs building:
@@ -79,11 +73,6 @@ Invoke-Build -repositoryPath ./octo-asset-repo-services -configuration DebugL
 ### Full rebuild excluding frontend (faster)
 ```powershell
 Invoke-BuildAll -configuration DebugL -excludeFrontend $true
-```
-
-### Full rebuild excluding non-core repos
-```powershell
-Invoke-BuildAll -configuration DebugL -excludeAdditional $true -excludeFrontend $true
 ```
 
 ## NuGet Package Flow

@@ -88,7 +88,7 @@ mm-common → octo-distributedEventHub → octo-construction-kit-engine → octo
         → [remaining service repos, alphabetical]
 ```
 
-**Key principle:** Only rebuild from the changed repo downward through the chain. Skip everything upstream.
+**Key principle:** A change in a library repo needs everything downstream of it rebuilt too — and only `Invoke-BuildAll` propagates the NuGet packages that make that happen. Reserve `Invoke-Build` for a single service repo that publishes no package.
 
 For the full dependency chain, NuGet package mappings, and selective build commands, read `references/build-system.md`.
 

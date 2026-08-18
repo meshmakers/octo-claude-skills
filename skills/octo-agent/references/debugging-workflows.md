@@ -68,13 +68,10 @@ Invoke-Build -repositoryPath ./octo-asset-repo-services -configuration DebugL
 
 **Bug in a library repo (needs downstream rebuild):**
 ```powershell
-# Build the library
-Invoke-Build -repositoryPath ./octo-construction-kit-engine -configuration DebugL
-Copy-NuGetPackages -directory ./octo-construction-kit-engine
-
-# Rebuild only the service(s) needed for testing
-Invoke-Build -repositoryPath ./octo-asset-repo-services -configuration DebugL
+Invoke-BuildAll -configuration DebugL -excludeFrontend $true
 ```
+
+`Invoke-BuildAll` is required here, not merely convenient: `Invoke-Build` does not propagate NuGet packages, so rebuilding the library and the service directly leaves everything between them — `octo-sdk`, `octo-construction-kit-engine-mongodb` — on the previous version, and the service under test then reproduces the *old* behaviour. That looks exactly like "the fix did not work".
 
 ### Step 3: Start Minimal Services
 
