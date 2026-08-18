@@ -42,6 +42,10 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/octo-devtools/scripts/run_pwsh.sh" '<PowerShe
 
 OctoMesh is a monorepo where repos produce NuGet packages consumed by downstream repos. The build system handles copying these NuGet packages between repos automatically — but ONLY when using `Invoke-BuildAll`.
 
+**The one difference that matters: `Invoke-Build` does NOT propagate NuGet packages between repos, `Invoke-BuildAll` does.** A repo built with `Invoke-Build` writes its package nowhere the other repos can see it, so every consumer keeps compiling and running against the previous version. That is why `Invoke-BuildAll` is the default and `Invoke-Build` is the narrow exception.
+
+**The only sanctioned way to make a build cheaper is `-excludeFrontend $true`.** Do not narrow the build any further to save time — see the warning under the examples below.
+
 ### When to use `Invoke-BuildAll` (DEFAULT CHOICE)
 
 **Use `Invoke-BuildAll` whenever building after code changes that could affect NuGet packages, or when unsure.** This is the safe default. It builds repos in dependency order AND copies NuGet packages to the shared `nuget/` folder between each step.
@@ -52,10 +56,9 @@ Invoke-BuildAll -configuration DebugL
 
 # Backend only — skips Angular frontends (saves significant time)
 Invoke-BuildAll -configuration DebugL -excludeFrontend $true
-
-# Core repos only — skips optional/additional repos AND frontends
-Invoke-BuildAll -configuration DebugL -excludeFrontend $true -excludeAdditional $true
 ```
+
+**Do NOT reach for `-excludeAdditional $true` to save time.** It stops after the core library chain and skips the service repos, so a changed contract lands in the shared `nuget/` folder while identity, asset-repo and the other services keep running against the old one. The failure surfaces later, at service startup or at runtime, far away from the build that caused it. The parameter is documented in `references/command-reference.md` because it exists — not because it is a recommended shortcut.
 
 **Use `Invoke-BuildAll` for:**
 - After pulling latest changes (`Sync-AllGitRepos`)
@@ -79,7 +82,7 @@ Invoke-BuildAll -configuration DebugL -excludeFrontend $true -excludeAdditional 
 Invoke-Build -repositoryPath ./octo-asset-repo-services -configuration DebugL
 ```
 
-**NEVER use `Invoke-Build` to propagate NuGet changes.** Do not attempt to manually chain `Invoke-Build` + `Copy-NuGetPackages` to replicate what `Invoke-BuildAll` does — use `Invoke-BuildAll` with the appropriate exclusion flags instead.
+**NEVER use `Invoke-Build` to propagate NuGet changes.** Do not attempt to manually chain `Invoke-Build` + `Copy-NuGetPackages` to replicate what `Invoke-BuildAll` does — use `Invoke-BuildAll` instead (with `-excludeFrontend $true` when the frontends are not needed).
 
 ## Command Quick Reference
 
@@ -264,7 +267,6 @@ Interactive blocking applies to `Start-Octo` (without `-nonInteractive $true`) a
 ### Natural language mapping
 - "build everything" / "build all" → `Invoke-BuildAll -configuration DebugL`
 - "build without frontend" / "build backend" → `Invoke-BuildAll -configuration DebugL -excludeFrontend $true`
-- "build core only" / "build libraries" / "build base" → `Invoke-BuildAll -configuration DebugL -excludeFrontend $true -excludeAdditional $true`
 - "build asset repo" → `Invoke-Build -repositoryPath ./octo-asset-repo-services -configuration DebugL` (only if no NuGet changes!)
 - "rebuild after pull" / "sync and build" → `Sync-AllGitRepos` then `Invoke-BuildAll -configuration DebugL`
 - "git status" / "repo status" → `Get-AllGitRepStatus`
@@ -292,7 +294,7 @@ Interactive blocking applies to `Start-Octo` (without `-nonInteractive $true`) a
 Always use `-configuration DebugL` for build commands unless the user explicitly specifies a different configuration. This is the standard local development configuration.
 
 ### Build order awareness
-When the user asks to build, default to `Invoke-BuildAll` with exclusion flags to limit scope — do NOT attempt to manually orchestrate `Invoke-Build` calls in dependency order or manually copy NuGet packages. The `Invoke-BuildAll` script already handles the correct build order and NuGet propagation. Only use `Invoke-Build` for a single service repo where no NuGet packages are affected.
+When the user asks to build, default to `Invoke-BuildAll`, narrowing it at most with `-excludeFrontend $true` — do NOT attempt to manually orchestrate `Invoke-Build` calls in dependency order or manually copy NuGet packages. The `Invoke-BuildAll` script already handles the correct build order and NuGet propagation. Only use `Invoke-Build` for a single service repo where no NuGet packages are affected.
 
 ### Workflow suggestions
 When the user describes a high-level goal (e.g., "set up a fresh dev environment"), suggest the appropriate multi-step workflow from `references/workflows.md` and offer to execute it step by step.

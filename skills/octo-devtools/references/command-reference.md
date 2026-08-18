@@ -8,16 +8,15 @@ Complete catalog of cmdlets available after loading `octo-tools/modules/profile.
 Build repositories in dependency order with automatic NuGet package propagation between repos. **This is the default build command** — use it whenever changes might affect NuGet packages or when building after pull/branch switch.
 - `-configuration` (string): Build configuration — `DebugL` (local dev), `Debug`, `Release`. **Always use `DebugL` for local development.**
 - `-branch` (string): Branch name for NuGet package resolution
-- `-excludeAdditional` (bool): Skip additional/optional repos — builds only the core dependency chain. **Must pass `$true` explicitly** (e.g., `-excludeAdditional $true`), not bare flag.
+- `-excludeAdditional` (bool): Skip additional/optional repos — builds only the core dependency chain. **Must pass `$true` explicitly** (e.g., `-excludeAdditional $true`), not bare flag. **Not a time-saving shortcut:** it skips the service repos, so a changed contract package reaches `nuget/` while the services still consume the previous one and fail later at startup or runtime. Use it only when you deliberately want the libraries alone.
 - `-excludeFrontend` (bool): Skip Angular frontend builds — significant time savings for backend-only work. **Must pass `$true` explicitly** (e.g., `-excludeFrontend $true`), not bare flag.
 - **Safety:** Mutating (local) — modifies build outputs and NuGet cache
 - **Common patterns:**
   - Full build: `Invoke-BuildAll -configuration DebugL`
-  - Backend only: `Invoke-BuildAll -configuration DebugL -excludeFrontend $true`
-  - Core libraries only: `Invoke-BuildAll -configuration DebugL -excludeFrontend $true -excludeAdditional $true`
+  - Backend only (the only sanctioned way to shorten a build): `Invoke-BuildAll -configuration DebugL -excludeFrontend $true`
 
 ### `Invoke-Build`
-Build a single repository. **Does NOT handle NuGet package propagation between repos.** Only use for isolated changes within a single service repo where no NuGet packages are affected. If changes affect NuGet packages or touch library repos, use `Invoke-BuildAll` with exclusion flags instead.
+Build a single repository. **Does NOT handle NuGet package propagation between repos** — unlike `Invoke-BuildAll`, which does. Anything this repo publishes stays invisible to its consumers, which keep building and running against the previous package version. Only use for isolated changes within a single service repo where no NuGet packages are affected. If changes affect NuGet packages or touch library repos, use `Invoke-BuildAll` with exclusion flags instead.
 - `-configuration` (string): Build configuration (`DebugL`, `Debug`, `Release`)
 - `-repositoryPath` (string): Path to the repository to build (e.g., `./octo-asset-repo-services`)
 - **Safety:** Mutating (local)

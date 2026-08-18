@@ -70,14 +70,13 @@ If frontend dependencies changed:
 Invoke-Build -repositoryPath ./octo-asset-repo-services -configuration DebugL
 ```
 
-**Changes affect NuGet packages — use Invoke-BuildAll with scope flags:**
+**Changes affect NuGet packages — use Invoke-BuildAll:**
 ```
 # Build base libraries + services (no frontend) — handles NuGet propagation automatically
 Invoke-BuildAll -configuration DebugL -excludeFrontend $true
-
-# Build only core libraries (no services, no frontend)
-Invoke-BuildAll -configuration DebugL -excludeFrontend $true -excludeAdditional $true
 ```
+
+`-excludeFrontend $true` is the only sanctioned way to shorten the build. Do not add `-excludeAdditional $true` for speed — it skips the service repos, so they keep consuming the previous package version and break later at startup instead of at build time.
 
 **NEVER manually chain `Invoke-Build` + `Copy-NuGetPackages` to propagate NuGet changes — use `Invoke-BuildAll` instead.**
 
