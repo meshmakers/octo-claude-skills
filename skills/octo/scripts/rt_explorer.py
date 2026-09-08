@@ -120,7 +120,7 @@ query($ckId: String!, $columnPaths: [String!]!, $first: Int, $sortOrder: [Sort],
         totalCount
         items {
           columns { attributePath attributeValueType }
-          rows { items { cells { items { attributePath value } } } }
+          rows(first: $first) { items { cells { items { attributePath value } } } }
         }
       }
     }

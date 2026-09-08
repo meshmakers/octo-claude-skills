@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.20.3] — 2026-09-08
+
+### Fixed
+
+- **`octo/scripts/rt_explorer.py`** — `query` ignored `--first` and fetched every row of the transient query (the limit was applied to the query-result items, not to the `rows` connection). `--first` now bounds the rows, so `query` on a large type no longer dumps tens of thousands of rows.
+
 ## [0.20.0] — 2026-08-06
 
 ### TL;DR
