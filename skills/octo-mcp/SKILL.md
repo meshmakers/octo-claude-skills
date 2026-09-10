@@ -1,6 +1,6 @@
 ---
 name: octo-mcp
-description: Develop and extend the OctoMesh MCP server (octo-mcp-service) — the Model Context Protocol server exposing ~181 tools that mirror octo-cli plus generic CK CRUD and aggregation/stream-data queries, used by AI assistants to administer OctoMesh tenants without the CLI or GraphQL. Use when adding or modifying MCP tools, classifying tool risk, wiring *ClientContext helpers, building file-transfer flows, or following the mandatory test conventions. Trigger on: MCP tool development, octo-mcp-service, adding MCP tools, McpRisk, MCP server, model context protocol server work in OctoMesh.
+description: "Develop and extend the OctoMesh MCP server (octo-mcp-service) — the Model Context Protocol server exposing ~181 tools that mirror octo-cli plus generic CK CRUD and aggregation/stream-data queries, used by AI assistants to administer OctoMesh tenants without the CLI or GraphQL. Use when adding or modifying MCP tools, classifying tool risk, wiring *ClientContext helpers, building file-transfer flows, or following the mandatory test conventions. Trigger on: MCP tool development, octo-mcp-service, adding MCP tools, McpRisk, MCP server, model context protocol server work in OctoMesh."
 ---
 
 # OctoMesh MCP Server Development

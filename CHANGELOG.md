@@ -2,6 +2,20 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.20.4] — 2026-09-10
+
+### Fixed
+
+- **All 13 `SKILL.md` files** — the `description` frontmatter is now a quoted YAML scalar. Six skills (`octo`, `octo-agent`, `octo-logs`, `octo-logs-setup`, `octo-mcp`, `pipeline-expert`) had an unquoted plain scalar containing `Trigger on: ` (and, for `octo-logs`, `(test-2/staging-1/prod-1/prod-2): `). In YAML a plain scalar ends at a `": "`, so the frontmatter failed to parse with `ScannerError: mapping values are not allowed here`. Claude Code then registered those skills by directory name with **no description**, which drops them from the model's skill listing — they were reachable only by typing `/<name>` explicitly, and auto-routing from `/octo` to its siblings was broken. Reported against 0.20.3 on Claude Code 2.1.267.
+
+### Added
+
+- **`scripts/validate_skill_frontmatter.py`** — parses every skill's frontmatter and checks name/description presence, the 1200-char description budget and the 500-line body budget. `claude plugin validate . --strict` passes on broken frontmatter, so this check is what actually guards the regression. Run it before every release:
+
+  ```bash
+  bash skills/octo/scripts/run_python.sh scripts/validate_skill_frontmatter.py
+  ```
+
 ## [0.20.3] — 2026-09-08
 
 ### Fixed

@@ -1,17 +1,6 @@
 ---
 name: refinery-studio
-description: >-
-  Guides Angular development on the OctoMesh Data Refinery Studio
-  (octo-frontend-refinery-studio) — the main web app for CK model design,
-  dashboards, queries, pipelines, and visualizations (distinct from the older
-  admin panel). Covers the tech stack, multi-tenant /:tenantId/ routing, the
-  OctoGraphQlDataSource list-view pattern, the GraphQL codegen workflow, the
-  LCARS theme token system, the link to octo-frontend-libraries, and the
-  lint/test/build commands.
-  Trigger on: refinery studio, data refinery, OctoMesh frontend, Angular
-  component work, mm-list-view, OctoGraphQlDataSource, data source directive,
-  GraphQL codegen frontend, npm run codegen, LCARS theme, theme tokens,
-  Kendo UI, Apollo Angular, tenant routing, octo-frontend-libraries.
+description: "Guides Angular development on the OctoMesh Data Refinery Studio (octo-frontend-refinery-studio) — the main web app for CK model design, dashboards, queries, pipelines, and visualizations (distinct from the older admin panel). Covers the tech stack, multi-tenant /:tenantId/ routing, the OctoGraphQlDataSource list-view pattern, the GraphQL codegen workflow, the LCARS theme token system, the link to octo-frontend-libraries, and the lint/test/build commands. Trigger on: refinery studio, data refinery, OctoMesh frontend, Angular component work, mm-list-view, OctoGraphQlDataSource, data source directive, GraphQL codegen frontend, npm run codegen, LCARS theme, theme tokens, Kendo UI, Apollo Angular, tenant routing, octo-frontend-libraries."
 allowed-tools:
   - "Read(${CLAUDE_PLUGIN_ROOT}/skills/refinery-studio/references/*)"
 ---

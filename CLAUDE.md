@@ -10,6 +10,7 @@ A Claude Code plugin providing skills for working with the OctoMesh platform. Us
 .claude-plugin/plugin.json   — Plugin manifest (name, version, metadata; $schema-validated)
 .claude-plugin/marketplace.json — Marketplace listing (kept in version sync with plugin.json)
 hooks/hooks.json              — SessionStart hooks (venv pre-warm, pwsh probe)
+scripts/                      — repo maintenance: validate_skill_frontmatter.py (release gate)
 skills/
   octo/                       — Hub skill: octo-cli NL interface, CK/RT exploration, routing to siblings
     SKILL.md                  — Skill definition (frontmatter + operational guide)
@@ -76,15 +77,19 @@ bash skills/octo/scripts/run_python.sh skills/octo/scripts/_verify_e2e_real.py  
 
 These require a running OctoMesh environment and valid authentication.
 
-Validate the plugin manifests after any manifest or skill-structure change:
+Validate the plugin manifests **and** the skill frontmatter after any manifest or skill change:
 
 ```bash
-claude plugin validate . --strict
+claude plugin validate . --strict                                             # manifests only
+bash skills/octo/scripts/run_python.sh scripts/validate_skill_frontmatter.py  # every SKILL.md
 ```
+
+`claude plugin validate` does **not** parse skill frontmatter — it passes even when a `SKILL.md` has unparseable YAML. `validate_skill_frontmatter.py` is the check that catches it, plus the description/body budgets below.
 
 ## Skill Authoring
 
 - **SKILL.md frontmatter description**: prose-first — one or two sentences stating what the skill does and the key use case FIRST, then a `Trigger on:` tail with the most important keywords. Keep the whole description **under 1200 characters** (Claude Code truncates the combined listing entry at 1536 chars; leave headroom). Highest-value triggers go earliest.
+- **Always quote the description** (`description: "…"`). An unquoted YAML plain scalar ends at the first `": "`, so a `Trigger on: ` tail breaks the whole frontmatter; Claude Code then loads the skill with no description, which removes it from the model's skill listing — it stays reachable only via an explicit `/<name>`, and auto-routing from `/octo` silently stops working. Escape any inner `"` as `\"`.
 - **SKILL.md body**: keep **under 500 lines** — the body is loaded into context every turn, so every line is recurring token cost. State what to do, don't narrate why.
 - **Reference docs** in `references/`: detailed content that SKILL.md points to for drill-down (command flags, node properties, URL mappings). Keep SKILL.md as the operational overview; put exhaustive details in references — Claude loads them on demand.
 - **Progressive drill-down**: exploration workflows go broad-to-narrow: models → types in model → type detail → instances → instance detail.
@@ -100,7 +105,7 @@ The `version` field in `.claude-plugin/plugin.json` is the release gate: **bump 
 
 Keep `marketplace.json`'s plugin entry version in sync for clarity — but note that when both files declare a version, **`plugin.json` wins** per the Claude Code plugin spec.
 
-Record every release in `CHANGELOG.md`. Run `claude plugin validate . --strict` before tagging a release.
+Record every release in `CHANGELOG.md`. Run both `claude plugin validate . --strict` and `scripts/validate_skill_frontmatter.py` before tagging a release.
 
 ## Naming Conventions
 
