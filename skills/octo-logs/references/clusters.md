@@ -54,5 +54,6 @@ see "Cost control" in `docs/DASH0-OBSERVABILITY.md`.
 
 ## Retention
 
-Set by the Dash0 dataset retention, not by the cluster. 7-day windows return
-data (checked 2026-10-08). Copy evidence you need longer into the work item.
+Set by the Dash0 dataset retention, not by the cluster: logs, spans and span events are kept
+30 days (queries cannot span more than 30 days). prod-1 and prod-2 only have data since
+2026-09-30, when they were connected to Dash0. Copy evidence you need longer into the work item.

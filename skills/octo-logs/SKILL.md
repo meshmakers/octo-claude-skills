@@ -133,7 +133,7 @@ trace with `getTraceDetails` to see the whole request.
 
 ## Retention
 
-Bounded by the Dash0 dataset retention (7-day windows worked on 2026-10-08).
+Bounded by the Dash0 retention: 30 days (prod-1/prod-2 only since 2026-09-30).
 There is no in-cluster log store any more — `kubectl logs` only reaches the
 current and previous container of a pod. For long-lived evidence, copy the
 relevant lines/counts into the work item or incident note.
