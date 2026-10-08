@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.20.5] — 2026-10-08
+
+### Changed
+
+- **`octo-commit`** — follows the new Azure DevOps backlog hierarchy Epic → Feature → User Story / Bug → Task (effective 2026-10-09). New work items are created as **User Story** (with mandatory acceptance criteria), Bug or Task — never as the legacy **Issue** type — and User Stories / Bugs are linked to a parent **Feature** (`az boards work-item relation add --relation-type parent`); maintenance work goes to the team's `Sustain Q<n>/<year> – <Team>` Feature. Commits reference requirement-level items, not Epics or Features. Bug descriptions go into `Microsoft.VSTS.TCM.ReproSteps`. Team list extended with the theme teams `Core Platform Team`, `Studio UX Team`, `Platform Ops Team`, `Apps Team`.
+
 ## [0.20.4] — 2026-09-10
 
 ### Fixed

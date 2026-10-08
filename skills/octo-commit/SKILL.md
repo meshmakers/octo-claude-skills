@@ -48,7 +48,7 @@ AB#<WorkItemId> <New|Fix>: <Description>
 
 | Work Item Type | Prefix | Example |
 |---------------|--------|---------|
-| Issue / Epic | `New` | `AB#4521 New: Add pipeline validation endpoint` |
+| User Story (or legacy Issue) | `New` | `AB#4521 New: Add pipeline validation endpoint` |
 | Task | `New` (default) | `AB#4081 New: Add blueprint variables` |
 | Bug | `Fix` | `AB#4493 Fix: Resolve null reference in CK compilation` |
 
@@ -159,19 +159,37 @@ az boards query \
 
 **CRITICAL:** The WIQL command is `az boards query` — there is **no** `az boards work-item query` subcommand (`az boards work-item` only has create/delete/show/update).
 
-Work item types: **Bug**, **Issue** (features), **Epic**, **Task**.
+**Backlog hierarchy (since 2026-10-09):** Epic → Feature → **User Story** / **Bug** → Task.
+Commits reference a requirement-level item — a **User Story**, **Bug** or **Task** — never an Epic or a Feature
+(those are planning items for humans). The **Issue** type is legacy: commits may still reference an existing open
+Issue, but **never create a new Issue** — create a User Story instead.
+
+If the search only finds a matching Epic or Feature, do not commit against it: create a User Story under the
+matching Feature (or ask which Feature, if only the Epic matches).
 
 Present matching work items to the user with AskUserQuestion if multiple matches found.
 
 **If no matching work item exists**, ask user whether to create one. If yes, gather the following via AskUserQuestion:
 
-1. **Type**: Bug, Issue, Epic, or Task
-2. **Team**: one of the real OctoMesh teams (see below)
-3. **Area**: suggest based on which repos have changes
+1. **Type**: User Story (new functionality, default), Bug (defect), or Task (technical sub-step of a story)
+2. **Parent Feature** (required for User Story and Bug): search open Features (WIQL below) and let the user pick.
+   Maintenance or quality work without a real Feature goes to the team's current Sustain Feature,
+   titled `Sustain Q<n>/<year> – <Team>`. A Task's parent is the User Story it belongs to.
+3. **Team / Area**: use the parent Feature's area path (one theme team per Feature)
 4. **Iteration**: list available iterations for the chosen team
 
+```bash
+# Open Features to choose a parent from (add a CONTAINS filter on the title to narrow down)
+az boards query \
+  --wiql "SELECT [System.Id], [System.Title], [System.AreaPath] FROM WorkItems \
+          WHERE [System.TeamProject] = 'OctoMesh' AND [System.WorkItemType] = 'Feature' \
+          AND [System.State] NOT IN ('Closed', 'Removed') ORDER BY [System.Title]" \
+  --org https://dev.azure.com/meshmakers
+```
+
 **OctoMesh Azure DevOps teams** (use the exact names):
-`Solutions Team` (plural), `Product Team`, `CustomerProjects Team`, `Sales Team`, `BizOps Team`, `Energy Solution Team`.
+- Theme teams (product work): `Core Platform Team`, `Studio UX Team`, `Platform Ops Team`, `Apps Team`, `Energy Solution Team`
+- Other teams: `Product Team` (portfolio view over all Product Team areas), `Solutions Team` (plural), `CustomerProjects Team`, `Sales Team`, `BizOps Team`
 
 ```bash
 # List available iterations for a team
@@ -187,17 +205,27 @@ az boards area team list \
   --project OctoMesh
 ```
 
-Create the work item (Mutating — confirm with user first):
+Create the work item and link it to its parent (Mutating — confirm with user first):
 
 ```bash
 az boards work-item create \
-  --type "<Type>" \
-  --title "<Title>" \
-  --area "<AreaPath>" \
+  --type "User Story" \
+  --title "<Outcome-style title, e.g. Tenant admin can revoke a service account>" \
+  --area "<AreaPath of the parent Feature>" \
   --iteration "<IterationPath>" \
+  --fields "Microsoft.VSTS.Common.AcceptanceCriteria=<testable criteria>" \
   --org https://dev.azure.com/meshmakers \
   --project OctoMesh
+
+az boards work-item relation add \
+  --id <NewWorkItemId> \
+  --relation-type parent \
+  --target-id <ParentFeatureId> \
+  --org https://dev.azure.com/meshmakers
 ```
+
+- **User Story:** `Microsoft.VSTS.Common.AcceptanceCriteria` is mandatory — derive it from the change and confirm it with the user.
+- **Bug:** put the description into `Microsoft.VSTS.TCM.ReproSteps` (via `--fields`), not `--description` — `System.Description` is not the visible field on Bugs.
 
 ### Step 5: Choose Commit Strategy
 
@@ -348,7 +376,10 @@ See `${CLAUDE_PLUGIN_ROOT}/skills/octo-commit/references/repo-remotes.md` for th
 | Pushing without approval | Get explicit go-ahead **this session** before any push/PR |
 | Committing without work item | Always resolve AB# first -- search or create |
 | Wrong WIQL command | Use `az boards query --wiql`, NOT `az boards work-item query` |
-| Wrong prefix (New vs Fix) | Bug -> Fix; Issue/Epic/Task -> New (confirm Task if it's a fix) |
+| Wrong prefix (New vs Fix) | Bug -> Fix; User Story/Issue/Task -> New (confirm Task if it's a fix) |
+| Creating a new Issue | Issue is legacy — create a User Story under a Feature |
+| Committing against an Epic or Feature | Reference a User Story / Bug / Task; create one under the Feature if needed |
+| Story or Bug without parent | Every new User Story / Bug needs a parent Feature (Sustain Feature for maintenance) |
 | Wrong team name | It's `Solutions Team` (plural), not "Solution Team" |
 | Bare Co-Authored-By | Use model-specific name: `Claude <model> <noreply@anthropic.com>` |
 | Wrong docs remote | `docs` dir -> `reikla/ai-docs`, not `reikla/docs` |
