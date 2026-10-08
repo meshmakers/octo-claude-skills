@@ -2,6 +2,17 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.21.0] — 2026-10-08
+
+### Changed
+
+- **`octo-logs`** — rebuilt on **Dash0** (AB#6116). Loki + Promtail no longer run on any cluster and were removed from the IaC, so the skill now reads logs through the read-only Dash0 MCP tools (`getLogRecords`, `sql`, `getFullLogRecord`, `getAttributeValues`, `getLogCorrelations`, `getSpans`/`getTraceDetails`) against the datasets `test-2`, `staging-1`, `prod-1`, `prod-2`. Filters on `k8s.namespace.name` / `k8s.container.name` / `k8s.pod.name` / `service.name` / `otel.log.severity.range` / `otel.log.body`; D0QL recipes (verified against test-2) in `references/d0ql-cheatsheet.md`, including a LogQL → Dash0 translation table. Skill name unchanged.
+- **`octo-logs-setup`** — now sets up / checks the Dash0 MCP connection (`claude mcp add` + `/mcp` OAuth login + `listDatasets`). The Loki credential flow (`LOKI_USERNAME` / `LOKI_PASSWORD` in the private profile) is retired; the skill explains how to remove the obsolete variables. Skill name unchanged.
+
+### Removed
+
+- `octo-logs/scripts/run_logcli.sh`, `octo-logs/scripts/_logcli.ps1`, `octo-logs/references/logql-cheatsheet.md`, `octo-logs-setup/scripts/setup_loki_creds.sh` — `logcli` and the monitoring-Grafana Loki datasource no longer exist.
+
 ## [0.20.5] — 2026-10-08
 
 ### Changed

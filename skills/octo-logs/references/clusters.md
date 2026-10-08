@@ -1,64 +1,58 @@
-# Clusters, Grafana endpoints, retention
+# Clusters, Dash0 datasets, attributes, retention
 
-Source: OctoMesh wiki — "View application logs and set up alerts"
-(`https://dev.azure.com/meshmakers/OctoMesh/_wiki/wikis/OctoMesh.wiki/238/Access-clusters-and-filter-logs`).
+## Where the logs come from
 
-## Two Grafanas per cluster — do not confuse them
+Each cluster runs the Dash0 operator (`dash0-system` namespace) with an
+OpenTelemetry collector DaemonSet. Its filelog receiver tails every pod's log
+under `/var/log/pods` and exports to Dash0 (EU ingress, org of meshmakers).
+Configuration as code lives in `meshmakers-infrastructure`
+(`roles/k8s-infrastructure/tasks/dash0.yml`, `dash0:` block in each cluster's
+group_vars; docs: `docs/DASH0-OBSERVABILITY.md`).
 
-| Host | What it is | Logs? |
+Loki + Promtail are **gone** on all clusters (verified 2026-10-08) and were
+removed from the IaC (AB#6116). The `monitoring.*` Grafana no longer has a Loki
+datasource; the end-customer `grafana.*` never had one.
+
+## Cluster → dataset
+
+| Cluster | Dataset | Notes |
 |---|---|---|
-| `monitoring.<cluster-domain>` | **Prometheus-stack Grafana** (internal). Carries the **Loki** datasource. | **Yes — use this.** |
-| `grafana.<cluster-domain>` | OctoMesh-Grafana, OAuth, end-customer-facing. | No Loki datasource. |
+| test-2 | `test-2` | on-prem RKE2, first to receive every release |
+| staging-1 | `staging-1` | Azure AKS |
+| prod-1 | `prod-1` | Exoscale SKS — production |
+| prod-2 | `prod-2` | Azure AKS — production |
 
-This skill always targets the `monitoring.*` host.
+`listDatasets` shows them (plus an empty `default`).
 
-## Cluster → monitoring Grafana base URL
+## Attributes (verified against test-2, 2026-10-08)
 
-| Cluster | Monitoring URL |
+Filter keys for `getLogRecords` / `getAttributeValues`:
+
+| Key | Content |
 |---|---|
-| `test-2` (testing / pre-staging) | `https://monitoring.test-2.mm.cloud` |
-| `staging-1` (staging) | `https://monitoring.staging.octo-mesh.com` |
-| `prod-1` (production EU) | `https://monitoring.prod-1.octo-mesh.com` |
-| `prod-2` (production AT) | `https://monitoring.prod-2.octo-mesh.com` |
+| `k8s.namespace.name` | namespace (`octo`, `mongodb`, `cratedb`, `ponton`, `dash0-system`, …) |
+| `k8s.container.name` | container: `identity`, `assetrepository`, `communication`, `bot`, `mesh-adapter`, `platformservices`, `octo-mesh-ai`, `octo-mesh-mcp`, `octo-mesh-reporting`, `octo-mesh-office`, `octo-mesh-communication-operator`, app containers (`meshmakers-app`, `energy-community-app`, `fda-seen`, …) |
+| `k8s.pod.name` | pod; middle segment = ReplicaSet hash (one rollout) |
+| `service.name` | aligned with traces/metrics (AB#5478 §2.1); tenant adapters/apps appear as `<release>-<rtId>` |
+| `otel.log.severity.range` | `ERROR`, `WARN`, `INFO`, `UNKNOWN` (unparsed lines) |
+| `otel.log.body` | message body |
+| `trace_id` / `span_id` | present on structured OctoMesh logs (AB#5478 §2.3) |
 
-These are baked into `scripts/_logcli.ps1` (`$baseMap`). Add a cluster there if a new one appears.
+Use `getAttributeValues` with a filter (e.g. `k8s.namespace.name is octo`) to list
+current values rather than relying on this table.
 
-## Why logcli points at a datasource-proxy path (not the host root)
+In **D0QL** (`mcp__dash0__sql`) the same data is addressed as
+`resource_attributes['k8s.container.name']`, `severity`, `body`, `timestamp`.
 
-Loki is **not** exposed directly on the `monitoring.*` host — that host root is Grafana itself. The wiki's `LOKI_ADDR=https://monitoring.<domain>` points logcli at Grafana's root and returns HTML instead of logs.
+## Severity caveat
 
-Loki is reachable through Grafana's **datasource proxy**:
-
-```
-https://monitoring.<domain>/api/datasources/proxy/uid/<loki-datasource-uid>
-```
-
-`_logcli.ps1` discovers `<loki-datasource-uid>` at runtime by calling
-`GET /api/datasources` (basic auth) and picking the entry with `type == "loki"` —
-so no UID is hard-coded and it works across clusters. (For reference, test-2's
-Loki UID has historically been `P8E80F9AEF21F6940`, but do not rely on that —
-discovery is authoritative.)
-
-## Login / credentials
-
-- User `mesh-admin`, password from the team store (Keeper → "Grafana monitoring `<cluster>`", or Vault `meshmakers/<cluster>/grafana` → `admin_password`).
-- Everyone shares this admin login.
-- The skill reads `LOKI_USERNAME` / `LOKI_PASSWORD` from the private PowerShell profile. Set them via `/octo-logs-setup`.
-- If clusters use distinct passwords, set per-cluster overrides `LOKI_USERNAME_<CLUSTER>` / `LOKI_PASSWORD_<CLUSTER>` (suffix = uppercase cluster with dashes removed, e.g. `LOKI_PASSWORD_PROD1`); the wrapper prefers those and falls back to the generic pair.
+Lines the collector could not parse arrive as `UNKNOWN`. Pods outside `octo`
+(mongodb, cratedb, ponton) often have no real severity — search the body
+(`otel.log.body matches "(?i)\\berror\\b"`) instead of filtering on severity.
+A DEBUG spam filter (`Dash0SpamFilter`) drops noisy DEBUG lines before storage;
+see "Cost control" in `docs/DASH0-OBSERVABILITY.md`.
 
 ## Retention
 
-- **~7 days per cluster** (Loki retention). Older lines are gone.
-- A single query may span at most ~30 days of time range (a separate server limit), so `--since` beyond ~30d errors out regardless.
-- For longer-lived history, dump before it ages out:
-  ```bash
-  bash run_logcli.sh test-2 query --since=24h --limit=10000 '{namespace="octo", level="ERROR"}' > errors.log
-  ```
-
-## logcli installation note
-
-The wiki's `brew install grafana/tap/logcli` formula no longer exists. Use:
-
-```bash
-brew install logcli
-```
+Set by the Dash0 dataset retention, not by the cluster. 7-day windows return
+data (checked 2026-10-08). Copy evidence you need longer into the work item.

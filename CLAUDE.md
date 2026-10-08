@@ -31,11 +31,11 @@ skills/
                                 docker.mm.cloud image push, test-2 context/tenant setup, kubectl-free verify
   octo-ck-miro/               — UML class diagrams of all Construction Kits on a Miro board, read from
                                 a given git branch of octo-construction-kit via `git show` (non-destructive)
-  octo-logs/                  — Reading/tracing deployed-cluster logs via Loki + logcli (LogQL, error
-                                rates, cross-deployment tracing). Creds come from the octo-tools profile.
-                                scripts/ = run_logcli.sh (bash) + _logcli.ps1 (profile load + UID discovery)
-  octo-logs-setup/            — Safe one-time setup of LOKI_USERNAME/PASSWORD in the private profile
-                                (sourced from Keeper/Vault); scripts/setup_loki_creds.sh (status|write)
+  octo-logs/                  — Reading/tracing deployed-cluster logs in Dash0 via the mcp__dash0__* tools
+                                (filters, D0QL error rates, cross-deployment tracing). No scripts, no creds.
+                                references/ = clusters.md (datasets, attributes) + d0ql-cheatsheet.md
+  octo-logs-setup/            — Setup / health check of the Dash0 MCP connection (claude mcp add + /mcp
+                                OAuth login). Loki/LOKI_* credentials are obsolete.
 ```
 
 ## Python Script Development
