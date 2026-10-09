@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.21.1] — 2026-10-09
+
+### Changed
+
+- **`octo-commit`** — product theme teams work without sprints: new work items stay on the project root iteration `OctoMesh`; iterations only for customer-project, sales and bizops teams. `AI Platform Team` added to the theme teams.
+
 ## [0.21.0] — 2026-10-08
 
 ### Changed

@@ -176,7 +176,9 @@ Present matching work items to the user with AskUserQuestion if multiple matches
    Maintenance or quality work without a real Feature goes to the team's current Sustain Feature,
    titled `Sustain Q<n>/<year> – <Team>`. A Task's parent is the User Story it belongs to.
 3. **Team / Area**: use the parent Feature's area path (one theme team per Feature)
-4. **Iteration**: list available iterations for the chosen team
+4. **Iteration**: none for product work — the product theme teams work without sprints (since 2026-10-09);
+   leave the iteration at the project root `OctoMesh`. Only customer-project, sales or bizops items may use
+   their team's iterations.
 
 ```bash
 # Open Features to choose a parent from (add a CONTAINS filter on the title to narrow down)
@@ -188,11 +190,11 @@ az boards query \
 ```
 
 **OctoMesh Azure DevOps teams** (use the exact names):
-- Theme teams (product work): `Core Platform Team`, `Studio UX Team`, `Platform Ops Team`, `Apps Team`, `Energy Solution Team`
+- Theme teams (product work, no sprints): `Core Platform Team`, `Studio UX Team`, `Platform Ops Team`, `Apps Team`, `Energy Solution Team`, `AI Platform Team`
 - Other teams: `Product Team` (portfolio view over all Product Team areas), `Solutions Team` (plural), `CustomerProjects Team`, `Sales Team`, `BizOps Team`
 
 ```bash
-# List available iterations for a team
+# List available iterations for a team (non-product teams only)
 az boards iteration team list \
   --team "Solutions Team" \
   --org https://dev.azure.com/meshmakers \
@@ -212,7 +214,7 @@ az boards work-item create \
   --type "User Story" \
   --title "<Outcome-style title, e.g. Tenant admin can revoke a service account>" \
   --area "<AreaPath of the parent Feature>" \
-  --iteration "<IterationPath>" \
+  --iteration "OctoMesh" \
   --fields "Microsoft.VSTS.Common.AcceptanceCriteria=<testable criteria>" \
   --org https://dev.azure.com/meshmakers \
   --project OctoMesh
