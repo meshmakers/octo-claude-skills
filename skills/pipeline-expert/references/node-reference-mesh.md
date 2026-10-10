@@ -320,7 +320,7 @@ Create `AssociationUpdateInfo` for creating or deleting associations between ent
 
 ### CreateFileSystemUpdate@1
 
-Create file system items with binary content.
+Create file system items with binary content. The file is created as `System.Files/FileSystemItem` under the `System.Files/FolderRoot` with the given well-known name. While a tenant is not migrated yet (file entities still `System.Reporting`), the root is looked up in `System.Reporting/FolderRoot` as fallback and the item is created as `System.Reporting/FileSystemItem`; pipeline configuration is identical. The result written to `targetPath` carries the `ckTypeId` actually used.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -333,9 +333,23 @@ Create file system items with binary content.
 | `contentTypePath` | string | optional | JSONPath to content type |
 | `contentLength` | long | optional | Static content length |
 | `contentLengthPath` | string | optional | JSONPath to length |
-| `rootFolderWellKnownName` | string | required | Root folder reference |
+| `rootFolderWellKnownName` | string | required | Well-known name of the folder root (`System.Files/FolderRoot`, fallback `System.Reporting/FolderRoot`) |
 | `path` | string | `$` | Source path for base64 content (inherited) |
 | `targetPath` | string | required | Where to write result |
+
+### GetFileSystemContent@1
+
+Read the bytes of a stored file back into the pipeline (read counterpart of `CreateFileSystemUpdate@1`). Looks the item up as `System.Files/FileSystemItem` first and falls back to `System.Reporting/FileSystemItem` while the tenant is not migrated yet.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `rtIdPath` | string | required | JSONPath to the RtId of the file item |
+| `targetPath` | string | required | Where to write the base64 content |
+| `fileNameTargetPath` / `contentTypeTargetPath` / `contentLengthTargetPath` | string | optional | Where to write file name, content type, byte length |
+
+### CreateZipArchive@1 (persist mode)
+
+With `persistAsFileSystemItem: true` the ZIP is stored as a file item and its RtId (string) is written to `targetPath`. Props: `rootFolderWellKnownName` (required, folder root: `System.Files/FolderRoot`, fallback `System.Reporting/FolderRoot`), `fileName`/`fileNamePath`, `contentType` (default `application/zip`), `generateRtId` (default true). Type resolution is identical to `CreateFileSystemUpdate@1`.
 
 ### DataMapping@1
 
@@ -902,7 +916,7 @@ Deploy another pipeline **within the same DataFlow** to its assigned adapter, vi
 
 ### ToDiscord@1
 
-Post a message, embed, and/or single file attachment to a Discord channel via the Bot API, using a `DiscordConfiguration` CK entity (bot token + optional guild id) resolved by name. Threads are channels — pass a thread snowflake as `channelId` to post into a thread. **Prerequisite:** a `System.Communication/DiscordConfiguration` entity (and `System.Reporting` loaded when sending attachments). Most fields follow the `{Field}` + `{Field}Path` convention (the `*Path` variant reads from the data context).
+Post a message, embed, and/or single file attachment to a Discord channel via the Bot API, using a `DiscordConfiguration` CK entity (bot token + optional guild id) resolved by name. Threads are channels — pass a thread snowflake as `channelId` to post into a thread. **Prerequisite:** a `System.Communication/DiscordConfiguration` entity (and `System.Files` loaded when sending attachments; `System.Reporting` works as fallback on a tenant that is not migrated yet). Most fields follow the `{Field}` + `{Field}Path` convention (the `*Path` variant reads from the data context).
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -912,7 +926,7 @@ Post a message, embed, and/or single file attachment to a Discord channel via th
 | `embedTitle` / `embedTitlePath` | string | optional | Embed title |
 | `embedDescription` / `embedDescriptionPath` | string | optional | Embed description |
 | `embedColor` (int) / `embedColorPath` | — | optional | Embed color (24-bit RGB int; path accepts `0xRRGGBB`/`#RRGGBB`/decimal) |
-| `attachmentFileSystemItemRtId` / `…Path` | string | optional | RtId of a `System.Reporting/FileSystemItem` to attach (the bound binary is posted — **not** a raw binary RtId) |
+| `attachmentFileSystemItemRtId` / `…Path` | string | optional | RtId of a `System.Files/FileSystemItem` (fallback `System.Reporting/FileSystemItem`) to attach (the bound binary is posted — **not** a raw binary RtId) |
 | `attachmentFilename` / `attachmentFilenamePath` | string | optional | Override the sent filename |
 | `mentionPolicy` | enum | `None` | `None`/`Users`/`Roles`/`UsersAndRoles`/`All`/`Custom` — controls which mentions can ping |
 | `allowedMentionsPath` | string | optional | Raw Discord `allowed_mentions` object (only when `mentionPolicy: Custom`) |
