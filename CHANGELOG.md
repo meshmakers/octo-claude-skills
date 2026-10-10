@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Changed
+
+- **`pipeline-expert`** — file nodes (AB#6177): `CreateFileSystemUpdate@1`, `CreateZipArchive@1` (persist mode), `GetFileSystemContent@1` and `ToDiscord@1` attachments use `System.Files/FileSystemItem` / `System.Files/FolderRoot`, with `System.Reporting` as transition fallback on tenants that are not migrated yet; pipeline configuration (`rootFolderWellKnownName`) is unchanged. Added reference entries for `GetFileSystemContent@1` and the `CreateZipArchive@1` persist mode.
+
 ## [0.21.1] — 2026-10-09
 
 ### Changed
