@@ -112,7 +112,7 @@ When builds are broken or stale:
 
 ## 8. Switch Environment (CLI Auth)
 
-`Register-OctoCliContext` is the recommended unified path for all installations (uses the current `*.octo-mesh.com` cluster domains):
+`Register-OctoCliContext` is the recommended unified path for all installations (uses the current ``<staging/prod domains>`` cluster domains):
 
 ```
 # Local
@@ -128,7 +128,7 @@ Register-OctoCliContext -Installation staging-1 -TenantId meshtest
 Register-OctoCliContext -Installation prod-1 -TenantId meshmakers
 ```
 
-The older per-environment cmdlets still work; `Invoke-OctoCliLoginStaging` / `Invoke-OctoCliLoginProduction` are **legacy** (old `*.meshmakers.cloud` domains):
+The older per-environment cmdlets still work; `Invoke-OctoCliLoginStaging` / `Invoke-OctoCliLoginProduction` are **legacy** (old `*.<legacy-domain>` domains):
 
 ```
 Invoke-OctoCliLoginLocal              # -tenantId (default meshtest), -includeReporting

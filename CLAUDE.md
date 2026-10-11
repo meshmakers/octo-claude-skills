@@ -28,7 +28,7 @@ skills/
   octo-app-builder/           — End-to-end OctoMesh app building: CK model → catalog → blueprint →
                                 HTTP-API pipelines → operator-deployed Application workload
   octo-deploy/                — Promotion local → test-2: shared-catalog publishing (octo-ckc/octo-bpm),
-                                docker.mm.cloud image push, test-2 context/tenant setup, kubectl-free verify
+                                <registry> image push, test-2 context/tenant setup, kubectl-free verify
   octo-ck-miro/               — UML class diagrams of all Construction Kits on a Miro board, read from
                                 a given git branch of octo-construction-kit via `git show` (non-destructive)
   octo-logs/                  — Reading/tracing deployed-cluster logs in Dash0 via the mcp__dash0__* tools

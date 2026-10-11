@@ -1,5 +1,7 @@
 # Publishing artifacts for test-2 — catalogs, registry, CI lane
 
+> **Hostnames are placeholders.** The concrete domains of the shared environments (`<test-2-domain>`, `<staging-domain>`, `<prod-1-domain>`, `<prod-2-domain>`, `<legacy-domain>`, `<registry>`, `<rancher-url>`) are internal. If the plugin `octo-claude-pm` is installed, see its `agent-operating-rules/references/environments.md`; otherwise ask a colleague.
+
 How the three promotable artifacts (CK model, blueprint, app image) reach
 infrastructure the test-2 services can read. Verified 2026-06-10 against
 octo-ckc/octo-bpm help + engine source (`GitHubCatalog.cs`,
@@ -76,12 +78,12 @@ restart — `InstallBlueprint -b <id> -f` fetches blueprint.yaml/seed-data live
 from GitHub Pages (≤1 min Pages deploy lag). The local cache-file-delete trick
 from local development does not apply to test-2.
 
-## App image → docker.mm.cloud
+## App image → <registry>
 
 ```powershell
-# Tailscale first when off-site! Probe: curl -skI https://docker.mm.cloud/v2/  -> 200
-docker build -t docker.mm.cloud/meshmakers/<app>:<tag> .\app
-docker push docker.mm.cloud/meshmakers/<app>:<tag>
+# Tailscale first when off-site! Probe: curl -skI https://<registry>/v2/  -> 200
+docker build -t <registry>/meshmakers/<app>:<tag> .\app
+docker push <registry>/meshmakers/<app>:<tag>
 ```
 
 - `<tag>` must equal the tag pinned in the blueprint seed's ValuesYaml
@@ -89,7 +91,7 @@ docker push docker.mm.cloud/meshmakers/<app>:<tag>
   `main-latest` + `pullPolicy: Always` pattern is for core services only.
 - Repository path convention: `meshmakers/<app-name>`.
 - Do NOT set `image.privateRegistry` in the seed — the operator injects
-  `docker.mm.cloud` on test-2 (cluster values: `operator.imageRegistry`).
+  `<registry>` on test-2 (cluster values: `operator.imageRegistry`).
 - Cluster nodes pull without per-pod imagePullSecrets (node-level containerd
   config / open internal registry). A locally built `linux/amd64` image is fine
   for test-2; CI builds multi-arch via buildx.

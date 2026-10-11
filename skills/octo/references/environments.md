@@ -1,36 +1,42 @@
 # OctoMesh Environment URL Mappings
 
-These mappings mirror the `Register-OctoCliContext` cmdlet in the OctoMesh developer shell, which is the source of truth for the known installations: `local`, `test-2`, `staging-1`, `prod-1`, `prod-2`. The newer cluster installations use `*.octo-mesh.com` domains; the older `*.meshmakers.cloud` domains are still valid as legacy production/staging.
+These mappings mirror the `Register-OctoCliContext` cmdlet in the OctoMesh developer shell, which is the source of truth for the known installations: `local`, `test-2`, `staging-1`, `prod-1`, `prod-2`.
+
+> **Hostnames are placeholders.** The concrete domains of the shared environments (`<test-2-domain>`, `<staging-domain>`, `<prod-1-domain>`, `<prod-2-domain>`, `<legacy-domain>`, `<registry>`, `<rancher-url>`) are internal. If the plugin `octo-claude-pm` is installed, see its `agent-operating-rules/references/environments.md`; otherwise ask a colleague.
 
 ## Environment Service URLs
 
-| Installation | Identity (`-isu`) | Asset (`-asu`) | Bot (`-bsu`) | Communication (`-csu`) | Reporting (`-rsu`) | AI (`-aisu`) |
-|---|---|---|---|---|---|---|
-| local | `https://localhost:5003/` | `https://localhost:5001/` | `https://localhost:5009/` | `https://localhost:5015/` | `https://localhost:5007/` | `https://localhost:5019/` |
-| test-2 | `https://connect.test-2.mm.cloud/` | `https://assets.test-2.mm.cloud/` | `https://bots.test-2.mm.cloud/` | `https://communication.test-2.mm.cloud/` | `https://reporting.test-2.mm.cloud/` | `https://ai.test-2.mm.cloud/` |
-| staging-1 | `https://connect.staging.octo-mesh.com/` | `https://assets.staging.octo-mesh.com/` | `https://bots.staging.octo-mesh.com/` | `https://communication.staging.octo-mesh.com/` | `https://reporting.staging.octo-mesh.com/` | `https://ai.staging.octo-mesh.com/` |
-| prod-1 (Exoscale SKS Vienna) | `https://connect.prod-1.octo-mesh.com/` | `https://assets.prod-1.octo-mesh.com/` | `https://bots.prod-1.octo-mesh.com/` | `https://communication.prod-1.octo-mesh.com/` | `https://reporting.prod-1.octo-mesh.com/` | `https://ai.prod-1.octo-mesh.com/` |
-| prod-2 (Azure AKS) | `https://connect.prod-2.octo-mesh.com/` | `https://assets.prod-2.octo-mesh.com/` | `https://bots.prod-2.octo-mesh.com/` | `https://communication.prod-2.octo-mesh.com/` | `https://reporting.prod-2.octo-mesh.com/` | `https://ai.prod-2.octo-mesh.com/` |
+Every installation except `local` exposes the services as `https://<service>.<installation-domain>/`:
 
-### Legacy domains (still valid)
+| Service | Host prefix | AddContext flag |
+|---|---|---|
+| Identity | `connect` | `-isu` |
+| Asset | `assets` | `-asu` |
+| Bot | `bots` | `-bsu` |
+| Communication | `communication` | `-csu` |
+| Reporting | `reporting` | `-rsu` |
+| AI | `ai` | `-aisu` |
 
-| Installation | Identity | Asset | Communication |
-|---|---|---|---|
-| staging (legacy) | `https://connect.staging.meshmakers.cloud/` | `https://assets.staging.meshmakers.cloud/` | `https://communication.staging.meshmakers.cloud/` |
-| production (legacy) | `https://connect.meshmakers.cloud` | `https://assets.meshmakers.cloud/` | `https://communication.meshmakers.cloud/` |
+| Installation | Domain placeholder |
+|---|---|
+| local | `localhost` — Identity `https://localhost:5003/`, Asset `5001`, Bot `5009`, Communication `5015`, Reporting `5007`, AI `5019` |
+| test-2 | `<test-2-domain>` |
+| staging-1 | `<staging-domain>` |
+| prod-1 | `<prod-1-domain>` |
+| prod-2 | `<prod-2-domain>` |
 
-The `Invoke-OctoCliLoginProduction` / `Invoke-OctoCliLoginStaging` cmdlets still point at these legacy `*.meshmakers.cloud` domains; prefer `Register-OctoCliContext -Installation prod-1|prod-2|staging-1` for the current clusters.
+Older installations on a legacy domain (`<legacy-domain>`) may still exist; the `Invoke-OctoCliLoginProduction` / `Invoke-OctoCliLoginStaging` cmdlets point at them. Prefer `Register-OctoCliContext -Installation prod-1|prod-2|staging-1` for the current clusters.
 
-## URI Suffix (test-2 and the *.octo-mesh.com clusters)
+## URI Suffix (test-2 and the shared clusters)
 
 `Register-OctoCliContext -UriSuffix <suffix>` produces variant deployments by inserting `-<suffix>` into each service host (and `_<suffix>` into the context name). For test-2:
 ```
-https://connect-<suffix>.test-2.mm.cloud/
-https://assets-<suffix>.test-2.mm.cloud/
-https://bots-<suffix>.test-2.mm.cloud/
-https://communication-<suffix>.test-2.mm.cloud/
-https://reporting-<suffix>.test-2.mm.cloud/
-https://ai-<suffix>.test-2.mm.cloud/
+https://connect-<suffix>.<test-2-domain>/
+https://assets-<suffix>.<test-2-domain>/
+https://bots-<suffix>.<test-2-domain>/
+https://communication-<suffix>.<test-2-domain>/
+https://reporting-<suffix>.<test-2-domain>/
+https://ai-<suffix>.<test-2-domain>/
 ```
 The same `-<suffix>` insertion applies to `staging-1`, `prod-1`, and `prod-2` hosts.
 
@@ -49,20 +55,20 @@ octo-cli -c LogIn -i --context local_meshtest
 
 ### Switch to test-2
 ```bash
-octo-cli -c AddContext -n test-2_meshtest -isu "https://connect.test-2.mm.cloud/" -asu "https://assets.test-2.mm.cloud/" -bsu "https://bots.test-2.mm.cloud/" -csu "https://communication.test-2.mm.cloud/" -tid meshtest
+octo-cli -c AddContext -n test-2_meshtest -isu "https://connect.<test-2-domain>/" -asu "https://assets.<test-2-domain>/" -bsu "https://bots.<test-2-domain>/" -csu "https://communication.<test-2-domain>/" -tid meshtest
 octo-cli -c LogIn -i --context test-2_meshtest
 ```
 
 ### Switch to staging-1
 ```bash
-octo-cli -c AddContext -n staging-1_meshtest -isu "https://connect.staging.octo-mesh.com/" -asu "https://assets.staging.octo-mesh.com/" -bsu "https://bots.staging.octo-mesh.com/" -csu "https://communication.staging.octo-mesh.com/" -tid meshtest
+octo-cli -c AddContext -n staging-1_meshtest -isu "https://connect.<staging-domain>/" -asu "https://assets.<staging-domain>/" -bsu "https://bots.<staging-domain>/" -csu "https://communication.<staging-domain>/" -tid meshtest
 octo-cli -c LogIn -i --context staging-1_meshtest
 ```
 
 ### Switch to prod-1 / prod-2
 ```bash
-# prod-1 (substitute prod-2 for the Azure AKS cluster)
-octo-cli -c AddContext -n prod-1_meshmakers -isu "https://connect.prod-1.octo-mesh.com/" -asu "https://assets.prod-1.octo-mesh.com/" -bsu "https://bots.prod-1.octo-mesh.com/" -csu "https://communication.prod-1.octo-mesh.com/" -tid meshmakers
+# prod-1 (substitute prod-2 for the second production cluster)
+octo-cli -c AddContext -n prod-1_meshmakers -isu "https://connect.<prod-1-domain>/" -asu "https://assets.<prod-1-domain>/" -bsu "https://bots.<prod-1-domain>/" -csu "https://communication.<prod-1-domain>/" -tid meshmakers
 octo-cli -c LogIn -i --context prod-1_meshmakers
 ```
 
@@ -70,7 +76,7 @@ octo-cli -c LogIn -i --context prod-1_meshmakers
 Add `-rsu` and/or `-aisu` to the `AddContext` command:
 ```bash
 # Example for test-2 with reporting + AI
-octo-cli -c AddContext -n test-2_meshtest -isu "https://connect.test-2.mm.cloud/" -asu "https://assets.test-2.mm.cloud/" -bsu "https://bots.test-2.mm.cloud/" -csu "https://communication.test-2.mm.cloud/" -rsu "https://reporting.test-2.mm.cloud/" -aisu "https://ai.test-2.mm.cloud/" -tid meshtest
+octo-cli -c AddContext -n test-2_meshtest -isu "https://connect.<test-2-domain>/" -asu "https://assets.<test-2-domain>/" -bsu "https://bots.<test-2-domain>/" -csu "https://communication.<test-2-domain>/" -rsu "https://reporting.<test-2-domain>/" -aisu "https://ai.<test-2-domain>/" -tid meshtest
 octo-cli -c LogIn -i --context test-2_meshtest
 ```
 
@@ -96,9 +102,8 @@ octo-cli -c AuthStatus --context local_meshtest   # verify the token is still va
 | URL Pattern | Installation |
 |---|---|
 | `localhost:500x` | local |
-| `*.test-2.mm.cloud` | test-2 |
-| `*.staging.octo-mesh.com` | staging-1 |
-| `*.prod-1.octo-mesh.com` | prod-1 (Exoscale SKS Vienna) |
-| `*.prod-2.octo-mesh.com` | prod-2 (Azure AKS) |
-| `*.staging.meshmakers.cloud` | staging (legacy domain) |
-| `*.meshmakers.cloud` (no staging/test prefix) | production (legacy domain) |
+| `*.<test-2-domain>` | test-2 |
+| `*.<staging-domain>` | staging-1 |
+| `*.<prod-1-domain>` | prod-1 |
+| `*.<prod-2-domain>` | prod-2 |
+| `*.<legacy-domain>` | legacy staging / production domains |
