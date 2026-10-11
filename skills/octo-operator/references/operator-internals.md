@@ -76,7 +76,7 @@ For central deployment, the operator also needs RabbitMQ connectivity to receive
 | Layer | Type | Responsibility |
 |-------|------|----------------|
 | `Helm/HelmProcessInvoker` (`IHelmProcessInvoker`) | low-level | `System.Diagnostics.Process` wrapper around the `helm` binary on PATH. Captures stdout/stderr, masks `--username`/`--password` in the debug log line. On `OperationCanceledException` does `process.Kill(entireProcessTree: true)` (kubectl/registry helpers fork as children). |
-| `Helm/HelmRunner` (`IHelmRunner`) | high-level | `EnsureRepoAsync` (idempotent `helm repo add --force-update` + `helm repo update`), `UpgradeInstallAsync` (`-f`, `--set`, `--atomic`), `UpgradeInstallDryRunAsync` (same minus `--atomic`, plus `--dry-run=server`), `UninstallAsync` (`--ignore-not-found`). Non-zero exit → `HelmException` with full stderr. Omits `--version` when the value is blank/whitespace. |
+| `Helm/HelmRunner` (`IHelmRunner`) | high-level | `EnsureRepoAsync` (idempotent `helm repo add --force-update` + `helm repo update`), `UpgradeInstallAsync` (`-f`, `--set`, `--atomic`, optional `--description` = `octo-deploy:<fingerprint>` stamp), `UpgradeInstallDryRunAsync` (same minus `--atomic`, plus `--dry-run=server`), `UninstallAsync` (`--ignore-not-found`). Non-zero exit → `HelmException` with full stderr. Omits `--version` when the value is blank/whitespace. |
 | `Reconcilers/WorkloadContextValuesBuilder` | builder | `OperatorOptions` + workload identity (`tenantId`, `adapterRtId` from `WorkloadRtId`) → `values-context.yaml`. Only set fields are projected; empty options → null/no layer. **No secrets.** |
 | `Reconcilers/WorkloadOverrideYamlBuilder` | builder | `ValueOverride[]` → `values-overrides.yaml`. Secret entries → `valueFrom: secretKeyRef` envelope on `{release}-octo-secrets`; non-secret → literals; dotted paths → nested maps. |
 | `Reconcilers/WorkloadReconciler` | orchestrator | `ReconcileSecretAsync` → `EnsureRepoAsync` (alias = short SHA-1 of repo URL, stable/idempotent) → write up to 3 values files (context → base → overrides) → `helm upgrade --install {tenant}-{workload} {alias}/{chart}` → temp cleanup. |
@@ -123,15 +123,18 @@ Pure-logic + callback surfaces:
 - `Services/OperatorHubServiceTests` — `TenantCreatedAsync`/`TenantDeletedAsync` delegate to `ICommunicationPoolManager` and swallow exceptions.
 
 Reconcilers + resource managers (mocked at the abstraction boundary):
-- `Helm/HelmRunnerTests` — argument construction for repo-add (with/without auth), upgrade-install (files + `--set` escaping), dry-run (`--dry-run=server` present, `--atomic` absent, operation tag flags pre-flight failures), uninstall; non-zero exit → `HelmException`.
+- `Helm/HelmRunnerTests` — argument construction (`--description` only when set, history parse incl. description), for repo-add (with/without auth), upgrade-install (files + `--set` escaping), dry-run (`--dry-run=server` present, `--atomic` absent, operation tag flags pre-flight failures), uninstall; non-zero exit → `HelmException`.
 - `Diagnostics/WorkloadDiagnosticsCollectorTests` — `FormatPodStates`/`FormatWarningEvents`: ImagePullBackOff surfaced, benign waiting states (`ContainerCreating`/`PodInitializing`) suppressed, init-container failures tagged `initContainer`, terminated exit codes reported, unrelated events excluded, duplicates deduped.
 - `Reconcilers/WorkloadReconcilerTests/DeployAsyncTests` — secret materialization (create/replace/cleanup-on-empty), repo registration with optional auth, upgrade with correct release/chart-ref/values-file count; dry-run **before** real install (`Received.InOrder`); dry-run failure skips real install; real-install failure invokes diagnostics; collector output merged into rethrown `HelmException.StdErr`; empty diagnostics → original rethrown; file ordering (context → base → overrides) when operator context set.
+- `Reconcilers/WorkloadReconcilerTests/DuplicateDispatchTests` (AB#6471) — identical concurrent request joins and shares the result/exception; different request waits then deploys; other releases not serialised; reconciliation with a `deployed` newest revision and the same `octo-deploy:` stamp runs no helm; missing/other stamp, `failed`, unreadable history deploy; user-triggered deploy never skips.
 - `Reconcilers/WorkloadReconcilerTests/UndeployAsyncTests` — `helm uninstall`, secret-cleanup branches.
 - `Reconcilers/WorkloadReconcilerTests/WorkloadOverrideYamlBuilderTests` — plain values, secret references, deep nesting, plaintext never in output for secret entries.
 - `Reconcilers/WorkloadReconcilerTests/WorkloadContextValuesBuilderTests` — empty options → null, partial → only set keys, full → complete YAML with cluster deps + ingress annotations.
 - `Services/CommunicationPoolManagerTests/` — auto-create/delete CR + broker secret, idempotency, CR/Secret content. Mocks `ICommunicationPoolKubernetesGateway`.
 - `Services/OperatorHubServiceTests/ExecuteAsyncTests` — early-return paths, client creation, on-connect registration + per-tenant pool creation, clean shutdown. Mocks `IOperatorHubClientFactory`.
 - `Services/OperatorHubServiceTests/ReverseSyncTests` — Cloud with owned pools sends report; edge does NOT; empty owned-pool list skips; `ReportDeployedStateAsync` failure logged not crashing.
+
+**Kind E2E** (skips unless `OCTO_OPERATOR_E2E_KUBECONTEXT` is set; needs helm ≥ 4): `E2E/ControllerRestartRedispatchKindE2ETests` (AB#6471) asserts one helm revision per request carrying the stamp, final `Deployed` status and that a user-triggered redeploy still deploys; `OCTO_OPERATOR_E2E_LEGACY=1` only prints the outcome.
 
 **Not unit-tested** (thin pass-throughs, covered by E2E): `CommunicationPoolKubernetesGateway` itself, `OperatorHubClientFactory`.
 
