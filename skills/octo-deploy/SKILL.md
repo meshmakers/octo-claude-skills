@@ -75,8 +75,8 @@ docker push docker.mm.cloud/meshmakers/<app>:<tag>
 **A premature publish** can be withdrawn: `octo-ckc -c Unpublish -m <model> -ve <version> -cn <catalog>`
 is a dry run (shows the dependents that block it); `-f` applies, and the public catalog also needs
 `-rs "<reason>"`. The version number is burned (never publishable again), so the fix is the next free
-number. Withdrawing from a shared catalog needs the developer's explicit go. Rules:
-`octo-construction-kit-engine/docs/ck-semver-rules.md`, "Withdrawing a published version".
+number. Withdrawing from a shared catalog needs the developer's explicit go. Details: the
+documentation page "Versioning rules" (Construction Kits), section "Withdrawing a published version".
 
 `octo-ckc`/`octo-bpm` are build outputs of `octo-construction-kit-engine`
 (`bin/DebugL/net10.0/`), not on PATH. The pushed image tag must equal the tag
