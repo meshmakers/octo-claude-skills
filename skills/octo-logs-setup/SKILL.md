@@ -1,34 +1,40 @@
 ---
 name: octo-logs-setup
-description: "One-time setup and health check of the Dash0 MCP connection that /octo-logs relies on to read OctoMesh cluster logs (datasets test-2, staging-1, prod-1, prod-2). Registers the Dash0 MCP server in Claude Code, walks through the browser OAuth login via /mcp, and verifies access with listDatasets. Replaces the former Loki credential setup (LOKI_USERNAME / LOKI_PASSWORD) — Loki no longer exists; old LOKI_* variables can be deleted from the private profile. Run this when the mcp__dash0__* tools are missing or return auth errors. Trigger on: set up log access, configure log access, octo-logs setup, Dash0 MCP, dash0 tools missing, mcp__dash0 not available, Dash0 login, Dash0 auth, log credentials missing, LOKI_USERNAME, LOKI_PASSWORD, logcli auth."
+description: "One-time setup and health check of the Dash0 MCP connection that /octo-logs relies on to read OctoMesh cluster logs. Walks through registering the Dash0 MCP server in Claude Code, the browser OAuth login via /mcp, and verifies access with listDatasets. Replaces the former Loki credential setup (LOKI_USERNAME / LOKI_PASSWORD) — Loki no longer exists; old LOKI_* variables can be deleted from the private profile. Run this when the mcp__dash0__* tools are missing or return auth errors. Trigger on: set up log access, configure log access, octo-logs setup, Dash0 MCP, dash0 tools missing, mcp__dash0 not available, Dash0 login, Dash0 auth, log credentials missing, LOKI_USERNAME, LOKI_PASSWORD, logcli auth."
 ---
 
 # OctoMesh Log Access — Dash0 MCP Setup
 
 ## Overview
 
-`/octo-logs` reads cluster logs exclusively through the **Dash0 MCP server**
-(`mcp__dash0__*` tools). There are no log credentials to store any more: the MCP
+`/octo-logs` reads logs exclusively through the **Dash0 MCP server**
+(`mcp__dash0__*` tools). There are no log credentials to store: the MCP
 connection authenticates with Dash0 via OAuth in the browser, and Claude Code
 keeps the token. Loki/logcli and the `LOKI_USERNAME` / `LOKI_PASSWORD` variables
-are obsolete (Loki was removed from all clusters, AB#6116).
+are obsolete.
+
+**Internal details** — the MCP endpoint URL of the organization, the Dash0
+organization to log in to, the datasets: if the plugin `octo-claude-pm` is
+installed, its internal reference `agent-operating-rules/references/dash0.md`
+holds them. This public plugin deliberately contains none. Without that plugin,
+ask a colleague or your Dash0 administrator for the MCP endpoint.
 
 ## Step 1 — check whether the tools are already there
 
-Call `mcp__dash0__listDatasets`. Expected datasets: `test-2`, `staging-1`,
-`prod-1`, `prod-2` (plus an empty `default`).
+Call `mcp__dash0__listDatasets`.
 
-- Works → setup is done, go back to `/octo-logs`.
+- Works and returns datasets → setup is done, go back to `/octo-logs`.
 - Tool unknown / not listed → Step 2.
 - Auth error → Step 3.
 
 ## Step 2 — register the Dash0 MCP server (user runs this)
 
-The OctoMesh org uses the EU endpoint. Register it for the monorepo workspace
-(or with `--scope user` for all projects):
+Register the MCP server for the workspace (or with `--scope user` for all
+projects). `<mcp-endpoint>` is the HTTP MCP URL of your organization's Dash0
+region (see the internal reference):
 
 ```bash
-claude mcp add --transport http --scope local dash0 https://api.europe-west4.gcp.dash0.com/mcp
+claude mcp add --transport http --scope local dash0 <mcp-endpoint>
 ```
 
 Then restart the Claude Code session so the tools load.
@@ -36,16 +42,17 @@ Then restart the Claude Code session so the tools load.
 ## Step 3 — log in
 
 In Claude Code run `/mcp`, select **dash0** and choose *Authenticate*. The browser
-opens the Dash0 login (meshmakers org). After the redirect the server shows as
-connected. The assistant cannot do this step — ask the user.
+opens the Dash0 login of your organization. After the redirect the server shows
+as connected. The assistant cannot do this step — ask the user.
 
 ## Step 4 — verify
 
-`mcp__dash0__listDatasets`, then a minimal query:
+`mcp__dash0__listDatasets`, then a minimal query against one of the returned
+datasets:
 
 ```json
 mcp__dash0__getLogRecords {
-  "dataset": "test-2",
+  "dataset": "<dataset>",
   "timeRange": {"from": "now-15m", "to": "now"},
   "filters": [{"key": "k8s.namespace.name", "value": "octo"}],
   "pagination": {"limit": 3}
@@ -57,12 +64,6 @@ Lines come back → `/octo-logs` is ready.
 ## Cleanup of the old Loki setup (optional)
 
 Earlier versions of this skill wrote `LOKI_USERNAME` / `LOKI_PASSWORD` (and
-per-cluster `LOKI_*_<CLUSTER>` variants) into the private PowerShell profile
-(`~/.config/powershell/Microsoft.PowerShell_profile_private.ps1` on macOS,
-`~/.pwsh/profile.ps1` elsewhere). They are no longer read by anything. The user
-can remove those lines; the assistant must not print the file (it holds other
-secrets) — at most list matching variable **names**:
-
-```bash
-grep -o '\$env:LOKI_[A-Z0-9_]*' ~/.config/powershell/Microsoft.PowerShell_profile_private.ps1 | sort -u
-```
+per-cluster `LOKI_*_<CLUSTER>` variants) into a private PowerShell profile. They
+are no longer read by anything. The user can remove those lines; the assistant
+must not print the profile (it holds other secrets).
