@@ -72,9 +72,8 @@ If not authenticated: inform the user and offer to run `octo-cli -c LogIn -i` (i
 | `*.<staging-domain>` | staging-1 |
 | `*.<prod-1-domain>` | prod-1 |
 | `*.<prod-2-domain>` | prod-2 |
-| `*.<legacy-domain>` | legacy staging / production domains |
 
-> **Hostnames are placeholders.** The concrete domains of the shared environments (`<test-2-domain>`, `<staging-domain>`, `<prod-1-domain>`, `<prod-2-domain>`, `<legacy-domain>`, `<registry>`, `<rancher-url>`) are internal. If the plugin `octo-claude-pm` is installed, see its `agent-operating-rules/references/environments.md`; otherwise ask a colleague.
+> Hostnames are placeholders (`<test-2-domain>`, `<staging-domain>`, …): with `octo-claude-pm` installed see its `agent-operating-rules/references/environments.md`.
 
 ## Invocation Syntax
 
