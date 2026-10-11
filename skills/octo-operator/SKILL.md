@@ -57,6 +57,13 @@ For multiple edge operators on one cluster, each must set `OPERATOR__WATCHNAMESP
 4. `WorkloadReconciler` materializes secret-flagged values into an operator-owned `Secret`, ensures the chart repo, then runs `helm upgrade --install` (preceded by a dry-run pre-flight — see below).
 5. On pool deletion, matching `WorkloadUndeployedAsync` events trigger `helm uninstall` per release.
 
+**Idempotent dispatch (AB#6471).** After a controller restart or a pool re-register, the controller re-dispatches every workload still `Pending` (`IsReconciliation=true`). It cannot tell a lost dispatch from a deploy the operator is still running or has finished with the report lost into the dead connection, so `WorkloadReconciler.DeployAsync` dedupes (`DeployCoreAsync` does the real work):
+
+- **Single-flight per release:** an identical request (same desired-state fingerprint) joins the running deploy and shares its outcome (success or the same exception) — no second helm process, no "already in progress" error. A different request for the same release waits, then deploys. Other releases run in parallel.
+- **Stamp:** every successful `helm upgrade` writes `--description octo-deploy:<fingerprint>` into the revision (visible in `helm history`; durable across operator restarts). The fingerprint is a truncated SHA-256 of the request DTO without `IsReconciliation`, plus the operator's context layer; secret values are hashed, never stored beside it.
+- **Skip:** a reconciliation whose release's newest revision is `deployed` **and** carries the same stamp runs no helm and reports success from the real release state. A missing or different stamp, status `failed`, or unreadable history all deploy as before. A user-triggered deploy never skips.
+- Wire-compatible (no hub contract change); an older (edge) operator keeps the old behaviour until it is updated.
+
 **Soft-failure on unregister:** `PoolService.UnRegisterPoolAsync` (from `CommunicationPoolController.DeletedAsync`) treats any `HubException` from the controller as a soft failure — logs only. The CR is already gone when `DeletedAsync` fires and the tenant may no longer exist controller-side; re-throwing would trap the entity in the KubeOps retry queue forever. The local connection is stopped and the pool removed regardless.
 
 ## Helm Values Layering Model
@@ -96,11 +103,13 @@ Three mechanisms surface the real failure reason behind `helm upgrade --install 
 
 **Cancellable deploys:** `WorkloadReconciler._inFlightDeploys` tracks running deploys by release. `UndeployAsync` cancels an in-flight deploy's CTS, waits a 2s grace for atomic rollback, then `helm uninstall --ignore-not-found`. Cancellation works end-to-end only because `HelmProcessInvoker.InvokeAsync` does `process.Kill(entireProcessTree: true)` on cancel — `WaitForExitAsync(ct)` alone leaves helm holding the release lock.
 
+The in-flight tracking for cancellation (`_inFlightDeploys`) is separate from the single-flight map (`_deployFlights`) that dedupes dispatches (see Reconciliation Flow). The pre-flight dry-run and the watcher run only in the owner of a deploy — a joined request does neither. The stamp is passed as the `description` parameter of `IHelmRunner.UpgradeInstallAsync` (the dry-run passes none).
+
 Reconciler exceptions are **logged but not propagated** to the hub — one bad workload must not crash the SignalR connection.
 
 ## Reverse-Sync on Reconnect
 
-After re-registering owned CRs on reconnect, a **central** operator (`AutoManagePools=true`) calls `IOperatorHub.ReportDeployedStateAsync(reports)` to restore `DeploymentState=Deployed` on pools whose state drifted while offline. Two coupled paths run it: **bulk on reconnect** (`OperatorHubService.onReconnect`, covers controller-restart) and **per-pool on register** (`PoolService.RegisterPoolAsync`, covers operator-restart race where KubeOps repopulates `_pools` after the bulk snapshot). Per-pool is idempotent (restore-only-when-changed). Edge operators skip it (controller rejects them); empty owned-pool list skips it; call failure is logged, not propagated. Workloads are **not yet** reverse-synced (no persistent helm-release→workload-rtId map survives a pod restart). See `docs/DEPLOYMENT-MANAGEMENT-CONCEPT.md` for the contract.
+After re-registering owned CRs on reconnect, a **central** operator (`AutoManagePools=true`) calls `IOperatorHub.ReportDeployedStateAsync(reports)` to restore `DeploymentState=Deployed` on pools whose state drifted while offline. Two coupled paths run it: **bulk on reconnect** (`OperatorHubService.onReconnect`, covers controller-restart) and **per-pool on register** (`PoolService.RegisterPoolAsync`, covers operator-restart race where KubeOps repopulates `_pools` after the bulk snapshot). Per-pool is idempotent (restore-only-when-changed). Edge operators skip it (controller rejects them); empty owned-pool list skips it; call failure is logged, not propagated. Workloads are **not yet** reverse-synced (no persistent helm-release→workload-rtId map survives a pod restart). Pending workloads are not part of this path: the controller re-dispatches them after the re-register, and the idempotent dispatch above (stamp + single-flight) keeps that re-dispatch from producing a second helm revision or an `Error` report. See `docs/DEPLOYMENT-MANAGEMENT-CONCEPT.md` for the contract.
 
 ## Key Testing Seams
 
@@ -110,10 +119,12 @@ The operator is built to be testable at abstraction boundaries, not against the 
 |------------------|----------|-------------------|
 | `ICommunicationPoolKubernetesGateway` | direct `IKubernetes` calls in `CommunicationPoolManager` | Six methods: `CommunicationPoolExistsAsync`, `CreateCommunicationPoolAsync`, `DeleteCommunicationPoolAsync`, `SecretExistsAsync`, `CreateSecretAsync`, `DeleteSecretAsync`. All k8s-SDK quirks (404→false, CRD group/version/plural constants) live in `CommunicationPoolKubernetesGateway`. **Add new k8s calls here — never reach back into `IKubernetes` from elsewhere.** |
 | `IOperatorHubClientFactory` | `new OperatorHubClient(...)` in `OperatorHubService.ExecuteAsync` | Produces an `IOperatorHubClient` (SDK type). Mock it to substitute the SignalR client. Prod wiring in `OperatorHubClientFactory` (singleton). |
-| `IHelmRunner` / `IHelmProcessInvoker` | the `helm` binary | High-level operations / low-level process wrapper. |
+| `IHelmRunner` / `IHelmProcessInvoker` | the `helm` binary | High-level operations / low-level process wrapper. `UpgradeInstallAsync` takes a `description` (stamp); `GetLatestReleaseRevisionAsync` returns `HelmReleaseRevision(Revision, Status, Description)` with `IsDeployed`. Mock these to test the stamp/skip logic (`DuplicateDispatchTests`). |
 | `IWorkloadDiagnosticsCollector` | k8s pod/event scraping | Pure formatters `FormatPodStates` / `FormatWarningEvents` exposed via `InternalsVisibleTo`. |
 
 **Test sync point for `OperatorHubService`:** use `client.When(c => c.EnableReconnect(...)).Do(_ => tcs.TrySetResult())` — once `EnableReconnect` ran, the connect callback finished and the service is parked in `Task.Delay(Infinite, ...)`. Asserting earlier races.
+
+**Dispatch dedupe tests:** `Reconcilers/WorkloadReconcilerTests/DuplicateDispatchTests` (join, wait, skip, no-skip cases) and `Helm/HelmRunnerTests` (`--description`, history parse). The kind E2E `E2E/ControllerRestartRedispatchKindE2ETests` runs the real reconciler, `HelmRunner` and helm 4 against kind (simulated controller restart with several workloads, one in flight, lost reports, user redeploy); it skips unless `OCTO_OPERATOR_E2E_KUBECONTEXT` is set (e.g. `kind-kind`), and `OCTO_OPERATOR_E2E_LEGACY=1` only prints the outcome as a counter-check against a build without the fix.
 
 `CommunicationPoolKubernetesGateway` itself and `OperatorHubClientFactory` are **not** unit-tested (thin pass-throughs, covered by E2E).
 
@@ -161,6 +172,10 @@ In-repo helpers (run via PowerShell): `src/scripts/Create-KindTestCluster.ps1` (
 In DEBUG/DEBUGL builds the operator auto-picks the first non-loopback IPv4 for its dev webhook endpoint and logs it (`Dev webhook endpoint: https://192.168.x.y:6001`). Override with `Operator:DevWebhookHost`/`Port` in `appsettings.Development.json` or `OCTO_OPERATOR__DEVWEBHOOKHOST`/`PORT`.
 
 Manual E2E runbook: `docs/E2E-SMOKE-TEST.md` (uses `Install-OctoKubernetes`, `Start-Octo`, `start-operator.ps1`).
+
+## Troubleshooting
+
+- **Two helm revisions per workload, or an `Error` report ("A deploy for release ... is already in progress") for a release helm has deployed, after a controller restart or pool re-register:** the operator is older than the AB#6471 fix (merge `a0fff62` of `octo-communication-operator`). Update the operator (edge operators separately); the controller needs no change. Check with `helm history <release>`: revisions of the fixed operator carry the description `octo-deploy:<fingerprint>`.
 
 ## octo-helm-core Charts
 

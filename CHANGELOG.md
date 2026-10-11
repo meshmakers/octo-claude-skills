@@ -4,8 +4,11 @@ All notable changes to the octo-claude-skills plugin. Format loosely follows [Ke
 
 ## [Unreleased]
 
+## [0.21.4] — 2026-10-11
+
 ### Changed
 
+- **`octo-operator`** — idempotent dispatch after a controller restart (AB#6471, operator PR #32 `a0fff62`, controller docs PR #52 `e609f3e`): single-flight `DeployAsync` per release, `octo-deploy:<fingerprint>` stamp in the helm revision description, reconciliations that helm already satisfies skip helm and report success, user deploys never skip. Updated the reconciliation flow, the pre-flight/watcher/cancellation section, the reverse-sync note, the test seams and the unit/E2E coverage map (`DuplicateDispatchTests`, `ControllerRestartRedispatchKindE2ETests`); added a troubleshooting note (double helm revisions or `Error` after a controller restart = operator older than the fix).
 - **`pipeline-expert`** — file nodes (AB#6177): `CreateFileSystemUpdate@1`, `CreateZipArchive@1` (persist mode), `GetFileSystemContent@1` and `ToDiscord@1` attachments use `System.Files/FileSystemItem` / `System.Files/FolderRoot`, with `System.Reporting` as transition fallback on tenants that are not migrated yet; pipeline configuration (`rootFolderWellKnownName`) is unchanged. Added reference entries for `GetFileSystemContent@1` and the `CreateZipArchive@1` persist mode.
 
 ## [0.21.3] — 2026-10-11
