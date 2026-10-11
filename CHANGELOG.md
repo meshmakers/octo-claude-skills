@@ -6,6 +6,8 @@ All notable changes to the octo-claude-skills plugin. Format loosely follows [Ke
 
 ### Changed
 
+- **`octo-deploy`** — pointer to `octo-ckc -c Unpublish` (AB#5433): a premature CK model publish can be withdrawn (dry run by default, dependents block it, the version number is burned, the public catalog needs `-f` and a reason).
+
 - **`pipeline-expert`** — file nodes (AB#6177): `CreateFileSystemUpdate@1`, `CreateZipArchive@1` (persist mode), `GetFileSystemContent@1` and `ToDiscord@1` attachments use `System.Files/FileSystemItem` / `System.Files/FolderRoot`, with `System.Reporting` as transition fallback on tenants that are not migrated yet; pipeline configuration (`rootFolderWellKnownName`) is unchanged. Added reference entries for `GetFileSystemContent@1` and the `CreateZipArchive@1` persist mode.
 
 ## [0.21.2] — 2026-10-11
