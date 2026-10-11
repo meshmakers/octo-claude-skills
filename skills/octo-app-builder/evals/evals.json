@@ -14,7 +14,7 @@
         "Every FromHttpRequest pipeline definition ends with Project@1 clear: true listing only the intended response fields",
         "Application entity is wired correctly: Manages-1 to Pool 670000000000000000000001, HelmRepository-1 to 670000000000000000000003, IngressEnabled, Hostname containing ${octo.tenantId} and {{domain.default}}, ValuesYaml with tenant-scoped upstreamUrl and an image override",
         "COMMANDS.md covers the full ordered chain: octo-ckc Compile + Publish, copy into ~/.octo/local-blueprint-catalog layout, DELETE the local-blueprint-catalog-cache.json file, InstallBlueprint, DeployDataFlow, DeployWorkload",
-        "Image commands tag BOTH meshmakers/<app> and docker.mm.cloud/meshmakers/<app> and kind-load them (registry-prefix injection handled)",
+        "Image commands tag BOTH meshmakers/<app> and <registry>/meshmakers/<app> and kind-load them (registry-prefix injection handled)",
         "Seed rtIds are hand-assigned 24-char hex strings and cross-references are consistent (pipeline ParentChild targetRtId equals the DataFlow rtId)",
         "ckTypeId inside pipeline YAML is unversioned (Model/Type) while seed entity ckTypeIds are versioned (System.Communication/Pipeline-1)"
       ]

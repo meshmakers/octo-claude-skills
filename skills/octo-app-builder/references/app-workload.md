@@ -1,5 +1,7 @@
 # Web app as an operator-deployed Application workload
 
+> **Hostnames are placeholders.** The concrete domains of the shared environments (`<test-2-domain>`, `<staging-domain>`, `<prod-1-domain>`, `<prod-2-domain>`, `<legacy-domain>`, `<registry>`, `<rancher-url>`) are internal. If the plugin `octo-claude-pm` is installed, see its `agent-operating-rules/references/environments.md`; otherwise ask a colleague.
+
 How to ship a web UI for a mesh app so that the **platform itself deploys it**:
 an `System.Communication/Application` entity in the blueprint seed, helm-installed
 by the Communication Operator on `DeployWorkload`. Verified 2026-06-09 on local
@@ -41,19 +43,19 @@ The proxy indirection is what makes the browser story work: browser → app
 
 ## Image build + registry rules
 
-The communication controller injects `image.privateRegistry=docker.mm.cloud` at
-deploy time, so the final image reference is `docker.mm.cloud/<repository>:<tag>`.
+The communication controller injects `image.privateRegistry=<registry>` at
+deploy time, so the final image reference is `<registry>/<repository>:<tag>`.
 
 Local kind (no registry needed — `pullPolicy: IfNotPresent` finds node-local images):
 
 ```powershell
 docker build -t meshmakers/<app>:0.1.0 .\app
-docker tag meshmakers/<app>:0.1.0 docker.mm.cloud/meshmakers/<app>:0.1.0
-kind load docker-image meshmakers/<app>:0.1.0 docker.mm.cloud/meshmakers/<app>:0.1.0
+docker tag meshmakers/<app>:0.1.0 <registry>/meshmakers/<app>:0.1.0
+kind load docker-image meshmakers/<app>:0.1.0 <registry>/meshmakers/<app>:0.1.0
 ```
 
 Tag and load **both** names so the image resolves regardless of registry-prefix
-injection. Shared clusters (test-2 etc.): push to `docker.mm.cloud` instead.
+injection. Shared clusters (test-2 etc.): push to `<registry>` instead.
 
 ## The Application seed entity
 

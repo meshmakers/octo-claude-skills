@@ -182,8 +182,8 @@ An alternative to the docker-compose infra: MongoDB / RabbitMQ / CrateDB, the CR
 | `Register-OctoCliContext` | **Recommended** — register a named octo-cli context for any installation (`local`, `test-2`, `staging-1`, `prod-1`, `prod-2`) | Mutating |
 | `Invoke-OctoCliLoginLocal` | Log in to local environment (`-tenantId`, `-includeReporting`) | Mutating |
 | `Invoke-OctoCliLoginTest2` | Log in to test-2 environment | Mutating |
-| `Invoke-OctoCliLoginStaging` | **Legacy** — old `*.meshmakers.cloud` domains; prefer `Register-OctoCliContext -Installation staging-1` | Mutating |
-| `Invoke-OctoCliLoginProduction` | **Legacy** — old `*.meshmakers.cloud` domains; prefer `Register-OctoCliContext -Installation prod-1`/`prod-2` | Mutating |
+| `Invoke-OctoCliLoginStaging` | **Legacy** — old `*.<legacy-domain>` domains; prefer `Register-OctoCliContext -Installation staging-1` | Mutating |
+| `Invoke-OctoCliLoginProduction` | **Legacy** — old `*.<legacy-domain>` domains; prefer `Register-OctoCliContext -Installation prod-1`/`prod-2` | Mutating |
 | `Invoke-OctoCliReconfigureLogLevel` | Reconfigure service log levels (3 mandatory params) | Mutating |
 | `Invoke-SetDebugConfiguration` | Register the Admin Panel debug OAuth client + scopes (run after local login) | Mutating |
 | `Register-AiBastion` | Register an Anthropic subscription token on a tenant (device-code OAuth) | Mutating (remote) |

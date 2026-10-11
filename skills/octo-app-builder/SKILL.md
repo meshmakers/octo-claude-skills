@@ -5,6 +5,8 @@ description: "Build a complete OctoMesh-powered application end to end — a cus
 
 # OctoMesh App Builder
 
+> **Hostnames are placeholders.** The concrete domains of the shared environments (`<test-2-domain>`, `<staging-domain>`, `<prod-1-domain>`, `<prod-2-domain>`, `<legacy-domain>`, `<registry>`, `<rancher-url>`) are internal. If the plugin `octo-claude-pm` is installed, see its `agent-operating-rules/references/environments.md`; otherwise ask a colleague.
+
 Build new OctoMesh-powered applications: data model + HTTP API + web app, packaged
 as one installable blueprint. This skill owns the **end-to-end composition recipe**;
 detail work routes to sibling skills.
@@ -124,13 +126,13 @@ Image handling on local kind (no registry needed):
 
 ```powershell
 docker build -t meshmakers/<app>:0.1.0 .\app
-docker tag meshmakers/<app>:0.1.0 docker.mm.cloud/meshmakers/<app>:0.1.0
-kind load docker-image meshmakers/<app>:0.1.0 docker.mm.cloud/meshmakers/<app>:0.1.0
+docker tag meshmakers/<app>:0.1.0 <registry>/meshmakers/<app>:0.1.0
+kind load docker-image meshmakers/<app>:0.1.0 <registry>/meshmakers/<app>:0.1.0
 ```
 
 Tag **both** names: the communication controller injects
-`image.privateRegistry=docker.mm.cloud` at deploy time, so the final image
-reference gets that prefix. On shared clusters push to `docker.mm.cloud` instead.
+`image.privateRegistry=<registry>` at deploy time, so the final image
+reference gets that prefix. On shared clusters push to `<registry>` instead.
 
 ### 4. Blueprint
 
@@ -192,7 +194,7 @@ under `LoadedCkModels`, no warnings. A silent no-op with `WasSkipped` means the
 | 2 | Endpoint answers 200 with empty body in ~0.1 ms | Route's method not registered (path-only fallback). After `ImportRt -r` on a live dataflow, each `DeployDataFlow` can remove an unchanged pipeline while re-registering a changed one. Re-run `DeployDataFlow` and re-test ALL routes; fresh install + single deploy is reliable. |
 | 3 | Pipeline 500s only for some entities | `SetPrimitiveValue@1` on an optional attribute that is unset. Guard with `If@1`. |
 | 4 | Response contains request body / secrets / lookup internals | No `Project@1 clear: true` at the end. The response is the whole final DataContext. |
-| 5 | App pod `ImagePullBackOff` | Controller injected `docker.mm.cloud` prefix and the image only exists under the plain name. Tag + `kind load` both names (or push to the registry). |
+| 5 | App pod `ImagePullBackOff` | Controller injected `<registry>` prefix and the image only exists under the plain name. Tag + `kind load` both names (or push to the registry). |
 | 6 | Install is a silent no-op | `requires:` gate mismatch (`WasSkipped: true`). Check `octo.environment`. |
 | 7 | `ImportRt` fails on re-run | Default mode is InsertOnly. Use `-r` for scratch iteration; blueprint re-apply (`InstallBlueprint -f`) upserts by itself. |
 | 8 | Errors return HTTP 200 | By design — `FromHttpRequest@1` pipelines cannot set status codes. Return `{ "error": ... }` payloads and make clients check for them. |

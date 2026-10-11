@@ -1,5 +1,7 @@
 # test-2 environment — contexts, auth, tenants, network
 
+> **Hostnames are placeholders.** The concrete domains of the shared environments (`<test-2-domain>`, `<staging-domain>`, `<prod-1-domain>`, `<prod-2-domain>`, `<legacy-domain>`, `<registry>`, `<rancher-url>`) are internal. If the plugin `octo-claude-pm` is installed, see its `agent-operating-rules/references/environments.md`; otherwise ask a colleague.
+
 Verified 2026-06-10 against `octo-tools` cmdlet sources, the octo skill's
 environments reference, and `meshmakers_staging` cluster values. Staging/prod
 are out of scope.
@@ -8,17 +10,17 @@ are out of scope.
 
 | Service | URL | AddContext flag |
 |---|---|---|
-| Identity | `https://connect.test-2.mm.cloud/` | `-isu` |
-| Asset | `https://assets.test-2.mm.cloud/` | `-asu` |
-| Bot | `https://bots.test-2.mm.cloud/` | `-bsu` |
-| Communication | `https://communication.test-2.mm.cloud/` | `-csu` |
-| Reporting | `https://reporting.test-2.mm.cloud/` | `-rsu` |
-| AI | `https://ai.test-2.mm.cloud/` | `-aisu` |
-| Admin Panel | `https://adminpanel.test-2.mm.cloud` | — |
-| Studio | `https://studio.test-2.mm.cloud` | — |
+| Identity | `https://connect.<test-2-domain>/` | `-isu` |
+| Asset | `https://assets.<test-2-domain>/` | `-asu` |
+| Bot | `https://bots.<test-2-domain>/` | `-bsu` |
+| Communication | `https://communication.<test-2-domain>/` | `-csu` |
+| Reporting | `https://reporting.<test-2-domain>/` | `-rsu` |
+| AI | `https://ai.<test-2-domain>/` | `-aisu` |
+| Admin Panel | `https://adminpanel.<test-2-domain>` | — |
+| Studio | `https://studio.<test-2-domain>` | — |
 
 PR sub-environments exist via URI suffix: `-UriSuffix pr123` →
-`assets-pr123.test-2.mm.cloud`, context `test-2_pr123_<tenantId>`.
+`assets-pr123.<test-2-domain>`, context `test-2_pr123_<tenantId>`.
 
 ## Context registration
 
@@ -38,8 +40,8 @@ Raw octo-cli equivalent:
 
 ```powershell
 octo-cli -c AddContext -n test-2_<tenantId> `
-  -isu "https://connect.test-2.mm.cloud/" -asu "https://assets.test-2.mm.cloud/" `
-  -bsu "https://bots.test-2.mm.cloud/" -csu "https://communication.test-2.mm.cloud/" `
+  -isu "https://connect.<test-2-domain>/" -asu "https://assets.<test-2-domain>/" `
+  -bsu "https://bots.<test-2-domain>/" -csu "https://communication.<test-2-domain>/" `
   -tid <tenantId>
 octo-cli -c Login -i --context test-2_<tenantId>
 octo-cli -c AuthStatus --context test-2_<tenantId>
@@ -83,7 +85,7 @@ Notes:
 4. **Deploy the Pool** (live-verified 2026-06-10: nothing rolls out while the
    pool is `Undeployed`, and deploy triggers fired in that state are silently
    lost). No octo-cli command exists — REST only:
-   `POST https://communication.test-2.mm.cloud/<tenantId>/v1/Pool/deploy?poolRtId=670000000000000000000001`
+   `POST https://communication.<test-2-domain>/<tenantId>/v1/Pool/deploy?poolRtId=670000000000000000000001`
    with the bearer token from `~/.octo-cli/contexts.json` → 204.
    `GetPools -j` → `Online`/`Deployed`.
 5. `octo-cli -c DeployWorkload -id 670000000000000000000002` (re-trigger after
@@ -112,19 +114,19 @@ no-op with `WasSkipped: true` means the gate didn't match the actual value.
 
 ## Network access
 
-- `*.test-2.mm.cloud` services: publicly reachable (TLS via mm-cloud certs).
-- `docker.mm.cloud` (image registry): internal network only — office WiFi
+- `*.<test-2-domain>` services: publicly reachable (TLS).
+- `<registry>` (image registry): internal network only — office WiFi
   direct, otherwise Tailscale first. Reachability probe:
-  `curl -skI https://docker.mm.cloud/v2/` → `HTTP/1.1 200 OK` with
+  `curl -skI https://<registry>/v2/` → `HTTP/1.1 200 OK` with
   `Docker-Distribution-Api-Version: registry/2.0`.
 - kubectl access to test-2 EXISTS via a Rancher kubeconfig download
-  (`https://rancher.mm.cloud`, publicly reachable — no VPN). Caveats:
+  (`<rancher-url>`, publicly reachable — no VPN). Caveats:
   - The downloaded yaml is NOT auto-integrated — merge it:
     `$env:KUBECONFIG="$env:USERPROFILE\.kube\config;<downloaded.yaml>";
     kubectl config view --flatten > merged; mv merged ~/.kube/config`
     (context name `test-2`).
-  - Older `k3s-test-2` contexts route via `rancher.srv.mm.local` (internal,
-    needs VPN) — connection refused off-VPN; prefer the `rancher.mm.cloud` one.
+  - Older `k3s-test-2` contexts route via `<internal-rancher-host>` (internal,
+    needs VPN) — connection refused off-VPN; prefer the `<rancher-url>` one.
   - Asset-repo deployment (for the blueprint-catalog cache restart):
     `octo/octo-mesh-asset-rep-services`.
 - Without kubectl, observability runs through octo-cli status commands and the

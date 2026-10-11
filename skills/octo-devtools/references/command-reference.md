@@ -167,7 +167,7 @@ Create the kind cluster + CRDs Helm chart + namespaces + in-cluster infra + ingr
 - `-SkipTrustCa` (switch): do not add the exported local root CA to the OS trust store (for unattended/CI runs)
 - `-SkipOperator` (switch): skip deploying the operator
 - `-SkipRegistryCheck` (switch): skip the dev-registry reachability pre-check (use when images are pre-loaded via `kind load`)
-- `-DevRegistry` (string, default `docker.mm.cloud`): internal registry the node pulls images from; pass `""` to skip configuring it
+- `-DevRegistry` (string, default `<registry>`): internal registry the node pulls images from; pass `""` to skip configuring it
 - **Safety:** Mutating — creates a cluster and deploys workloads
 
 ### `Deploy-OctoOperator`
@@ -333,9 +333,10 @@ The login cmdlets create a named octo-cli context (via `octo-cli -c AddContext`)
 
 ### `Register-OctoCliContext` (recommended)
 Unified replacement for the per-environment `Invoke-OctoCliLogin*` cmdlets. Builds the service URIs for the chosen installation, registers the context, optionally switches to it and triggers an interactive login.
-- `-Installation` (string, **Mandatory**): one of `local`, `test-2`, `staging-1`, `prod-1`, `prod-2`. Domain mapping: `local` → localhost; `test-2` → `*.test-2.mm.cloud`; `staging-1` → `*.staging.octo-mesh.com`; `prod-1` → `*.prod-1.octo-mesh.com`; `prod-2` → `*.prod-2.octo-mesh.com`
+> **Hostnames are placeholders.** The concrete domains of the shared environments (`<test-2-domain>`, `<staging-domain>`, `<prod-1-domain>`, `<prod-2-domain>`, `<legacy-domain>`, `<registry>`, `<rancher-url>`) are internal. If the plugin `octo-claude-pm` is installed, see its `agent-operating-rules/references/environments.md`; otherwise ask a colleague.
+- `-Installation` (string, **Mandatory**): one of `local`, `test-2`, `staging-1`, `prod-1`, `prod-2`. Domain mapping: `local` → localhost; `test-2` → `*.<test-2-domain>`; `staging-1` → `*.<staging-domain>`; `prod-1` → `*.<prod-1-domain>`; `prod-2` → `*.<prod-2-domain>`
 - `-TenantId` (string, **Mandatory**): tenant id to bind the context to
-- `-UriSuffix` (string, optional): for test-2 PR sub-environments (e.g. `pr123` → `assets-pr123.test-2.mm.cloud`); also appended to the context name
+- `-UriSuffix` (string, optional): for test-2 PR sub-environments (e.g. `pr123` → `assets-pr123.<test-2-domain>`); also appended to the context name
 - `-IncludeReporting` (switch): also register the reporting service URI (`-rsu`)
 - `-IncludeAi` (switch): also register the AI service URI (`-aisu`)
 - `-NoSwitch` (switch): skip `UseContext` (leave the active context unchanged) — recommended for parallel-safe agent use; then pass `--context <ctx>` on octo-cli commands
@@ -356,11 +357,11 @@ Register + log in to the test-2 environment.
 - **Safety:** Mutating
 
 ### `Invoke-OctoCliLoginStaging` (legacy)
-Register + log in to staging. **Legacy** — points at the old `*.meshmakers.cloud` domains. Prefer `Register-OctoCliContext -Installation staging-1`.
+Register + log in to staging. **Legacy** — points at the old `*.<legacy-domain>` domains. Prefer `Register-OctoCliContext -Installation staging-1`.
 - **Safety:** Mutating
 
 ### `Invoke-OctoCliLoginProduction` (legacy)
-Register + log in to production. **Legacy** — points at the old `*.meshmakers.cloud` domains. Prefer `Register-OctoCliContext -Installation prod-1` or `prod-2`.
+Register + log in to production. **Legacy** — points at the old `*.<legacy-domain>` domains. Prefer `Register-OctoCliContext -Installation prod-1` or `prod-2`.
 - **Safety:** Mutating
 
 ### `Invoke-OctoCliReconfigureLogLevel`

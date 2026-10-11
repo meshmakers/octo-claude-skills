@@ -29,7 +29,7 @@ This skill is the hub for all OctoMesh tasks. Before doing any work, check if th
 | **Refinery Studio Angular frontend** development (code in `octo-frontend-refinery-studio`), components, GraphQL codegen, Angular build/lint/test for the studio app | `Skill("refinery-studio", args: "<user's request>")` |
 | **Kubernetes Communication Operator** + Helm chart development/deployment (operator code, CRDs, Helm values, K8s manifests) | `Skill("octo-operator", args: "<user's request>")` |
 | **Building a new OctoMesh-powered app/workload end to end** — custom CK model + blueprint authoring (`blueprint.yaml`, seed data, `ckModelDependencies`), HTTP APIs from `FromHttpRequest@1` pipelines, operator-deployed Application web apps, CK/blueprint catalog publishing | `Skill("octo-app-builder", args: "<user's request>")` |
-| **Deploying/promoting an app to the test-2 environment** — publishing CK models/blueprints to the shared GitHub catalogs (`octo-ckc`/`octo-bpm`), pushing images to `docker.mm.cloud`, test-2 context setup, install + verify on a test-2 tenant | `Skill("octo-deploy", args: "<user's request>")` |
+| **Deploying/promoting an app to the test-2 environment** — publishing CK models/blueprints to the shared GitHub catalogs (`octo-ckc`/`octo-bpm`), pushing images to `<registry>`, test-2 context setup, install + verify on a test-2 tenant | `Skill("octo-deploy", args: "<user's request>")` |
 | **Reading/tracing logs from a deployed cluster** in Dash0 (Dash0 MCP tools) — log filters, D0QL error rates, tracing an error across pod redeployments, log retention | `Skill("octo-logs", args: "<user's request>")` |
 | **Setting up log access** — registering / logging in to the Dash0 MCP server when the `mcp__dash0__*` tools are missing or unauthenticated | `Skill("octo-logs-setup", args: "<user's request>")` |
 
@@ -68,12 +68,12 @@ If not authenticated: inform the user and offer to run `octo-cli -c LogIn -i` (i
 | URL Pattern | Environment |
 |---|---|
 | `localhost:500x` | local |
-| `*.test-2.mm.cloud` | test-2 |
-| `*.staging.octo-mesh.com` | staging-1 |
-| `*.prod-1.octo-mesh.com` | prod-1 (Exoscale SKS Vienna) |
-| `*.prod-2.octo-mesh.com` | prod-2 (Azure AKS) |
-| `*.staging.meshmakers.cloud` | staging (legacy domain) |
-| `*.meshmakers.cloud` (no subdomain prefix) | production (legacy domain) |
+| `*.<test-2-domain>` | test-2 |
+| `*.<staging-domain>` | staging-1 |
+| `*.<prod-1-domain>` | prod-1 |
+| `*.<prod-2-domain>` | prod-2 |
+
+> Hostnames are placeholders (`<test-2-domain>`, `<staging-domain>`, …): with `octo-claude-pm` installed see its `agent-operating-rules/references/environments.md`.
 
 ## Invocation Syntax
 

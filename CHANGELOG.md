@@ -8,6 +8,12 @@ All notable changes to the octo-claude-skills plugin. Format loosely follows [Ke
 
 - **`pipeline-expert`** — file nodes (AB#6177): `CreateFileSystemUpdate@1`, `CreateZipArchive@1` (persist mode), `GetFileSystemContent@1` and `ToDiscord@1` attachments use `System.Files/FileSystemItem` / `System.Files/FolderRoot`, with `System.Reporting` as transition fallback on tenants that are not migrated yet; pipeline configuration (`rootFolderWellKnownName`) is unchanged. Added reference entries for `GetFileSystemContent@1` and the `CreateZipArchive@1` persist mode.
 
+## [0.21.3] — 2026-10-11
+
+### Changed
+
+- **Environment URLs are placeholders** (AB#6475). `octo`, `octo-deploy`, `octo-devtools` and `octo-app-builder` (skills, references, evals, README, CLAUDE.md) no longer contain internal hostnames: the shared environments appear as `<test-2-domain>`, `<staging-domain>`, `<prod-1-domain>`, `<prod-2-domain>`, `<legacy-domain>`, the image registry as `<registry>` and the Rancher UI as `<rancher-url>`; hosting-provider remarks are gone. Each affected file points to the internal reference of the private `octo-claude-pm` plugin (`agent-operating-rules/references/environments.md`) when it is installed. Public schema URLs (`schemas.meshmakers.cloud`) are unchanged. No behaviour change.
+
 ## [0.21.2] — 2026-10-11
 
 ### Changed
