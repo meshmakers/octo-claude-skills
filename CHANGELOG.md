@@ -8,6 +8,12 @@ All notable changes to the octo-claude-skills plugin. Format loosely follows [Ke
 
 - **`pipeline-expert`** — file nodes (AB#6177): `CreateFileSystemUpdate@1`, `CreateZipArchive@1` (persist mode), `GetFileSystemContent@1` and `ToDiscord@1` attachments use `System.Files/FileSystemItem` / `System.Files/FolderRoot`, with `System.Reporting` as transition fallback on tenants that are not migrated yet; pipeline configuration (`rootFolderWellKnownName`) is unchanged. Added reference entries for `GetFileSystemContent@1` and the `CreateZipArchive@1` persist mode.
 
+## [0.21.2] — 2026-10-11
+
+### Changed
+
+- **`octo-logs`, `octo-logs-setup`** — made generic (AB#6472). The public plugin no longer names the organization's Dash0 datasets, MCP endpoint, cluster hosting providers, retention window, infrastructure repository paths or example tenant/app service names. The skills describe "logs, traces and metrics via the Dash0 MCP server" and point to the internal reference of the private `octo-claude-pm` plugin (`agent-operating-rules/references/dash0.md`) when it is installed. `/octo-logs-setup` takes the MCP endpoint as a placeholder (`<mcp-endpoint>`); the dataset comes from `listDatasets`. Behaviour of the tools, filters and D0QL recipes is unchanged.
+
 ## [0.21.1] — 2026-10-09
 
 ### Changed

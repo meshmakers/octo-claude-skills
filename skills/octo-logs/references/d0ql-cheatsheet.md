@@ -3,7 +3,7 @@
 D0QL is a ClickHouse SQL subset. Table `logs`. Columns used here:
 `timestamp`, `severity` (UNKNOWN/TRACE/DEBUG/INFO/WARN/ERROR/FATAL), `body`,
 `resource_attributes` (map — **bracket notation only**). Without `LIMIT` the
-server forces 1000 rows. All recipes below were run against `test-2` on 2026-10-08. The time window comes from the tool's `timeRange`,
+server forces 1000 rows. The time window comes from the tool's `timeRange`,
 not from a `WHERE timestamp` clause.
 
 ```sql
@@ -43,7 +43,7 @@ GROUP BY pod ORDER BY first_seen LIMIT 20
 -- Case-insensitive body search outside octo (no severity there)
 SELECT timestamp, resource_attributes['k8s.pod.name'] AS pod, substring(body, 1, 200) AS msg
 FROM logs
-WHERE resource_attributes['k8s.namespace.name'] = 'ponton' AND body ILIKE '%error%'
+WHERE resource_attributes['k8s.namespace.name'] = 'mongodb' AND body ILIKE '%error%'
 ORDER BY timestamp DESC LIMIT 50
 ```
 
