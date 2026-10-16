@@ -185,7 +185,7 @@ This is an operational overview of the **most-used** nodes. The full property ta
 
 Common: `CreateUpdateInfo@1` (build entity Insert/Update/Delete), `CreateAssociationUpdate@1` (build association Create/Delete), `CreateFileSystemUpdate@1`, `DataMapping@1` (value mapping), `Concat@1`, `FormatString@1`, `TransformString@1`, `Flatten@1`, `Project@1`, `Join@1`, `Math@1`, `SumAggregation@1`, `FilterLatestUpdateInfo@1`, `Distinct@1` (SDK — all adapters), `PlaceholderReplace@1`, `Base64Encode@1`/`Base64Decode@1`, `Hash@1`, `ConvertDataType@1`, `Map@1`, `LinearScaler@1`, `MinMax@1`, `Logger@1`/`PrintDebug@1`, `ExecuteCSharp@1`, `MakeHttpRequest@1`, `CheckDuplicate@1`, `ComputeFileHash@1`, `QueryResultToMarkdownTable@1`.
 
-Specialized (see `node-reference-mesh.md`): `AnthropicAiQuery@1` (Claude AI; MCP-aware), `PdfOcrExtraction@1`, `StatisticalAnomalyDetection@1`, `MachineLearningAnomalyDetection@1`, `ImportFromCsv@1`, `ImportFromExcel@1`, `ReplyToTeamsChannel@1`.
+Specialized (see `node-reference-mesh.md`): `AnthropicAiQuery@1` (Claude AI; MCP-aware), `PdfOcrExtraction@1`, `StatisticalAnomalyDetection@1`, `MachineLearningAnomalyDetection@1`, `ImportFromCsv@1`, `ConvertToCsv@1` (array → real CSV: quoting, per-column format, BOM, base64), `RenderDelimitedText@1` (fixed layouts, no quoting), `ImportFromExcel@1`, `ReplyToTeamsChannel@1`.
 
 DataPointMapping family (Mesh): `ApplyDataPointMappings@1` (evaluate mappings with mXparser expressions), `BuildMappingTargets@1` (resolve mappings to acquisition targets), `GenerateDataPointMappings@1` (deterministic rule-based generator — non-AI alternative to `AnthropicAiQuery@1`), `ValidateDataPointCoverage@1` (coverage report), `MapToRecordArray@1`, `UpdateRecordArrayItem@1`.
 
