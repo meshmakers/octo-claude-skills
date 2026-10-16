@@ -508,6 +508,82 @@ Each `columnMapping`:
       dateFormat: "dd.MM.yyyy"
 ```
 
+### ConvertToCsv@1
+
+Turn an array of records into ONE CSV document (text or base64). Generic: header row, RFC 4180 quoting, per-column number/date format, optional UTF-8 BOM and base64 output for nodes that store or attach a file. Mesh adapter. Sibling of `RenderDelimitedText@1` (fixed layouts, **no** quoting) — pick this one when you need real CSV.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `path` | string | required | JSONPath of the source **array**; each element must be an object |
+| `targetPath` | string | required | Receives the document (text, or base64 with `outputAsBase64`) |
+| `delimiter` | string | `;` | Exactly one character; never a line break or `"` |
+| `lineEnding` | enum | `CrLf` | `CrLf` or `Lf` (never taken from the OS) |
+| `includeHeader` | bool | true | Header row first |
+| `quoting` | enum | `Minimal` | `Minimal` (only values that need it), `Text` (strings, dates and header; numbers and booleans bare), `All` (every non-empty cell) |
+| `trailingDelimiter` | bool | false | Every row, header included, ends with the delimiter |
+| `trailingNewLine` | bool | true | Line end after the last row |
+| `byteOrderMark` | bool | false | UTF-8 BOM in front (Excel needs it) |
+| `outputAsBase64` | bool | false | Base64 of the UTF-8 bytes (BOM included) instead of text — the content `CreateFileSystemUpdate@1` stores as a file-system item; `SendEMail@2` then attaches the stored item by its BinaryId (it cannot attach base64 directly) |
+| `contentLengthTargetPath` | string | — | Optional path for the byte length (a long) of the UTF-8 document |
+| `culture` | string | invariant | Culture of all numbers and dates, e.g. `de-AT` (decimal comma, German day/month names); `""` = invariant; unknown culture fails the node |
+| `columns` | array | all scalar properties | Output columns in order; an explicit empty list is an error |
+
+Each `columns` entry:
+| Property | Type | Description |
+|----------|------|-------------|
+| `header` | string | Header text; defaults to the last name of `valuePath` |
+| `valuePath` | string | Relative, single-valued JSONPath (wildcard, filter, recursive descent are refused). Mutually exclusive with `value` |
+| `value` | string | Constant text in every row (no `format`/`decimals`/`factor`/`timeZone`/`culture` on a constant) |
+| `dataType` | enum | `Auto` (default), `String`, `Number`, `Boolean`, `DateTime` |
+| `format` | string | .NET format string for Number / DateTime / Auto (`0.###`, `0.000`, `dd.MM.yyyy HH:mm`); an error on String and Boolean |
+| `decimals` | int | 0–28, round half away from zero, before formatting |
+| `factor` | decimal | Multiplied before rounding (unit conversion, e.g. `4`) |
+| `timeZone` | string | IANA id, DateTime only; a value without an offset is read as **UTC** |
+| `culture` | string | Overrides the node's culture for this column |
+| `required` | bool | An empty cell fails the node |
+
+Rules worth knowing:
+- The column property is **`dataType`, not `type`** — `type` inside a pipeline definition is taken by the serializer and never reaches the column.
+- A number without `format`/`decimals`/`factor` and without a culture keeps its raw JSON token (`0.50` stays `0.50`). `0.###` writes `14` and `0.546`; `0.000` writes `14.000`.
+- A string source value is always **read** invariant (`"1234.5"` is 1234.5), whatever the output culture is.
+- With a decimal comma use a delimiter other than `,`.
+- An empty array writes a header-only document with explicit `columns`, an empty string without; the write is never skipped. A source that is not an array, or a record that is not an object, fails.
+
+```yaml
+# Grid-operator layout: BOM, LF, quoted text, trailing ';', Vienna time, up to 3 decimals, kW = 4 x kWh
+- type: ConvertToCsv@1
+  path: $.rows
+  targetPath: $.csv
+  contentLengthTargetPath: $.csvLength
+  lineEnding: Lf
+  quoting: Text
+  trailingDelimiter: true
+  byteOrderMark: true
+  outputAsBase64: true
+  columns:
+    - { header: Datum, valuePath: $.from, dataType: DateTime, format: "dd.MM.yyyy HH:mm", timeZone: Europe/Vienna }
+    - { header: kWh, valuePath: $.kwh, decimals: 3, format: "0.###" }
+    - { header: kW, valuePath: $.kwh, factor: 4, decimals: 3, format: "0.###" }
+    - { header: Status, value: VALID }
+```
+
+### RenderDelimitedText@1
+
+Render an array of records into ONE delimited-text document for **fixed layouts** (reserved fields, no escaping convention). Mesh adapter. Use `ConvertToCsv@1` for real CSV with quoting.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `path` | string | required | JSONPath of the source array; each element must be an object |
+| `targetPath` | string | required | Receives the document as one string |
+| `delimiter` | string | `\|` | Exactly one character |
+| `lineEnding` | enum | `Lf` | `Lf` or `CrLf` |
+| `trailingNewLine` | bool | true | Line end after the last row |
+| `onDelimiterInValue` | enum | `Fail` | `Fail`, `Replace` or `Strip` for a value containing the delimiter, CR or LF |
+| `replacement` | string | `""` | Substitute for `Replace` |
+| `columns` | array | required | Entries with `value` (constant), `valuePath` (relative) or neither (empty reserved field), `required` |
+
+**No quoting by design**; numbers keep their raw JSON token, booleans are `True`/`False`; an empty input array writes an empty string.
+
 ### ReplyToTeamsChannel@1
 
 Send a message card to a Microsoft Teams channel via an Incoming Webhook URL.

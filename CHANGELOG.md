@@ -4,6 +4,10 @@ All notable changes to the octo-claude-skills plugin. Format loosely follows [Ke
 
 ## [Unreleased]
 
+### Changed
+
+- **`pipeline-expert`** — new node reference entries `ConvertToCsv@1` (AB#6733, octo-mesh-adapter PR #74: array of records to a real CSV document with RFC 4180 quoting, per-column `dataType`/`format`/`decimals`/`factor`/`timeZone`/`culture`, optional BOM and base64 output with content length) and `RenderDelimitedText@1` (AB#4846, fixed layouts without quoting), plus the specialized-node overview in `SKILL.md` (AB#6799). Documents the `dataType`-not-`type` trap: `type` inside a pipeline definition is taken by the serializer and never reaches a column.
+
 ## [0.21.4] — 2026-10-11
 
 ### Changed
