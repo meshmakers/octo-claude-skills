@@ -523,7 +523,7 @@ Turn an array of records into ONE CSV document (text or base64). Generic: header
 | `trailingDelimiter` | bool | false | Every row, header included, ends with the delimiter |
 | `trailingNewLine` | bool | true | Line end after the last row |
 | `byteOrderMark` | bool | false | UTF-8 BOM in front (Excel needs it) |
-| `outputAsBase64` | bool | false | Base64 of the UTF-8 bytes (BOM included) instead of text — what `CreateFileSystemUpdate@1` / `SendEMail@2` attachments take |
+| `outputAsBase64` | bool | false | Base64 of the UTF-8 bytes (BOM included) instead of text — the content `CreateFileSystemUpdate@1` stores as a file-system item; `SendEMail@2` then attaches the stored item by its BinaryId (it cannot attach base64 directly) |
 | `contentLengthTargetPath` | string | — | Optional path for the byte length (a long) of the UTF-8 document |
 | `culture` | string | invariant | Culture of all numbers and dates, e.g. `de-AT` (decimal comma, German day/month names); `""` = invariant; unknown culture fails the node |
 | `columns` | array | all scalar properties | Output columns in order; an explicit empty list is an error |
