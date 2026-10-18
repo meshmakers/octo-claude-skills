@@ -191,10 +191,10 @@ Upload-then-import flow (URL built from `McpServiceOptions.PublicUrl`, default `
 ```
 prepare_file_upload(fileName) → { transferId, uploadUrlPath }
 HTTP PUT to <publicUrl>/file-transfer/upload/{transferId}
-import_ck_model(transferId, tenantId) → store.GetUpload(transferId) gives the disk path → SDK import → store.DeleteUpload
+import_ck_model(transferId, tenantId) → store.GetUpload(transferId, McpSessionContext.GetCallerLabel(server)) gives the disk path (only for the session that reserved the upload; a foreign id answers like an unknown id) → SDK import → store.DeleteUpload
 ```
 
-Export-then-download mirrors it: `export_runtime_model_by_query` runs an asset job, downloads to a temp file, `store.RegisterDownload(...)`, returns a `downloadUrlPath`.
+Export-then-download mirrors it: `export_runtime_model_by_query` runs an asset job, downloads to a temp file, `store.RegisterDownload(...)`, returns a `downloadUrlPath`; the download is single-use (deleted after the first complete GET). Details: `octo-mcp-service/CLAUDE.md`, section *File I/O Architecture → Security* (AB#6989).
 
 **CRITICAL: do NOT add base64-in-tool-parameter as an alternative.** The file-transfer endpoints are the only sanctioned mechanism — base64 in JSON-RPC blows up token budgets and memory.
 
