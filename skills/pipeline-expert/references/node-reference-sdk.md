@@ -511,7 +511,7 @@ Date/time operations on one value. Source: `octo-communication-sdk/src/Sdk.Pipel
 | `ConvertFromTimeZone` | **Wall-clock** time of the zone → UTC instant (Kind Utc, serializes with `Z`); the inverse of `ConvertToTimeZone` |
 | `FromUnixTimeMilliseconds` | UTC value from Unix milliseconds read at `path` (number or quoted number) |
 
-`ConvertFromTimeZone` reads the clock fields **as written in the value** as local time: a trailing `Z`, a UTC offset such as `+05:00` and no marker at all are all ignored (`2026-07-15T00:00:00+05:00` and `2026-07-15T00:00:00Z` both mean 00:00 local), so the result never depends on the machine's time zone. Fractional seconds are kept. Daylight saving time:
+`ConvertFromTimeZone` reads the clock fields **as written in the value** as local time: a trailing `Z`, a UTC offset such as `+05:00` and no marker at all are all ignored (`2026-07-15T00:00:00+05:00` and `2026-07-15T00:00:00Z` both mean 00:00 local), so the result never depends on the machine's time zone. Fractional seconds are kept. Only ISO 8601 date-times are valid, as in every `DateTime@1` operation: `12:00:00` or `07/15/2026` fail the node instead of being completed. Daylight saving time:
 
 | Local time | Result |
 |------------|--------|
