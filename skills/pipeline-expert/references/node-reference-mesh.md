@@ -399,7 +399,7 @@ Each mapping: `{sourceValue, targetValue, description}`. The first matching entr
 | Element without a matching mapping | Stays unchanged |
 | Everything outside the matches | Untouched |
 | Path matches nothing | Warning, the chain continues |
-| Element not readable as `sourceValueType` | Node error naming the element's position among the matches |
+| Element not readable as `sourceValueType` | Node error naming the element's position among the matches. **Not atomic:** earlier elements are already mapped, the execution ends and its data is discarded |
 | `targetValueWriteMode` / `targetValueKind` / `documentMode` | Do not apply (in-place write): keep the defaults `Overwrite` / `Simple` / `Extend`, any other value fails the node |
 
 An index is not a wildcard: `$.rows[1].unit` stays a single-value path. Measured with 123,000 rows: ~1.3x faster than `ForEach@1` with one `DataMapping@1` per row, about a third less extra memory — it replaces the loop or script, it does not make a huge array free. Source: `octo-mesh-adapter/src/MeshAdapter.Sdk/Nodes/Transform/DataMappingNode.cs`.
