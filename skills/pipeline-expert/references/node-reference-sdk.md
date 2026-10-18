@@ -485,6 +485,62 @@ Convert value to different type.
   valueType: Int
 ```
 
+### DateTime@1
+
+Date/time operations on one value. Source: `octo-communication-sdk/src/Sdk.Pipeline/EtlDataPipeline/Nodes/Transforms/DateTimeNode.cs`.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `operation` | enum | required | See the table below |
+| `path` | string | required (except `Now`) | Source date/time value path |
+| `targetPath` | string | required | Where to store the result |
+| `value` | any | optional | Static operand: a number for `Add*`, a .NET format string for `Format`, an IANA zone id for `ConvertToTimeZone` / `ConvertFromTimeZone` |
+| `valuePath` | string | optional | Dynamic operand path; takes precedence over `value`. `DaysBetween` and `CombineDateTime` require it (the second date/time) |
+
+| Operation | Result |
+|-----------|--------|
+| `Now` | Current UTC instant |
+| `StartOfDay`, `ExtractDate` | The value truncated to 00:00 (same Kind) |
+| `StartOfMonth` | First day of the value's month at 00:00, **same Kind as the source**, no zone conversion (`2026-12-31T23:59` → `2026-12-01T00:00`) |
+| `AddDays`, `AddHours`, `AddMinutes`, `AddSeconds` | The value plus a (negative allowed) number |
+| `DaysBetween` | Whole days between `path` and `valuePath` (date part only) |
+| `Format` | String, .NET format string in `value`, invariant culture |
+| `CombineDateTime` | Date of `path`, time of `valuePath` (UTC) |
+| `ExtractTime` | String `HH:mm:ss` |
+| `ConvertToTimeZone` | UTC instant → **wall-clock** time of the zone (Kind Unspecified, so it serializes without `Z`). A source without Kind is read as UTC |
+| `ConvertFromTimeZone` | **Wall-clock** time of the zone → UTC instant (Kind Utc, serializes with `Z`); the inverse of `ConvertToTimeZone` |
+| `FromUnixTimeMilliseconds` | UTC value from Unix milliseconds read at `path` (number or quoted number) |
+
+`ConvertFromTimeZone` reads the clock fields of the source as local time **whatever Kind the value carries** (a trailing `Z` that an upstream system added is ignored, so the result never depends on the machine's time zone). Daylight saving time:
+
+| Local time | Result |
+|------------|--------|
+| Exists once | Its UTC instant (`Europe/Vienna`: `2026-07-15T00:00` → `2026-07-14T22:00Z`, `2026-01-15T00:00` → `2026-01-14T23:00Z`) |
+| Does not exist (spring gap, `2026-03-29T02:30` in Vienna) | **The node fails**, the error names value and zone |
+| Ambiguous (autumn repeat, `2026-10-25T02:30` in Vienna) | The **earlier** instant (summer-time offset): `2026-10-25T00:30Z` |
+
+An unknown or empty zone id fails the node. Round trip: `ConvertToTimeZone` followed by `ConvertFromTimeZone` returns the original instant, except for the second pass of the repeated autumn hour (its wall-clock reading equals the first pass and maps to the first).
+
+```yaml
+# Vienna midnight of the first day of the current month, as a UTC bound for GetStreamData@1
+- type: DateTime@1
+  operation: ConvertToTimeZone
+  path: $.now
+  value: Europe/Vienna
+  targetPath: $.localNow
+- type: DateTime@1
+  operation: StartOfMonth
+  path: $.localNow
+  targetPath: $.localMonthStart
+- type: DateTime@1
+  operation: ConvertFromTimeZone
+  path: $.localMonthStart
+  value: Europe/Vienna          # or valuePath: $.zoneId
+  targetPath: $.from
+```
+
+Additive history: `ConvertToTimeZone` (11) and `FromUnixTimeMilliseconds` (12) came with AB#5095, `ConvertFromTimeZone` (13) and `StartOfMonth` (14) with AB#6854; all stay in `DateTime@1`, existing pipelines are unaffected.
+
 ### Flatten@1
 
 Flatten nested arrays into a single array.
