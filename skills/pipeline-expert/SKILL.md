@@ -226,6 +226,18 @@ Pipeline execution output is **only** stored when the pipeline includes `SetPipe
   # maxLength: 1048576  # optional cap
 ```
 
+## Pipeline as a CK method handler (`execution.handler: pipeline`)
+
+A CK method declared `execution.handler: pipeline` is implemented by a pipeline; callers get the pipeline's result in the standard method envelope. Contract (communication controller, AB#6879; guide: `technologyGuide/constructionKits/ckLanguage2/pipelineMethodHandlers.md` in the documentation):
+
+- **Binding**: the deployed pipeline in the call's tenant whose **`rtWellKnownName` equals the qualified method id** (for example `Acme.Assets/Device.UpdateFirmware-1`). No other binding. No such pipeline: `METHOD_HANDLER_NOT_AVAILABLE`, reason `pipeline-not-deployed`. A changed pipeline takes effect after `DeployPipeline`.
+- **Trigger**: `FromExecutePipelineCommand@1`. Use `callerBinding: BindingRequired` so the pipeline never runs anonymously; it runs as the user who called the method.
+- **Input** (data root): `$.parameters.<name>` (camelCase method parameters), `$.target.ckTypeId` / `$.target.rtId` (`rtId` null for a static method), `$.method.id|invocationId|correlationId`. The caller is not in the data.
+- **Output**: end with `SetPipelineExecutionResult@1`; the document must be `{"value": <result>}` (type of the method's `result`; required when the method has one) or `{"error": {"code": "DECLARED_CODE", "parameters": {"k": "v"}}}`. The code must be declared in the method's `errors` (or be `METHOD_VALIDATION_FAILED` / `METHOD_TARGET_NOT_FOUND` / `METHOD_FORBIDDEN`); error parameter values must never contain method parameter values. Anything else (no JSON, no `value`, wrong type, undeclared code) is answered `METHOD_HANDLER_FAILED`, never a malformed success. A failed pipeline is `METHOD_HANDLER_FAILED` (its error text stays in the controller log); a pipeline still running at the deadline is `METHOD_TIMEOUT` and is not cancelled.
+- **Write the success and the error branch as two `If@1` nodes with complementary conditions** that each write `$.result` once, then one `SetPipelineExecutionResult@1` with `path: $.result`; do not rely on overwriting.
+- **Methods with `sensitive` parameters (or `Secret` type) must not be pipeline methods** until the retention of pipeline input and output is decided (OD-3, OD-4, OD-9): the controller refuses them (`sensitive-parameters-not-supported`). Nothing a pipeline execution stores (`InputData`, `OutputData`) is safe for secrets.
+- **Consistency**: nodes commit as they run, no rollback; put write nodes last. After `METHOD_TIMEOUT` the pipeline may still finish.
+
 ## RT Entity Data Structures
 
 `GetRtEntitiesByType@1` returns an **IResultSet object**, not a plain array:
