@@ -355,7 +355,7 @@ The DataFlow holds `System/Name-1`; the Pipeline links to it via `System/ParentC
 
 ### Pipeline Schema as Node Discovery
 
-`GetPipelineSchema --adapterId <rtId>` returns a JSON Schema (draft/2020-12) of every available pipeline node for that adapter, with each node's config properties (types, descriptions, enums, defaults). The available nodes depend on which adapter is running and which plugins it loaded, so prefer this over the build-time schema files when the user asks "what nodes are available?" or about a node's config, or before authoring YAML for a target environment. Save with `--outputFile <path>` for reuse (and feed to `pipeline_validate.py --schema`).
+`GetPipelineSchema --adapterId <rtId>` returns a JSON Schema (draft/2020-12) of every available pipeline node for that adapter, with each node's config properties (types, descriptions, enums, defaults). The available nodes depend on which adapter is running and which plugins it loaded, so prefer this over the build-time schema files when the user asks "what nodes are available?" or about a node's config, or before authoring YAML for a target environment. Save with `--outputFile <path>` for reuse (and feed to `pipeline_validate.py --schema`). `DataMapping@1` with a wildcard / recursive / filter `path` (`$.sd.Rows[*].Values[5]`) maps a whole array in place — stream-data enum keys to names without `ForEach@1` or a script; `targetPath` = same path or left out (AB#6589, details in `pipeline-expert` → `node-reference-mesh.md`).
 
 ### FromHttpRequest — Endpoint Location
 

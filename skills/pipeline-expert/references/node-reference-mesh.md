@@ -360,10 +360,10 @@ Map source values to target values based on configured mappings.
 | `sourceValueType` | enum | required | Source value type (Int, String, Double, etc.) |
 | `targetValueType` | enum | required | Target value type |
 | `mappings` | array | required | Mapping rules |
-| `path` | string | `$` | Source data path (inherited) |
-| `targetPath` | string | required | Where to write mapped value |
+| `path` | string | `$` | Source data path (inherited). **The shape decides:** one value maps that value; a wildcard, recursive descent or filter path maps every addressed element in place (see below) |
+| `targetPath` | string | `$` | Where to write the mapped value. With a multi-match `path`: the same path or left out |
 
-Each mapping: `{sourceValue, targetValue, description}`.
+Each mapping: `{sourceValue, targetValue, description}`. The first matching entry wins.
 
 ```yaml
 - type: DataMapping@1
@@ -377,6 +377,32 @@ Each mapping: `{sourceValue, targetValue, description}`.
     - sourceValue: 2
       targetValue: EnergyCommunity/Producer
 ```
+
+**Whole arrays — no `ForEach@1`, no script (AB#6589).** A `path` that can address several values (`[*]`, `..`, `[?(@.k=='v')]`) maps **every addressed element in place**:
+
+```yaml
+# GetStreamData@1 result: Values[5] holds the integer enum key of Amount.Unit in every row
+- type: DataMapping@1
+  path: $.sd.Rows[*].Values[5]
+  targetPath: $.sd.Rows[*].Values[5]   # the same path, or leave targetPath out
+  sourceValueType: Int
+  targetValueType: String
+  mappings:
+    - { sourceValue: 1, targetValue: kWh }
+    - { sourceValue: 2, targetValue: MWh }
+```
+
+| With a multi-match `path` | Behaviour |
+|---------------------------|-----------|
+| `targetPath` | Same path or left out. Any other value fails the node, naming the node and both paths |
+| `null` element | Skipped |
+| Element without a matching mapping | Stays unchanged |
+| Everything outside the matches | Untouched |
+| Path matches nothing | Warning, the chain continues |
+| Element not readable as `sourceValueType` | Node error naming the element's position among the matches |
+| `targetValueKind` / `targetValueWriteMode` | Do not apply (in-place write) |
+
+An index is not a wildcard: `$.rows[1].unit` stays a single-value path. Measured with 123,000 rows: ~1.3x faster than `ForEach@1` with one `DataMapping@1` per row, about a third less extra memory — it replaces the loop or script, it does not make a huge array free. Source: `octo-mesh-adapter/src/MeshAdapter.Sdk/Nodes/Transform/DataMappingNode.cs`.
 
 ### FilterLatestUpdateInfo@1
 
