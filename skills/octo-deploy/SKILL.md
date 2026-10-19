@@ -92,9 +92,20 @@ Register-OctoCliContext -Installation test-2 -TenantId <tenantId>   # octo-tools
 ```
 
 Creates context `test-2_<tenantId>` with all service URLs, switches to it, and
-runs the interactive login. Flags, URL table, headless auth, and tenant
+runs the interactive login. `-TenantId` accepts a list (`a,b,c`): one context per
+tenant, no switching, one login each (`-NoLogin` to skip). Flags, URL table, headless auth, and tenant
 creation (if the tenant doesn't exist yet): see
 [references/test-2-environment.md](references/test-2-environment.md).
+
+**Per-tenant authentication (AB#6836):** every command acts on the tenant of its
+context and only with a token for that tenant. In a child tenant, authority comes
+only from explicit provisioning: after creating a tenant run `octo-cli -c
+ProvisionCurrentUser -ttid <tenantId> --context test-2_octosystem` once (new tenants
+included). A missing provisioning stops the command with exit `-4` and a message that
+names the tenant and `ProvisionCurrentUser -ttid <tenantId>`. For a rollout over several
+tenants use `Invoke-OctoTenantSweep` (dry run `-WhatIf`, one result row per tenant, continues
+after a denial, never touches a token) instead of a script that copies a token out of the
+context file; details in the `octo` skill, `references/tenant-tokens.md`.
 
 **Parallel-safe targeting:** rather than relying on the active context (which
 the cmdlet switched, and which a concurrent session could flip), pass
@@ -117,8 +128,8 @@ that state are silently lost (the workload sits in `Pending` forever, no error).
 octo-cli has **no DeployPool command** — it is REST-only:
 
 ```powershell
-$ctx = Get-Content "$env:USERPROFILE\.octo-cli\contexts.json" | ConvertFrom-Json
-$token = $ctx.Contexts.($ctx.ActiveContext).Authentication.AccessToken
+# $token: access token issued for <tenantId> itself (signed-in context test-2_<tenantId>), never the
+# root tenant's token and never echoed or logged; the tenant gate denies a token of another tenant.
 Invoke-WebRequest -Method POST -Headers @{Authorization="Bearer $token"} `
   -Uri "https://communication.<test-2-domain>/<tenantId>/v1/Pool/deploy?poolRtId=670000000000000000000001"
 # expect 204; GetPools -j -> CommunicationState Online, DeploymentState Deployed

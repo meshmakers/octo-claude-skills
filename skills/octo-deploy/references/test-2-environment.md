@@ -30,6 +30,7 @@ Preferred (octo-tools cmdlet, source: `Register-OctoCliContext.psm1`):
 Register-OctoCliContext -Installation test-2 -TenantId <tenantId>
 # optional: -IncludeReporting -IncludeAi   (NOT included by default)
 #           -UriSuffix pr123              (PR sub-environment)
+#           -TenantId a,b,c               (one context per tenant, never activates; AB#6840)
 #           -NoSwitch                     (register without activating)
 #           -NoLogin                      (skip the interactive login)
 ```
@@ -76,7 +77,10 @@ Notes:
 2. `octo-cli -c Create -tid <tenantId> -db <tenantId> --context test-2_octosystem`
    — interactive sessions provision the current user as tenant admin. Headless
    sessions MUST add `-np` (machine tokens carry no user to provision). Tenant
-   IDs are lowercased.
+   IDs are lowercased. If the tenant was created without provisioning (`-np`) or
+   by someone else, run `octo-cli -c ProvisionCurrentUser -ttid <tenantId>
+   --context test-2_octosystem` before using the root operator's token in it: a
+   root-tenant user has no implicit rights in a child tenant (AB#6836).
 3. `octo-cli -c EnableCommunication --context test-2_<tenantId>` — must run
    against the TARGET tenant context, not octosystem (pass its `--context`, no
    switching needed). This only
@@ -86,7 +90,8 @@ Notes:
    pool is `Undeployed`, and deploy triggers fired in that state are silently
    lost). No octo-cli command exists — REST only:
    `POST https://communication.<test-2-domain>/<tenantId>/v1/Pool/deploy?poolRtId=670000000000000000000001`
-   with the bearer token from `~/.octo-cli/contexts.json` → 204.
+   with an access token issued for `<tenantId>` itself (the signed-in context
+   `test-2_<tenantId>`, never the root tenant's token; never echo it) → 204.
    `GetPools -j` → `Online`/`Deployed`.
 5. `octo-cli -c DeployWorkload -id 670000000000000000000002` (re-trigger after
    the pool is up), then `octo-cli -c GetAdapters -j` until the Mesh Adapter
