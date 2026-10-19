@@ -27,11 +27,11 @@ Invoke-OctoTenantSweep -Context test-2_octosystem -AllTenants -Exclude octosyste
     -CliArguments '-c','ProvisionCurrentUser','-ttid','{tenant}'
 
 # GraphQL query over many tenants, the answer per tenant (read-only; clean JSON in .Stdout)
-$q = '{ runtime { runtimeEntities(ckId:"System/Entity", first:1) { totalCount } } }'
+$q = '{ constructionKit { models(first:1) { totalCount } } }'
 Invoke-OctoTenantSweep -Context test-2_octosystem -Tenant tecob,lkv,wwc26 -IncludeOutput `
     -CliArguments '-c','GraphQl','-tid','{tenant}','-q',$q |
   ForEach-Object { [pscustomobject]@{ Tenant = $_.Tenant; Outcome = $_.Outcome
-      Total = if ($_.Outcome -eq 'Ok') { ($_.Stdout | ConvertFrom-Json).data.runtime.runtimeEntities.totalCount } } }
+      Total = if ($_.Outcome -eq 'Ok') { ($_.Stdout | ConvertFrom-Json).data.constructionKit.models.totalCount } } }
 ```
 
 Reference: octo-tools `docs/tenant-sweep.md`. octo-cli behaviour: octo-cli `CLAUDE.md`, "Tokens per tenant".

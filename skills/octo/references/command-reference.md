@@ -904,7 +904,7 @@ octo-cli -c UpdateSystemCkModel -tid <tenantId>
 ### GraphQl
 Sends one GraphQL query or mutation to `tenants/<tenant>/GraphQL` with the token for that tenant and writes the response JSON, unmodified, to standard output (banner and log lines go to standard error, so `| jq` and `ConvertFrom-Json` work). Replaces the scripts that read a token out of the context file and call the route with curl or Python. The token is chosen like for every tenant-addressed command: a token of the addressed tenant as is, a token of another tenant exchanged per tenant (cached); never the context token as a fallback. A root-tenant operator needs `ProvisionCurrentUser -ttid <tenant>` once per child tenant.
 ```
-octo-cli -c GraphQl -tid <tenant> -q "{ runtime { runtimeEntities(ckId:\"System/Entity\", first:1) { totalCount } } }"
+octo-cli -c GraphQl -tid <tenant> -q "{ constructionKit { models(first:1) { totalCount } } }"
 octo-cli -c GraphQl -tid <tenant> -f query.graphql -vars @vars.json -on MyQuery
 cat query.graphql | octo-cli --context test-2_octosystem -c GraphQl -tid <tenant> -si | jq .data
 ```
