@@ -180,6 +180,16 @@ Invoke-BuildAll -configuration DebugL -excludeFrontend $true
 2. After restart the in-memory token→tenant cache is cold; the middleware re-resolves via SHA256 hash lookup against the grant store
 3. Backend OIDC client landing on `/tenant-discovery` unexpectedly → deployment may predate the PAR (RFC 9126) tenant-resolution fix
 
+### Denied in a Child Tenant (Tenant Gate, AB#6836 / AB#6840)
+
+**Symptom:** an octo-cli command for a child tenant stops with exit code `-4` and a message such as "not provisioned ... ProvisionCurrentUser -ttid <tenant>", or the asset/communication service logs "This would be denied with UserTokenEnforcement=Enforce" (LogOnly mode) for a script.
+
+**Diagnosis:**
+1. A command addresses the tenant of its context and may only carry a token issued for that tenant. octo-cli exchanges a token of another tenant per tenant (cached in the context entry, no refresh token) and never falls back to the other token. The message names the cause: not provisioned, access denied (not a descendant), client not allowed to exchange (identity lacks the grant: use a context of that tenant), sign-in rejected (`LogIn`), tenant unknown, identity unreachable.
+2. Root-tenant users have **no implicit rights** in child tenants. Fix for "not provisioned": `octo-cli -c ProvisionCurrentUser -ttid <tenant> --context <root-ctx>` once per child tenant, also for tenants created later.
+3. LogOnly warnings from scripts: the log carries `ClientId`, `TokenTenantId`, `RouteTenantId`, `RequestPath` (no user agent). `ClientId=octo-cli` on `tenants/{t}/GraphQL` or other routes without a CLI command means a script that reused the CLI token. Replace the script with a command or `Invoke-OctoTenantSweep` (`-WhatIf` first); the helper reports `Denied` per tenant and continues.
+4. Never look into or print the context file or any token while diagnosing; `octo-cli -c AuthStatus --context <ctx>` and `ListContexts` show what is needed.
+
 ### AD Group Roles Not Applied
 
 **Symptom:** A Microsoft AD user authenticates but does not get the roles their AD group should grant.

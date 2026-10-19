@@ -88,7 +88,7 @@ Register-OctoCliContext -Installation test-2 -TenantId voest -UriSuffix pr123 -I
 Register-OctoCliContext -Installation prod-1 -TenantId meshmakers -NoLogin   # CI / client-credentials flow
 Register-OctoCliContext -Installation local -TenantId meshtest -IncludeAi
 ```
-Switches: `-IncludeReporting` (`-rsu`), `-IncludeAi` (`-aisu`), `-NoSwitch` (skip `UseContext`), `-NoLogin` (skip interactive login).
+Switches: `-IncludeReporting` (`-rsu`), `-IncludeAi` (`-aisu`), `-NoSwitch` (skip `UseContext`), `-NoLogin` (skip interactive login). `-TenantId` takes a list: `Register-OctoCliContext -Installation test-2 -TenantId tecob,lkv,wwc26 -NoSwitch` registers one context per tenant (never switches the active one; each new context is logged in by name unless `-NoLogin`). Use them with `Invoke-OctoTenantSweep`, see `tenant-tokens.md`.
 
 ### Work against a previously authenticated context
 ```bash

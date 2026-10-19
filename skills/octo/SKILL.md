@@ -2,7 +2,6 @@
 name: octo
 description: "Primary entry point and router for ALL OctoMesh tasks. Drives the octo-cli for platform administration (users, roles, groups, tenants, clients, identity providers, blueprints, CK catalog/library management, stream-data archives, communication adapters/pipelines, AI services) and explores the data model and runtime instances via GraphQL. Routes specialized work to sibling skills. When unsure which OctoMesh skill to use, start here. Trigger on: OctoMesh, octo-cli, CLI command, environment switch, auth/login, AuthStatus, tenant, temporary tenant, test tenant, user, role, group, client credentials, non-interactive login, headless authentication, LogInClientCredentials, client mirroring, identity provider, blueprint install/update/rollback, CK catalog, library management, LibraryStatus, stream data archive, archive activation, EnableAi, adapter, deploy pipeline, data flow, MovePipelines, data model, Construction Kit, CK type, enum, association, GraphQL introspection, runtime instance query, list/count/search/filter entities, building, services, Docker, debugging, pipeline YAML, ETL, commit, PR, AB#, MCP server, Refinery Studio, communication operator, Helm."
 allowed-tools:
-  - "Read(~/.octo-cli/contexts.json)"
   - "Read(${CLAUDE_PLUGIN_ROOT}/skills/octo/references/*)"
   - "Bash(bash ${CLAUDE_PLUGIN_ROOT}/skills/octo/scripts/run_python.sh:*)"
   - "Bash(octo-cli:*)"
@@ -43,14 +42,9 @@ Run these checks once per session and cache the results. If any check has alread
 
 ### 1. Active Context
 
-Read `~/.octo-cli/contexts.json` to extract:
-- `ActiveContext` — name of the currently active context (e.g., `local_meshtest`, `staging-1_meshtest`)
-- From the active context entry:
-  - `OctoToolOptions.TenantId` — configured tenant ID
-  - `OctoToolOptions.IdentityServiceUrl`, `OctoToolOptions.AssetServiceUrl`, `OctoToolOptions.BotServiceUrl`, `OctoToolOptions.CommunicationServiceUrl`, `OctoToolOptions.ReportingServiceUrl`, `OctoToolOptions.AiServiceUrl`, `OctoToolOptions.AdminPanelUrl` — service endpoints
-  - `Authentication.AccessToken` — current auth token (if logged in)
+Run `octo-cli -c ListContexts -j` (or `-n <name>`) for the active context name (e.g., `local_meshtest`), and per context its tenant ID, service endpoints and auth status. Never open `~/.octo-cli/contexts.json` yourself and never print, copy or forward a token from it; `ListContexts` and `AuthStatus` give everything needed.
 
-Reading `ActiveContext` tells you the *persisted default* — but a command may run against a different context when `--context <name>` is passed or `OCTO_CLI_CONTEXT` is set (see Invocation Syntax). Check the env var and prefer `--context` when targeting a specific environment so you never depend on, or mutate, the global active context.
+The active context is the *persisted default* — but a command may run against a different context when `--context <name>` is passed or `OCTO_CLI_CONTEXT` is set (see Invocation Syntax). Check the env var and prefer `--context` when targeting a specific environment so you never depend on, or mutate, the global active context.
 
 To list all available contexts: `octo-cli -c ListContexts` — the dedicated command. Shows each context's identity URL, tenant, and auth status (none/authenticated/expired). Add `-n <name>` for single-context detail or `-j` for JSON. (`octo-cli -c UseContext` with no `-n` still lists contexts as a legacy fallback.)
 
@@ -242,7 +236,7 @@ All communication commands accept plain runtime object IDs — the SDK builds th
 
 > Adapters are now Helm-deployed by the Communication Operator when a pool is deployed; there is **no** manual adapter-deploy command anymore (legacy `DeployAdapter`, `GetPool`, `DeployPoolAdapters`, `UndeployPoolAdapters` were removed). Use `DeployWorkload`/`UndeployWorkload` for adapter/application workloads.
 >
-> **Deploying the pool itself is REST-only** (no octo-cli command): `POST {CommunicationServiceUrl}{tenantId}/v1/Pool/deploy?poolRtId=<rtId>` with the bearer token from `~/.octo-cli/contexts.json` → 204 (`undeploy` likewise). **Order matters:** on a freshly comm-enabled tenant the pool starts `Undeployed`, and `DeployWorkload` triggers fired in that state are **silently lost** — the workload sits in `Pending` forever with no error. Deploy the pool first, then (re-)run `DeployWorkload`.
+> **Deploying the pool itself is REST-only** (no octo-cli command): `POST {CommunicationServiceUrl}{tenantId}/v1/Pool/deploy?poolRtId=<rtId>` → 204 (`undeploy` likewise). The bearer token must be one issued for `{tenantId}` itself (the per-tenant context of that tenant, signed in), never a token of another tenant such as the root tenant (see *Tenant tokens, child tenants and sweeps*). There is no CLI command yet, so this one call is the remaining exception to "no hand-made token handling". **Order matters:** on a freshly comm-enabled tenant the pool starts `Undeployed`, and `DeployWorkload` triggers fired in that state are **silently lost** — the workload sits in `Pending` forever with no error. Deploy the pool first, then (re-)run `DeployWorkload`.
 
 ### AI Services
 
@@ -292,6 +286,10 @@ All communication commands accept plain runtime object IDs — the SDK builds th
 octo-cli uses **named contexts** (like kubectl), each storing its own service URLs, tenant, and auth tokens. Naming convention: `{installation}_{tenantId}` (e.g. `local_meshtest`, `staging-1_meshtest`, `prod-1_meshmakers`); default tenant is `meshtest`.
 
 On "switch to <env>" / "connect to <env>": read `references/environments.md` for URL mappings (installations `local`, `test-2`, `staging-1`, `prod-1`, `prod-2`), then `AddContext -n {ctx}` (idempotent; add `-aisu` if AI is needed). Authenticate and work **against that context without changing the active one**: `AuthStatus --context {ctx}`; if the token is invalid, `LogIn -i --context {ctx}` (or `LogInClientCredentials --context {ctx}` for headless) — the token is stored in `{ctx}`. Then pass `--context {ctx}` on every command, or `export OCTO_CLI_CONTEXT={ctx}` for the session. Only use `UseContext -n {ctx}` when the user explicitly wants to change their persistent default (single-session/interactive). List contexts with `ListContexts`. In the OctoMesh developer shell, the `Register-OctoCliContext` cmdlet wraps context creation + login for any installation (it knows the current cluster domains) — route there via `octo-devtools`.
+
+## Tenant tokens, child tenants and sweeps
+
+A command addresses **one tenant: the tenant of its context**. octo-cli 3.5.27+ never sends a token issued for another tenant: it exchanges it per tenant (cached) or stops with exit `-4` and a message naming tenant and cause (no fallback). Authority in a child tenant comes **only from explicit provisioning**: `octo-cli -c ProvisionCurrentUser -ttid <child>` once per child tenant, new tenants included. For many tenants use the octo-tools helper, not a script: `Register-OctoCliContext -Installation <i> -TenantId a,b,c -NoSwitch`, then `Invoke-OctoTenantSweep -Installation <i> -Tenant a,b,c -CliArguments '-c','LibraryStatus' [-WhatIf] [-Json]` (one row per tenant: Ok / Denied + cause / Failed; continues after a denial; never touches a token). **Never write scripts that read a token out of the context file and call a child tenant** — they are denied once the gate is enforced; a GraphQL command for octo-cli is coming with AB#7027. The Python explorers in `scripts/` address the context's own tenant and keep working. Denial causes, per-tenant contexts for CI, and a worked example: `references/tenant-tokens.md`.
 
 ## Smart Behaviors
 
@@ -379,7 +377,7 @@ If a pipeline (especially HTTP-triggered) produces no results: `GetLatestPipelin
 
 ### Script Location & Invocation
 
-Scripts live in this skill's `scripts/` subdirectory and read connection info (endpoint URL, tenant, auth token) from the active context in `~/.octo-cli/contexts.json` automatically. **Prerequisite:** the user must be authenticated (`octo-cli -c LogIn -i`); on a 401/403, prompt to re-authenticate.
+Scripts live in this skill's `scripts/` subdirectory and read connection info (endpoint URL, tenant, auth token) from the effective context automatically. They address the **context's own tenant**, so they are not affected by the child-tenant token rule; to explore another tenant, point them at a context of that tenant (`OCTO_CLI_CONTEXT=<ctx>`). **Prerequisite:** the user must be authenticated (`octo-cli -c LogIn -i`); on a 401/403, prompt to re-authenticate.
 
 All Python scripts MUST be run through the venv wrapper, with absolute paths via `$CLAUDE_PLUGIN_ROOT`. The wrapper creates the venv and installs deps on first use. Never call `python`/`python3` directly and never `cd` into the skill directory (it triggers permission prompts and file-not-found errors). Throughout this reference, **`<RUN>`** is shorthand for the required prefix:
 
@@ -494,8 +492,9 @@ Progressive drill-down when the user asks about the data model (expand `<RUN>` t
 
 There is no `octo-cli` command or script for deleting individual runtime entities. Use the Asset Repo GraphQL mutation directly via `curl` against `{AssetServiceUrl}tenants/{TenantId}/GraphQL`:
 
+Stop-gap until the octo-cli GraphQL command (AB#7027) is released. `$TOKEN` must be a token issued for the tenant in the URL (a context of that tenant); never take one from another tenant's context, never echo it.
+
 ```bash
-TOKEN=$(python3 -c "import json; c=json.load(open('$HOME/.octo-cli/contexts.json')); print(c['Contexts'][c['ActiveContext']]['Authentication']['AccessToken'])")
 curl -sk "https://localhost:5001/tenants/maco/GraphQL" \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"query":"mutation { runtime { runtimeEntities { delete(entities: [{rtId: \"<RTID>\", ckTypeId: \"<UnversionedCkTypeId>\"}]) } } }"}'

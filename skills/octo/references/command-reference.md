@@ -816,7 +816,7 @@ octo-cli -c CreateAdminProvisioningMapping -ttid <targetTenantId> -stid <sourceT
 | `-rids` | `roleIds` | Comma-separated role IDs | No |
 
 #### ProvisionCurrentUser
-Provisions the current user as admin in the target tenant.
+Provisions the current user as admin in the target tenant. **Required once per child tenant, also for every new tenant** (AB#6836): a root-tenant operator has no implicit rights in a child tenant, and octo-cli's per-tenant token exchange is denied (exit `-4`, message names the tenant and `ProvisionCurrentUser -ttid <tenant>`) until this has run. For many tenants: `Invoke-OctoTenantSweep -Context <root-ctx> -AllTenants -CliArguments '-c','ProvisionCurrentUser','-ttid','{tenant}'` (see `tenant-tokens.md`).
 ```
 octo-cli -c ProvisionCurrentUser -ttid <targetTenantId>
 ```
@@ -1412,8 +1412,8 @@ octo-cli -c GetPools [-j]
 
 ```powershell
 # PoolController: POST {tenantId}/v1/Pool/deploy?poolRtId=<rtId>  (undeploy analogous)
-$ctx   = Get-Content "$env:USERPROFILE\.octo-cli\contexts.json" | ConvertFrom-Json
-$token = $ctx.Contexts.($ctx.ActiveContext).Authentication.AccessToken
+# $token = an access token issued for {tenantId} itself (the signed-in per-tenant context of that tenant),
+# never one of another tenant (denied by the tenant gate); never echo or log it. No CLI command exists yet.
 Invoke-WebRequest -Method POST -Headers @{Authorization="Bearer $token"} `
   -Uri "{CommunicationServiceUrl}{tenantId}/v1/Pool/deploy?poolRtId=670000000000000000000001"
 # 204 No Content on success; GetPools -j then shows Online/Deployed

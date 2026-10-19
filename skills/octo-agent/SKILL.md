@@ -55,6 +55,12 @@ Developer has a problem
 │   ├── Identify orphaned version references
 │   └── See: CK Model Internals reference
 │
+├── "Command denied in a child tenant / exit -4 / would be denied (LogOnly)"
+│   ├── Read the message: it names the tenant and the cause
+│   ├── Not provisioned → ProvisionCurrentUser -ttid <tenant> (per child tenant, new ones too)
+│   ├── Many tenants → Invoke-OctoTenantSweep, never a token-scraping script
+│   └── See: Debugging Workflows reference, "Denied in a Child Tenant"
+│
 └── "I need to understand how X works"
     ├── CK model YAML, versioning → CK Model Internals
     ├── Build chain, DebugL, NuGet → Build System
@@ -166,4 +172,4 @@ Consult these for detailed procedures:
 - **`references/build-system.md`** — DebugL configuration, NuGet dependency chain, selective build strategies, service startup options
 - **`references/ck-model-internals.md`** — CK model YAML format, versioning, dependency resolution, source generation, migrations, MongoDB collections
 - **`references/database-operations.md`** — Docker volume backup/restore, MongoDB diagnostic queries, multi-tenant data, service logs, health endpoints
-- **`references/debugging-workflows.md`** — Safe investigation protocol, bug isolation steps, common bug categories, test framework reference
+- **`references/debugging-workflows.md`** — Safe investigation protocol, bug isolation steps, common bug categories (incl. denial in a child tenant), test framework reference
