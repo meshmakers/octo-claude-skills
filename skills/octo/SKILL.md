@@ -289,7 +289,7 @@ On "switch to <env>" / "connect to <env>": read `references/environments.md` for
 
 ## Tenant tokens, child tenants and sweeps
 
-A command addresses **one tenant: the tenant of its context**. octo-cli 3.5.27+ never sends a token issued for another tenant: it exchanges it per tenant (cached) or stops with exit `-4` and a message naming tenant and cause (no fallback). Authority in a child tenant comes **only from explicit provisioning**: `octo-cli -c ProvisionCurrentUser -ttid <child>` once per child tenant, new tenants included. For many tenants use the octo-tools helper, not a script: `Register-OctoCliContext -Installation <i> -TenantId a,b,c -NoSwitch`, then `Invoke-OctoTenantSweep -Installation <i> -Tenant a,b,c -CliArguments '-c','LibraryStatus' [-WhatIf] [-Json]` (one row per tenant: Ok / Denied + cause / Failed; continues after a denial; never touches a token). **Never write scripts that read a token out of the context file and call a child tenant** — they are denied once the gate is enforced; a GraphQL command for octo-cli is coming with AB#7027. The Python explorers in `scripts/` address the context's own tenant and keep working. Denial causes, per-tenant contexts for CI, and a worked example: `references/tenant-tokens.md`.
+A command addresses **one tenant: the tenant of its context**. octo-cli 3.5.27+ never sends a token issued for another tenant: it exchanges it per tenant (cached) or stops with exit `-4` and a message naming tenant and cause (no fallback). Authority in a child tenant comes **only from explicit provisioning**: `octo-cli -c ProvisionCurrentUser -ttid <child>` once per child tenant, new tenants included. For many tenants use the octo-tools helper, not a script: `Register-OctoCliContext -Installation <i> -TenantId a,b,c -NoSwitch`, then `Invoke-OctoTenantSweep -Installation <i> -Tenant a,b,c -CliArguments '-c','LibraryStatus' [-WhatIf] [-Json]` (one row per tenant: Ok / Denied + cause / Failed; continues after a denial; never touches a token). **Never write scripts that read a token out of the context file and call a child tenant** — they are denied once the gate is enforced; GraphQL goes through `octo-cli -c GraphQl -tid <tenant> -q ...` (also inside the sweep: `-CliArguments \'-c\',\'GraphQl\',\'-tid\',\'{tenant}\',\'-q\',$q -IncludeOutput`). The Python explorers in `scripts/` address the context's own tenant and keep working. Denial causes, per-tenant contexts for CI, and a worked example: `references/tenant-tokens.md`.
 
 ## Smart Behaviors
 
@@ -488,19 +488,9 @@ Progressive drill-down when the user asks about the data model (expand `<RUN>` t
 5. **Search** — `<RUN> ck_explorer.py search <term>` — find types/enums by keyword
 6. **Runtime instances** — then explore actual instances: `<RUN> rt_explorer.py count <ckId>`, `... list <ckId> --first 5`, `... get <ckId> <rtId>`, `... search <ckId> <term>`, `... query <ckId> --columns name,state --first 10`
 
-### Deleting Runtime Entities via GraphQL
+### Querying and deleting runtime entities via GraphQL
 
-There is no `octo-cli` command or script for deleting individual runtime entities. Use the Asset Repo GraphQL mutation directly via `curl` against `{AssetServiceUrl}tenants/{TenantId}/GraphQL`:
-
-Stop-gap until the octo-cli GraphQL command (AB#7027) is released. `$TOKEN` must be a token issued for the tenant in the URL (a context of that tenant); never take one from another tenant's context, never echo it.
-
-```bash
-curl -sk "https://localhost:5001/tenants/maco/GraphQL" \
-  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"query":"mutation { runtime { runtimeEntities { delete(entities: [{rtId: \"<RTID>\", ckTypeId: \"<UnversionedCkTypeId>\"}]) } } }"}'
-```
-
-Add more objects to the `entities` array to delete several at once. Uses **unversioned** CK type IDs (e.g. `Industry.Manufacturing/Shift`). Returns `{"data":{"runtime":{"runtimeEntities":{"delete":true}}}}`. **Mutating** — confirm before executing.
+`octo-cli -c GraphQl -tid <tenant> -q '<query>'` (also `-f`, `-si`, `-vars`, `-on`) runs any query or mutation with the token for that tenant; the answer is clean JSON on standard output. Flags, exit codes and the multi-tenant sweep example: `references/command-reference.md` (*GraphQl*) and `references/tenant-tokens.md`. Deleting entities is a **mutating** call, confirm first: `-q 'mutation { runtime { runtimeEntities { delete(entities: [{rtId: "<RTID>", ckTypeId: "<UnversionedCkTypeId>"}]) } } }'` (unversioned CK type IDs such as `Industry.Manufacturing/Shift`; several objects in the array delete several entities; success is `"delete":true`). Never use curl with a token from a context file.
 
 ### Schema Evolution Handling
 

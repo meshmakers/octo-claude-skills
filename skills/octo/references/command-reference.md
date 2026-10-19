@@ -901,6 +901,24 @@ octo-cli -c UpdateSystemCkModel -tid <tenantId>
 |---|---|---|---|
 | `-tid` | `tenantId` | Tenant ID | Yes |
 
+### GraphQl
+Sends one GraphQL query or mutation to `tenants/<tenant>/GraphQL` with the token for that tenant and writes the response JSON, unmodified, to standard output (banner and log lines go to standard error, so `| jq` and `ConvertFrom-Json` work). Replaces the scripts that read a token out of the context file and call the route with curl or Python. The token is chosen like for every tenant-addressed command: a token of the addressed tenant as is, a token of another tenant exchanged per tenant (cached); never the context token as a fallback. A root-tenant operator needs `ProvisionCurrentUser -ttid <tenant>` once per child tenant.
+```
+octo-cli -c GraphQl -tid <tenant> -q "{ runtime { runtimeEntities(ckId:\"System/Entity\", first:1) { totalCount } } }"
+octo-cli -c GraphQl -tid <tenant> -f query.graphql -vars @vars.json -on MyQuery
+cat query.graphql | octo-cli --context test-2_octosystem -c GraphQl -tid <tenant> -si | jq .data
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-tid` | `tenantId` | Tenant to query (default: the tenant of the context). | No |
+| `-q` | `query` | Document text. | One of `-q`, `-f`, `-si` |
+| `-f` | `file` | Document from a file. | One of `-q`, `-f`, `-si` |
+| `-si` | `stdin` | Document from standard input (also used when input is piped and no other source is given). | One of `-q`, `-f`, `-si` |
+| `-vars` | `variables` | Variables as JSON object or `@file`. | No |
+| `-on` | `operationName` | Operation to run when the document has several. | No |
+
+Exit codes: `0` success; `-5` GraphQL `errors` (body on standard error, nothing on standard output), missing or ambiguous document, invalid variables; `-4` not provisioned / denied / 403 (message names tenant and cause, nothing is sent); `-3` transport or 5xx. Mutations (for example `runtimeEntities { delete(...) }`) are sent as given: confirm before running them. Over many tenants: `Invoke-OctoTenantSweep ... -IncludeOutput -CliArguments '-c','GraphQl','-tid','{tenant}','-q',$q` (see `tenant-tokens.md`).
+
 ### Models
 
 #### ImportCk
