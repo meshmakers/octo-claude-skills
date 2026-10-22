@@ -76,7 +76,11 @@ Notes:
    test-2_octosystem`.
 2. `octo-cli -c Create -tid <tenantId> -db <tenantId> --context test-2_octosystem`
    — interactive sessions provision the current user as tenant admin. Headless
-   sessions MUST add `-np` (machine tokens carry no user to provision). Tenant
+   (client-credentials) sessions add `--scratch` (the client becomes administrator
+   of the tenant it creates, no user provisioning; the client needs `-apic` and
+   the role `TenantManagement`; clean up with `Delete --disable-features -y`, see
+   the octo skill's `references/temp-tenants.md`) or, for a tenant that is not
+   a scratch tenant, `-np` (machine tokens carry no user to provision). Tenant
    IDs are lowercased. If the tenant was created without provisioning (`-np`) or
    by someone else, run `octo-cli -c ProvisionCurrentUser -ttid <tenantId>
    --context test-2_octosystem` before using the root operator's token in it: a
