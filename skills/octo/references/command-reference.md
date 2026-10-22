@@ -855,7 +855,7 @@ octo-cli -c Create -tid <tenantId> -db <database> [-np] [--scratch]
 | `-tid` | `tenantId` | Tenant ID | Yes |
 | `-db` | `database` | Database name | Yes |
 | `-np` | `no-provision` | Skip admin provisioning of the current user (flag, no value) | No |
-| `-sc` | `scratch` | Scratch tenant (AB#7192): the client-credentials client of the parent that runs the command becomes administrator (`TenantOwners`) of the new tenant; skips user provisioning. HTTP 403 for a user token or without `TenantManagement`; the client must be flagged `-apic` | No |
+| `-sc` | `scratch` | Scratch tenant: the client-credentials client of the parent that runs the command becomes administrator (`TenantOwners`) of the new tenant; skips user provisioning. HTTP 403 for a user token or without `TenantManagement`; the client must be flagged `-apic` | No |
 
 #### Clean
 Resets tenant to factory defaults by deleting CK and RT model.
@@ -884,7 +884,7 @@ octo-cli -c Delete -tid <tenantId> [-y] [--disable-features]
 |---|---|---|---|
 | `-tid` | `tenantId` | Tenant ID | Yes |
 | `-y` | `yes` | Skip confirmation prompt | No |
-| `-df` | `disable-features` | Switch off every enabled capability (AI Services, Communication, Reporting, Stream Data) with the caller's token for that tenant, then delete (AB#7192). Requires `-y`. Activated archives are listed and keep the tenant undeleted. Child secret: `OCTO_CLI_CHILD_CLIENT_SECRET`, else `OCTO_CLI_CLIENT_SECRET` | No |
+| `-df` | `disable-features` | Switch off every enabled capability (AI Services, Communication, Reporting, Stream Data) with the caller's token for that tenant, then delete. Requires `-y`. Activated archives are listed and keep the tenant undeleted. Child secret: `OCTO_CLI_CHILD_CLIENT_SECRET`, else `OCTO_CLI_CLIENT_SECRET` | No |
 
 #### ClearCache
 ```
