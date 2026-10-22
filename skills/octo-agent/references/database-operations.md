@@ -142,6 +142,11 @@ Regular tenants store:
 # Create a new tenant
 octo-cli -c Create -tid mytenant -db mytenant
 
+# Throwaway tenant for an agent (client-credentials login of the parent; the client becomes its administrator)
+octo-cli -c Create -tid tmp-mytest -db tmp-mytest --scratch
+# ...and its cleanup: disables the enabled capabilities with the child token, then deletes
+octo-cli -c Delete -tid tmp-mytest --disable-features -y
+
 # Clean a tenant (reset to factory defaults — destructive!)
 octo-cli -c Clean -tid mytenant
 

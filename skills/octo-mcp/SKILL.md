@@ -51,7 +51,10 @@ Six context helpers in `src/McpServices/Services/`:
 | `CommunicationClientContext` | `ICommunicationServicesClient` | per-tenant, falls back to system |
 | `StreamDataClientContext` | `IStreamDataServicesClient` | system (`api/v1`), tenant per call |
 | `ReportingClientContext` | `IReportingServicesClient` | per-tenant, falls back to system |
+| `AiClientContext` | `IAiServicesClient` | per-tenant (`enable_ai` / `disable_ai`, URL `OctoServiceUrls:AiServiceUrl`, AB#7192) |
 | `BotClientContext` | `IBotServicesClient` | system-scoped |
+
+Tenant lifecycle tools (AB#7192): `create_tenant` / `restore_tenant` take `scratch` (SDK flag; the service accepts it only for a client-credentials caller of the direct parent), `delete_tenant` takes `disableFeatures` (switches off the enabled capabilities with the session's token for the child through the SDK `TenantFeatureDisabler`, then deletes; works for a **user** session whose token can be exchanged for the child, a client-credentials session uses octo-cli `Delete --disable-features`).
 
 For rare `Bot`/`AdminPanel` one-offs (e.g. `reconfigure_log_level`) there is no helper — grab the factory via `server.Services.GetRequiredService<IOctoServiceClientFactory>()`.
 

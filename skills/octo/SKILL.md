@@ -137,7 +137,7 @@ Command-name + one-line purpose + safety type only. **For full flag detail, read
 | Command | Purpose | Type |
 |---|---|---|
 | `GetTenants` | List all child tenants | Read-only |
-| `Create` | Create a new tenant + provision current user (`-tid`, `-db`, `-np` to skip) | Mutating |
+| `Create` | Create a new tenant + provision current user (`-tid`, `-db`, `-np` to skip; `--scratch` for agents: the client-credentials caller becomes the tenant's administrator, no user provisioning) | Mutating |
 | `Clean` | Reset tenant to factory defaults (deletes CK + RT model) | Destructive |
 | `Attach` | Attach an existing database to a tenant | Mutating |
 | `Delete` | Delete a tenant | Destructive |
@@ -302,7 +302,7 @@ A command addresses **one tenant: the tenant of its context**. octo-cli 3.5.27+ 
 
 ## Temporary Tenants (Non-Interactive)
 
-When a task needs a throwaway tenant, the agent can run the **entire lifecycle without user interaction** (no `LogIn -i`): `LogInClientCredentials` (machine token, env vars `OCTO_CLI_CLIENT_ID`/`OCTO_CLI_CLIENT_SECRET`) + a mirrored client in `octosystem` (`AddClientCredentialsClient ... -apic`) that is auto-provisioned into every new tenant with the same id/secret. Short form, all via `--context` so the active context is never touched: `LogInClientCredentials --context <octosystem-ctx>` → `Create -tid tmp-<x> -db tmp-<x> -np --context <octosystem-ctx>` → `AddContext -n <tmp-ctx>` → `LogInClientCredentials --context <tmp-ctx>` → work with `--context <tmp-ctx>` → `Delete -tid tmp-<x> -y --context <octosystem-ctx>` → `RemoveContext -n <tmp-ctx>`. Read `references/temp-tenants.md` for the verified workflow, one-time client setup, and pitfalls (`-np` mandatory, per-context tokens, no user roles in machine tokens).
+When a task needs a throwaway tenant, the agent can run the **entire lifecycle without user interaction** (no `LogIn -i`): `LogInClientCredentials` (machine token, env vars `OCTO_CLI_CLIENT_ID`/`OCTO_CLI_CLIENT_SECRET`) with a client in `octosystem` that has the role `TenantManagement` and `-apic`, then **`Create --scratch`** (the creating client becomes administrator of the new tenant, AB#7192) and **`Delete --disable-features -y`** (switches off the enabled capabilities with the child token, then deletes). Short form, all via `--context`: `LogInClientCredentials --context <octosystem-ctx>` → `Create -tid tmp-<x> -db tmp-<x> --scratch --context <octosystem-ctx>` → `AddContext -n <tmp-ctx>` → `LogInClientCredentials --context <tmp-ctx>` → work with `--context <tmp-ctx>` → `Delete -tid tmp-<x> --disable-features -y --context <octosystem-ctx>` → `RemoveContext -n <tmp-ctx>`. `--scratch` refuses user tokens by design. Read `references/temp-tenants.md` for the workflow, one-time client setup and pitfalls.
 
 ## Communication Entity Relationships
 
