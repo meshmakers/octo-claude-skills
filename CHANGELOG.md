@@ -2,7 +2,7 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [0.22.0] — 2026-10-22
 
 ### Changed
 

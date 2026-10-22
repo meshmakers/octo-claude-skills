@@ -101,11 +101,11 @@ bash skills/octo/scripts/run_python.sh scripts/validate_skill_frontmatter.py  # 
 
 ## Versioning
 
-The `version` field in `.claude-plugin/plugin.json` is the release gate: **bump it (semver) when releasing a meaningful change set, not on every commit**. Users on a pinned version only receive updates when the version increases.
+The `version` field in `.claude-plugin/plugin.json` is the release gate: users on a pinned version only receive updates when the version increases. **Do not bump it on every commit during ongoing work, but every pull request that lands on `main` bumps the version (semver) and records its changes under that new version in `CHANGELOG.md`.** There is no `Unreleased` section.
 
 Keep `marketplace.json`'s plugin entry version in sync for clarity — but note that when both files declare a version, **`plugin.json` wins** per the Claude Code plugin spec.
 
-Record every release in `CHANGELOG.md`. Run both `claude plugin validate . --strict` and `scripts/validate_skill_frontmatter.py` before tagging a release.
+Run both `claude plugin validate . --strict` and `scripts/validate_skill_frontmatter.py` before pushing the version bump.
 
 ## Naming Conventions
 
