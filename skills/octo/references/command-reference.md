@@ -1111,15 +1111,21 @@ octo-cli -c LibraryStatus [-na] [-io]
 | `-io` | `installed-only` | Show only installed models | No |
 
 #### ImportFromCatalog
-Imports a CK model from a catalog with all dependencies. Background job — use `-w` to wait.
+Imports one or more CK models from a catalog with all dependencies. Background job — use `-w` to wait. The tenant upgrade guard refuses an import that would break an installed model (`CK_UPGRADE_BLOCKED`) unless `-f`.
 ```
 octo-cli -c ImportFromCatalog -cn <catalogName> -m <modelId> [-w]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-cn` | `catalogName` | Catalog name | Yes |
-| `-m` | `modelId` | Model ID (e.g. `Industry.Energy-2.0.0`) | Yes |
+| `-m` | `modelId` | Model ID (e.g. `Industry.Energy-2.0.0`) or a **comma-separated list** imported as one guarded set | Yes |
 | `-w` | `wait` | Wait for the import job to complete | No |
+
+**Models that pin each other exactly** (e.g. Basic, Industry.Basic, Industry.Energy, Industry.Fluid, Industry.Maintenance, Industry.Manufacturing) block each other when imported one by one. Import them together without `-f`:
+```
+octo-cli -c ImportFromCatalog -cn PublicGitHubCatalog -m Basic-2.5.0,Industry.Basic-2.6.0,Industry.Energy-3.6.0,Industry.Fluid-2.5.0,Industry.Maintenance-2.5.0,Industry.Manufacturing-2.6.0 -w
+```
+The CLI sends one `ResolveDependenciesBatch` and one `ImportFromCatalogBatch` (one job) and orders the set by dependency itself, whatever the order of the list. A blocked single import prints a ready-to-run joint command (requested models + the `suggestedDependentUpdate` of the blockers) — run that instead of `-f`; `-f` is not a safe workaround (a failing forced job can leave models `ResolveFailed`).
 
 #### RefreshCatalogs
 Refreshes CK model catalog caches.
@@ -1131,7 +1137,7 @@ octo-cli -c RefreshCatalogs [-cn <catalogName>]
 | `-cn` | `catalogName` | Catalog name to refresh (refreshes all if omitted) | No |
 
 #### FixAll
-Imports all CK models that need update or fix. Background job.
+Imports all CK models that need update or fix. Blocked rows with a catalog update are tried together (models blocked only by each other are imported in one batch); FixAll never forces. Background job.
 ```
 octo-cli -c FixAll [-w] [-y]
 ```

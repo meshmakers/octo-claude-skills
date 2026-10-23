@@ -163,9 +163,9 @@ Requires the **DataModelManagement** role for catalog import/refresh.
 | `CheckDependencies` | Show dependency tree for a catalog model (`-cn`, `-m`) | Read-only |
 | `CheckUpgrade` | Pre-flight an upgrade/migration (`-cn`, `-m`) | Read-only |
 | `LibraryStatus` | Installed models + catalog availability (`-na`, `-io`) | Read-only |
-| `ImportFromCatalog` | Import a catalog model + deps (`-cn`, `-m`, `-w`) | Mutating |
+| `ImportFromCatalog` | Import catalog model(s) + deps (`-cn`, `-m A,B,C` = one guarded set in dependency order, `-w`) | Mutating |
 | `RefreshCatalogs` | Refresh catalog caches (`-cn` optional) | Mutating |
-| `FixAll` | Import all models needing update/fix (`-w`, `-y`) | Mutating |
+| `FixAll` | Import all models needing update/fix, blocked-by-each-other groups together, never forces (`-w`, `-y`) | Mutating |
 
 #### Blueprints
 

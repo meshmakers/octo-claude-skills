@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Changed
+
+- **`octo`** — `ImportFromCatalog -m A,B,C` imports a comma-separated list as one guarded set in dependency order, without `-f` (AB#7376, octo-cli): documents the joint upgrade of models that pin each other exactly (octo-mesh-energy group), the ready-to-run joint command a blocked single import prints, and that `FixAll` now tries blocked rows together (never forces).
+
 ## [0.22.0] — 2026-10-22
 
 ### Changed
