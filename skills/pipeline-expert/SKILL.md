@@ -187,7 +187,7 @@ Common: `CreateUpdateInfo@1` (build entity Insert/Update/Delete), `CreateAssocia
 
 Specialized (see `node-reference-mesh.md`): `AnthropicAiQuery@1` (Claude AI; MCP-aware), `PdfOcrExtraction@1`, `StatisticalAnomalyDetection@1`, `MachineLearningAnomalyDetection@1`, `ImportFromCsv@1`, `ConvertToCsv@1` (array → real CSV: quoting, per-column format, BOM, base64), `RenderDelimitedText@1` (fixed layouts, no quoting), `ImportFromExcel@1`, `ReplyToTeamsChannel@1`.
 
-DataPointMapping family (Mesh): `ApplyDataPointMappings@1` (evaluate mappings with mXparser expressions), `BuildMappingTargets@1` (resolve mappings to acquisition targets), `GenerateDataPointMappings@1` (deterministic rule-based generator — non-AI alternative to `AnthropicAiQuery@1`), `ValidateDataPointCoverage@1` (coverage report), `MapToRecordArray@1`, `UpdateRecordArrayItem@1`.
+DataPointMapping family (Mesh): `ApplyDataPointMappings@1` (evaluate mappings with mXparser expressions), `BuildMappingTargets@1` (resolve mappings to acquisition targets), `GenerateDataPointMappings@1` (deterministic rule-based generator — non-AI alternative to `AnthropicAiQuery@1`), `ValidateDataPointCoverage@1` (coverage report), `MapToRecordArray@1`, `UpdateRecordArrayItem@1` (one record per call), `UpdateRecordArrayItem@2` (several records of one array in one pass — with `GroupBy@1`: one read and one write per entity).
 
 Simulation: `Simulation@1` is an **Extract** node (not Transform) — Bogus/Math/Energy generators; `SimulateEnergyMeasurements@1` (Mesh) generates 15-min EnergyMeasurement slots from BDEW/PV profiles.
 

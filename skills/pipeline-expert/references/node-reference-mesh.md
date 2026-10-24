@@ -845,6 +845,37 @@ Find one record in a CK RecordArray by a key attribute match and update specifie
 | `path` | string | `$` | Source RecordArray (inherited) |
 | `targetPath` | string | required | Where to write the updated array |
 
+### UpdateRecordArrayItem@2
+
+Update **several** records of one CK RecordArray in one in-memory pass and write the modified array once. Use it to store a batch of changes on one entity with one read and one write: `GroupBy@1` (changes per entity) → `ForEach@1` over the groups → read the entity once → `UpdateRecordArrayItem@2` → `CreateUpdateInfo@1` → one `ApplyChanges@2` for all entities. `@1` stays unchanged.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `path` | string | `$` | Source RecordArray (inherited), e.g. `$.key.Attributes.States` |
+| `updatesPath` | string | required | Array of changes; every item addresses one record |
+| `matchAttributeName` | string | required | Record attribute to match (e.g. `ExternalId`) |
+| `itemMatchValuePath` | string | required | JSONPath **relative to each change** to the value that selects the record |
+| `attributeUpdates` | array | required | Each `{attributeName, value, valuePath}`; `valuePath` is **relative to each change** and wins over `value`; `value: =now()` = current UTC time |
+| `targetPath` | string | required | Where to write the modified array |
+
+Behavior: several changes for one record apply in input order (last wins per attribute); untouched records and the array order are kept; the source array is not modified; match is case-insensitive on the text of the value, first record wins on duplicate keys, PascalCase/camelCase keys are both found and updated in place; unmatched changes are skipped with **one** warning per run (count only); nothing is written to `targetPath` if no change matched, the updates are empty or a path is not an array.
+
+```yaml
+- type: UpdateRecordArrayItem@2
+  path: $.key.Attributes.States
+  updatesPath: $.full.key.items          # items of a GroupBy@1 group seen from the inner ForEach
+  matchAttributeName: ExternalId
+  itemMatchValuePath: $.pollUuid
+  targetPath: $.updates._updatedStates
+  attributeUpdates:
+    - attributeName: CurrentValue
+      valuePath: $.value
+    - attributeName: LastUpdate
+      value: =now()
+```
+
+Recipe "N updates of one entity in one batch": do **not** build one update per change and hand them all to one `ApplyChanges@2` — it merges updates of the same entity attribute by attribute and the later one wins, each update carries the whole array with the stale values of the other records, so all but the last change are lost. Group (`GroupBy@1`), apply all changes of an entity with `UpdateRecordArrayItem@2`, emit one update per entity. This does not protect against two **executions** (e.g. parallel `FromPipelineDataEvent@1` messages) changing the same entity between read and write — the later write wins; see the node page in the documentation.
+
 ### SimulateEnergyMeasurements@1
 
 Generate per-15-min-slot `EnergyMeasurement` Insert candidates (and their parent `ParentChild` association candidates) for a set of MeteringPoints over a time window, using BDEW H0/G0/L0 load-profile or PV-curve math. Output flows into `UpdateRtEntityIfNewer@1` (dedup) → `ApplyChanges@2` (RT write) → `SaveTimeRangeStreamDataInArchive@1` (archive write).
