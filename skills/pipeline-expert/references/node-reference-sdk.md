@@ -269,6 +269,27 @@ Remove duplicate objects by a unique property value. SDK node (moved from MeshAd
 | `path` | string | `$` | Source array path (inherited) |
 | `targetPath` | string | required | Where to write the distinct array |
 
+### GroupBy@1
+
+Group the items of an array by a key (SDK node — available on **all** adapters). Not the editor-only `Group@1`, which has no runtime effect; not `Distinct@1`, which drops all but the first item per key.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `path` | string | `$` | Source array path (inherited) |
+| `keyPath` | string | optional | JSONPath relative to each item; must resolve to a simple value (string, number, boolean). Without it the array must hold scalars and each value is its own key |
+| `targetPath` | string | required | Where to write the groups |
+
+Result: `[ { "key": <key>, "items": [ ... ] }, ... ]` — groups in order of the key's first occurrence, items in their original order. Keys are compared by value: strings ordinal and case-sensitive (date-like strings are not parsed), `1` equals `1.0`, `"1"` differs from `1`. Items without a simple value at `keyPath` (missing, `null`, object/array, non-object items) are skipped and counted in **one** warning per run. Non-array or empty source: nothing is written, the pipeline continues. Items are deep-copied; the source array stays unchanged.
+
+```yaml
+- type: GroupBy@1
+  path: $.states
+  keyPath: $.controlUuid
+  targetPath: $.stateGroups
+- type: ForEach@1          # one iteration per entity: $.key.key, $.key.items
+  iterationPath: $.stateGroups
+```
+
 ---
 
 ## Trigger Nodes
