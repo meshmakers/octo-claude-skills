@@ -248,6 +248,7 @@ Create `EntityUpdateInfo` objects for database operations (Insert/Update/Delete)
 | `timestampPath` | string | optional | JSONPath to timestamp |
 | `rtWellKnownNamePath` | string | optional | JSONPath to well-known name |
 | `attributeUpdates` | array | optional | Attributes to set |
+| `recordArrayItemUpdates` | array | optional | **Atomic** updates of single RecordArray records, no read of the entity (`updateKind: UPDATE` only; see below) |
 | `path` | string | `$` | Source data path (inherited) |
 | `targetPath` | string | required | Where to write EntityUpdateInfo |
 | `targetValueWriteMode` | enum | Overwrite | Overwrite/Append/Prepend/Merge |
@@ -279,6 +280,31 @@ Each `attributeUpdate`:
       attributeValueType: Double
       valuePath: $.key.Quantity
 ```
+
+**Atomic RecordArray item update (`recordArrayItemUpdates`).** Changes single records of a RecordArray attribute in ONE atomic database update (`$set` + `arrayFilters`), **without reading the entity first**. Use it whenever several pipeline executions can change different records of the same entity in parallel (e.g. `FromPipelineDataEvent@1` consumers writing `Loxone/Control.States`). **Read-modify-write of a RecordArray** (`GetRtEntitiesByType@1` → `UpdateRecordArrayItem@1/@2` → `attributeUpdates` with the whole array → `ApplyChanges@2`) is **unsafe under parallel executions**: each execution writes back the whole array it read, so a concurrent change of another record is lost. The item update never rewrites other records or members; two executions on the SAME record: last write wins.
+
+```yaml
+- type: CreateUpdateInfo@1
+  targetPath: $._updates
+  targetValueKind: Array
+  updateKind: UPDATE
+  ckTypeId: Loxone/Control
+  rtIdPath: $.controlRtId
+  recordArrayItemUpdates:
+    - attributeName: States            # RecordArray attribute of the entity
+      matchAttributeName: ExternalId   # record member that identifies the record (String/Integer/Integer64/Enum; not writable here)
+      updatesPath: $.states            # optional: one item update per element; match/value paths are relative to the element
+      matchValuePath: $.pollUuid       # or matchValue: <static>
+      attributeUpdates:                # scalar members of the matched record
+        - attributeName: CurrentValue
+          valuePath: $.value           # or value: <static>; =now() = UTC now as ISO-8601 text
+        - attributeName: LastUpdate
+          value: =now()
+- type: ApplyChanges@2
+  entityUpdatesPath: $._updates
+```
+
+Rules: an empty match value skips that entry with a node warning; a record that matches nothing (or a missing entity) writes nothing and `ApplyChanges@2` logs the engine warning (partial misses of a multi-entry update are silent); the engine validates against the CK before writing — unknown attribute/member, a value of the wrong type, the match member as target and every `Secret` member are refused with a message naming type, attribute and member; ordinary `attributeUpdates` for other attributes can be combined (same statement), a whole-array update of the same attribute in the same update is refused as ambiguous; several infos of one entity in one `ApplyChanges@2` keep all item updates; display name rules referencing the RecordArray are not recomputed. Needs the engine/adapter release of AB#7445/AB#7442.
 
 ### CreateAssociationUpdate@1
 
@@ -874,7 +900,7 @@ Behavior: several changes for one record apply in input order (last wins per att
       value: =now()
 ```
 
-Recipe "N updates of one entity in one batch": do **not** build one update per change and hand them all to one `ApplyChanges@2` — it merges updates of the same entity attribute by attribute and the later one wins, each update carries the whole array with the stale values of the other records, so all but the last change are lost. Group (`GroupBy@1`), apply all changes of an entity with `UpdateRecordArrayItem@2`, emit one update per entity. This does not protect against two **executions** (e.g. parallel `FromPipelineDataEvent@1` messages) changing the same entity between read and write — the later write wins; see the node page in the documentation.
+Recipe "N updates of one entity in one batch": do **not** build one update per change and hand them all to one `ApplyChanges@2` — it merges updates of the same entity attribute by attribute and the later one wins, each update carries the whole array with the stale values of the other records, so all but the last change are lost. Group (`GroupBy@1`), apply all changes of an entity with `UpdateRecordArrayItem@2`, emit one update per entity. This does not protect against two **executions** (e.g. parallel `FromPipelineDataEvent@1` messages) changing the same entity between read and write — the later write wins and the other change is lost: the read-modify-write of a RecordArray is **unsafe under parallel executions**. For that case use `CreateUpdateInfo@1` `recordArrayItemUpdates` (atomic item update, no read), see above.
 
 ### SimulateEnergyMeasurements@1
 
