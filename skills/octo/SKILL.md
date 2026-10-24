@@ -214,7 +214,7 @@ All communication commands accept plain runtime object IDs — the SDK builds th
 | Command | Purpose | Type |
 |---|---|---|
 | `EnableCommunication` / `DisableCommunication` | Enable/disable the communication controller | Mutating |
-| `GetAdapters` / `GetAdapter` | List/get adapters (`-j`) | Read-only |
+| `GetAdapters` / `GetAdapter` | List/get adapters (`-j`); `GetAdapter` also shows the typed CPU/memory `resources` | Read-only |
 | `GetAdapterNodes` | Aggregated node descriptors from connected adapters (`-j`) | Read-only |
 | `GetPipelineSchema` | JSON Schema of valid pipeline YAML for an adapter (`-aid`, `-o`) | Read-only |
 | `GetPools` | List pools for the tenant (`-j`) | Read-only |
@@ -231,6 +231,7 @@ All communication commands accept plain runtime object IDs — the SDK builds th
 | `GetDataFlowStatus` | Aggregated data-flow status (`-id`, `-j`) | Read-only |
 | `GetWorkloadsByChart` | List workloads by Helm chart name (`-cn`) | Read-only |
 | `UpdateWorkloadChartVersion` | Set a workload's chart version — no deploy (`-id`, `-cv`) | Mutating |
+| `UpdateWorkloadResources` | Show/set/clear an adapter's or application's CPU and memory requests and limits — no deploy (`-id`, `-cr`, `-cl`, `-mr`, `-ml`; flag without value clears) | Mutating |
 | `DeployWorkload` | Deploy a workload through its parent pool (`-id`) | Mutating |
 | `UndeployWorkload` | Undeploy a workload — operator helm-uninstalls (`-id`) | Destructive |
 
