@@ -6,6 +6,7 @@ All notable changes to the octo-claude-skills plugin. Format loosely follows [Ke
 
 ### Changed
 
+- **`octo-operator`** — Helm values layering now includes the typed CPU/memory settings of a workload (AB#7428, octo-communication-controller-services): the controller projects `CpuRequest`/`CpuLimit`/`MemoryRequest`/`MemoryLimit` into `ValueOverride[]` unless `ValueOverride[]` or `ValuesYaml` already sets the path; precedence chart default < typed < `ValuesYaml` < `ValueOverride[]` < pool `replicaCount` pin; an overridden typed value is reported in `LastDeploymentWarning` and in the deploy response. The operator is unchanged.
 - **`octo`** — `UpdateWorkloadResources` (AB#7429, octo-cli PR #55): shows, sets and clears the typed CPU/memory requests and limits of an adapter or application without deploying; `GetAdapter` shows them as `resources`. Documents the flags (a flag without a value clears), the local validation, the precedence (chart default < typed settings < explicit `valuesYaml`/`values[]`) and that adapter pools use `PoolMember*`. The MCP tools `update_workload_resources` / `get_workload_resources` are in octo-mcp-service PR #33.
 - **`octo`** — `ImportFromCatalog -m A,B,C` imports a comma-separated list as one guarded set in dependency order, without `-f` (AB#7376, octo-cli): documents the joint upgrade of models that pin each other exactly (octo-mesh-energy group), the ready-to-run joint command a blocked single import prints, and that `FixAll` now tries blocked rows together (never forces).
 
