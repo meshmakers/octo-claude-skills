@@ -1612,6 +1612,21 @@ octo-cli -c UpdateWorkloadChartVersion -id <rtId> -cv <chartVersion>
 | `-id` | `workloadRtId` | The workload's runtime object ID | Yes |
 | `-cv` | `chartVersion` | New chart version (SemVer, e.g. `1.2.3` or `1.2.3-beta.1`) | Yes |
 
+#### UpdateWorkloadResources
+Shows, sets or clears the typed CPU and memory settings (`CpuRequest`, `CpuLimit`, `MemoryRequest`, `MemoryLimit`, System.Communication 4.10.0) of one adapter or application. Does **not** trigger a deploy — call `DeployWorkload` afterwards. Without a value flag it only shows the current values (the way to read them for an application; `GetAdapter` shows them for an adapter under `resources`). A flag without a value (or `""`) clears that attribute; the other three stay as they are. Quantities (`250m`, `0.5`, `512Mi`, `1Gi`) and request <= limit are checked before anything is written, with the controller's messages. Precedence at deploy: chart default < these settings < explicit `valuesYaml` / `values[]` overrides (an override wins and the controller reports it in `LastDeploymentWarning`). Adapter pools are sized with `PoolMember*` settings instead. Needs System.Communication 4.10.0 in the tenant.
+```
+octo-cli -c UpdateWorkloadResources -id <rtId> [-cr <cpuRequest>] [-cl <cpuLimit>] [-mr <memoryRequest>] [-ml <memoryLimit>]
+octo-cli -c UpdateWorkloadResources -id <rtId> -mr 512Mi      # set one value
+octo-cli -c UpdateWorkloadResources -id <rtId> -ml            # clear the memory limit
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `workloadRtId` | Runtime object ID of the adapter or application | Yes |
+| `-cr` | `cpu-request` | CPU request, e.g. `250m`; no value clears | No |
+| `-cl` | `cpu-limit` | CPU limit, e.g. `1`; no value clears | No |
+| `-mr` | `memory-request` | Memory request, e.g. `512Mi`; no value clears | No |
+| `-ml` | `memory-limit` | Memory limit, e.g. `1Gi`; no value clears | No |
+
 #### DeployWorkload
 Triggers a deploy of one workload through its parent pool.
 ```
