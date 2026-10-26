@@ -167,6 +167,8 @@ Requires the **DataModelManagement** role for catalog import/refresh.
 | `RefreshCatalogs` | Refresh catalog caches (`-cn` optional) | Mutating |
 | `FixAll` | Import all models needing update/fix, blocked-by-each-other groups together, never forces (`-w`, `-y`) | Mutating |
 
+> After a release bumped `System` and catalog models went `ResolveFailed`: `FixAll -w -y` repairs every model that has a range-retaining catalog successor; for all tenants of an installation use one `Invoke-OctoTenantSweep`. Runbook: `references/repair-after-system-bump.md`.
+
 #### Blueprints
 
 | Command | Purpose | Type |
