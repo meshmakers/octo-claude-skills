@@ -173,7 +173,7 @@ This is an operational overview of the **most-used** nodes. The full property ta
 | Node | Purpose |
 |------|---------|
 | `SetPrimitiveValue@1` / `SetArrayOfPrimitiveValues@1` / `WriteJson@1` | Inject static/dynamic value, value array, or raw JSON (SDK) |
-| `GetRtEntitiesByType@1` / `GetRtEntitiesById@1` / `GetRtEntitiesByWellKnownName@1` | Query entities by CK type / by ID / by well-known name (enriches with IDs) |
+| `GetRtEntitiesByType@1` / `GetRtEntitiesById@1` / `GetRtEntitiesByWellKnownName@1` | Query entities by CK type (or, with `ckInterfaceId`, by CK interface: all implementing types, `take` required) / by ID / by well-known name (enriches with IDs) |
 | `GetOrCreateRtEntitiesByType@1` | Find by field filters or generate a new ID |
 | `GetAssociationTargets@1` | Traverse associations |
 | `GetQueryById@1` | Execute a saved query (simple/aggregation/grouping queries; cache disabled — always fresh) |
@@ -232,7 +232,7 @@ A CK method declared `execution.handler: pipeline` is implemented by a pipeline 
 
 ## RT Entity Data Structures
 
-`GetRtEntitiesByType@1` returns an **IResultSet object**, not a plain array:
+`GetRtEntitiesByType@1` returns an **IResultSet object**, not a plain array (the same shape with `ckInterfaceId`, where `CkTypeId` differs per item):
 
 ```json
 { "TotalCount": 3, "Items": [ { "RtId": "...", "CkTypeId": "...", "RtWellKnownName": "...", "Attributes": { "Name": "value", "StartDateTime": "2026-01-01T06:00:00Z" } }, ... ] }
