@@ -6,12 +6,13 @@ Nodes provided by the **Mesh Adapter** (`octo-mesh-adapter`) — one of several 
 
 ### GetRtEntitiesByType@1
 
-Retrieve runtime entities by CK type ID.
+Retrieve runtime entities by CK type ID, or by CK **interface** ID (all implementing types, see below).
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `ckTypeId` | string | optional | CK type ID (e.g., `Industry.Basic/Machine`) |
 | `ckTypeIdPath` | string | optional | JSONPath to CK type ID |
+| `ckInterfaceId` | string | optional | Runtime ID of a CK interface (e.g., `System/Named`; `System/Named-1` is accepted too) — instead of `ckTypeId`/`ckTypeIdPath`, exactly one of the two. `take` becomes required (see below) |
 | `skip` | int | optional | Number of items to skip |
 | `take` | int | optional | Number of items to take |
 | `fieldFilters` | array | optional | Field filter conditions |
@@ -36,6 +37,27 @@ Each `sortOrders` entry has `attributeName` (the attribute to sort by — **not*
     - attributeName: CreatedAt      # attributeName, not attributePath
       sortOrder: Descending
 ```
+
+#### By CK interface (`ckInterfaceId`)
+
+Returns the entities of **all types that implement a CK interface** (derived types included) in one global order — one pipeline for everything that is `Named`, without a node per type. The result shape is the same as for a type (`Items`, `TotalCount`; `$.key.CkTypeId` names the concrete type of every item). Needs the Mesh Adapter release that contains AB#6933 and the engine release of AB#7019.
+
+```yaml
+- type: GetRtEntitiesByType@1
+  ckInterfaceId: System/Named        # runtime id; System/Named-1 works too
+  skip: 0                            # default 0
+  take: 50                           # REQUIRED with an interface
+  fieldFilters:
+    - attributePath: Name            # only members of the interface and system fields
+      operator: Equals
+      comparisonValue: Pump 1
+  sortOrders:
+    - attributeName: Name
+      sortOrder: Ascending
+  targetPath: $.named
+```
+
+Rules (v1): exactly one of `ckTypeId`/`ckTypeIdPath` and `ckInterfaceId`; `take` required, `skip + take` at most **1000**; filters and sort orders only on interface members (and `rtId`, `ckTypeId`, `rtCreationDateTime`, `rtChangedDateTime`, `rtVersion`, `rtWellKnownName`, `rtCreatedBy`); no text search, aggregation, navigation (`->`) or geospatial filter; at most 64 collection roots. A deep page costs about (`skip + take`) x the number of collections the implementers live in — **filter instead of paging deep, and index the sort field** (`indexes:` in the implementing CK type; without an index there is no latency promise). Runs with the caller's rights like the type variant (`identity`, default `Caller`): types the caller may not read neither appear nor count. A failed node carries stable, language-neutral data (class `RtEntitySelectionException`: `Code`, `Reason`, `MessageNumber`, `Parameters`), not text to parse: `NODE_CONFIGURATION_INVALID` with reason `CK_TYPE_AND_CK_INTERFACE_BOTH_SET` / `CK_TYPE_OR_CK_INTERFACE_REQUIRED` / `CK_INTERFACE_ID_INVALID` / `TAKE_REQUIRED_FOR_INTERFACE` / `PAGING_NEGATIVE`, or `INTERFACE_QUERY` with message number 7019 and the engine's reason (`UnknownInterface`, `TextSearchNotSupported`, `AggregationNotSupported`, `NavigationNotSupported`, `TooManyCollectionRoots`, `PageTooLarge`, `UnknownMember`) and parameters.
 
 ### GetRtEntitiesById@1
 
