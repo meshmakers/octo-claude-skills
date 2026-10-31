@@ -238,7 +238,7 @@ A client connects over HTTP to `https://localhost:5017/mcp` (tenant via tool par
 - Don't default `confirm` to `true`, and don't skip the gate in batch helpers.
 - Don't write to `Console`/`ILogger` for user-visible output.
 - Don't share SDK clients across requests.
-- Don't "fix" `AggregationFunctionDto` to PascalCase — the lowercase `count/sum/avg/min/max` is intentional (see references).
+- Don't "fix" `AggregationFunctionDto` to PascalCase — the lowercase `count/sum/avg/min/max/integral` is intentional (see references).
 
 ## References
 
