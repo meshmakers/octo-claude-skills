@@ -29,13 +29,14 @@ Counter to the rest of the codebase (PascalCase enums), this enum uses **lowerca
 - `DeriveAlias(column)` — `<function>_<sanitised-path>` when no explicit alias (e.g. `avg_Power`); special-cases `"count"` for unparametrised count.
 - `ApplyToAggregationInput(input, columns)` — pushes columns into the engine's `AggregationInput` (runtime aggregation tools).
 - `ToEngineColumns(columns)` — maps to `AggregationColumn[]` (stream-data tools).
-- `MapCkAggregationName(...)` — translates persisted CK `AggregationTypes` enum names (`Count`/`Sum`/`Average`/`Minimum`/`Maximum` + short `Avg`/`Min`/`Max`) to `AggregationFunctionDto` for persisted-query execution.
+- `MapCkAggregationName(...)` — translates persisted CK `AggregationTypes` enum names (`Count`/`Sum`/`Average`/`Minimum`/`Maximum`/`Integral` + short `Avg`/`Min`/`Max`) to `AggregationFunctionDto` for persisted-query execution.
+- `Validate(columns, allowIntegral)` / `ValidateIntegralWindow(columns, from, to)` — `integral` (step integral, value unit x hours) is accepted only by `query_stream_data_aggregation`, `query_stream_data_grouping` and persisted stream-data aggregation/grouping queries, and needs `from < to`; runtime aggregations and downsampling refuse it.
 
 The validation strings are user-visible error messages — keeping them consistent matters.
 
 ### Engine column key convention (stream-data only)
 
-Stream-data aggregation results return as `StreamDataRow` with `Values` keyed by the engine's column-name format `{Function}({path})` (the `ToString()` of `AggregationColumn`). The projection layer rebuilds that key (`EngineColumnKey` inside `StreamDataAggregationTools`), then writes the value under the MCP-side alias from `AggregationMapper.DeriveAlias`. Group-key columns flow straight from `Values` into the response dict, indexed by the supplied group-by paths.
+Stream-data aggregation results return as `StreamDataRow` with `Values` keyed `{column}_{token}` by the CrateDB repository (`power_avg`, `power_integral`; token from `AggregationMapper.EngineResultToken`), `column` being the storage name from the archive's `StreamDataFieldResolver` (lower-cased path, versioned physical name for computed columns, camelCase built-ins such as `rtId`). `EngineValue` inside `StreamDataAggregationTools` rebuilds that key and writes the value under the MCP-side alias from `AggregationMapper.DeriveAlias`; group keys are read the same way. The old `{Function}({path})` key (`AggregationColumn.ToString()`) is never written by the engine and is only a fallback (AB#7919).
 
 ### `StreamDataContext` — four-stage cascade
 
@@ -101,7 +102,7 @@ src/McpServices/
 │   ├── <Domain>Responses.cs            # response envelope DTOs grouped by domain
 │   ├── Filters/FilterOperatorDto.cs    # 18 filter operators
 │   └── Aggregation/
-│       ├── AggregationFunctionDto.cs   # count/sum/avg/min/max — DON'T fix to PascalCase
+│       ├── AggregationFunctionDto.cs   # count/sum/avg/min/max/integral — DON'T fix to PascalCase
 │       ├── AggregationColumnDto.cs · SortColumnDto.cs · AggregationResponses.cs
 ├── Services/
 │   ├── IOctoServiceClientFactory.cs / OctoServiceClientFactory.cs   # per-tenant SDK clients
