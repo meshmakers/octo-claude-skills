@@ -834,6 +834,8 @@ Query Claude AI for document analysis, information extraction, and (optionally) 
 
 Evaluate `System.Communication/DataPointMapping` entities for a source entity, apply their mXparser expressions, and produce `EntityUpdateInfo` for the mapped target entities. Used for live data acquisition (e.g. Loxone control → target attribute).
 
+Output: **one `EntityUpdateInfo` per target entity**, not one per mapping — mappings of the same source value onto the same target (e.g. `IsOn` and `DimmingLevel` of one luminaire on Loxone state `activeMoodsNum`) are merged into one update, and all items of one invocation share one `RtChangedDateTime`. A downstream `SaveStreamDataInArchive@1` therefore writes one row per entity and state change. Older adapter versions emitted one update per mapping (duplicate archive rows a few ms apart).
+
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `sourceRtIdPath` | string | optional | JSONPath to the source entity's RtId |
