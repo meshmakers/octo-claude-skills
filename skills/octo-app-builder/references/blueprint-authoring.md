@@ -211,6 +211,10 @@ octo-cli -c UpdateBlueprint -tv <Name>-<Version> [-m <mode>] [-dr]
 octo-cli -c UninstallBlueprint -n <Name> [-c] [-y]      # NAME only, no version
 ```
 
+Installing into a tenant that already holds the content (manual `ImportRt` of the same rtIds): run
+`PreviewBlueprintUpdate -tv <Name>-<Version>` first - without an installation it diffs the seed against the
+tenant by rtId (AB#8256), and `InstallBlueprint` applies exactly the listed adds and updates.
+
 Expected install output: `Success: true`, `ApplicationMode: Initial`, your model
 in `LoadedCkModels`, empty `Warnings`. Before uninstalling a blueprint whose seed
 contains a deployed Application, undeploy the workload first

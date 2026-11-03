@@ -1194,6 +1194,12 @@ octo-cli -c PreviewBlueprintUpdate -tv <targetVersion> [-m <updateMode>]
 | `-tv` | `targetVersion` | Fully-qualified target blueprint id, e.g. `MyBlueprint-2.0.0` | Yes |
 | `-m` | `updateMode` | `Safe`, `Merge` (default), `Full`, or `Migration` | No |
 
+Also for a blueprint that is **not installed** on the tenant (adoption, AB#8256): the seed is diffed against the tenant's entities
+by rtId, whatever their blueprint source - adds, updates with the changed attributes, unchanged, tenant-owned skipped, blanked
+attributes; nothing is deleted. `InstallBlueprint` then applies exactly these adds and updates and records the installation. Run it
+before installing a blueprint into a tenant that already holds its content (manual `ImportRt`). Older services answer with a
+placeholder (`EntitiesToAdd 1`, no changes, warning "fresh application").
+
 #### UpdateBlueprint
 Applies a blueprint update to the active tenant.
 ```
