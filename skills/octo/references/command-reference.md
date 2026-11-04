@@ -2,7 +2,7 @@
 
 All flags use short form with `-` prefix. Required flags are marked with **(R)**.
 
-> **Secrets never on the command line (octo-cli, AB#8044).** Passwords and client secrets are read from a hidden prompt, from standard input (`--password-stdin` / `-ps`, `--secret-stdin` / `-ss`, `--client-secret-stdin` / `-css`) or from an environment variable. The old arguments `-p`, `-s` and `-cs` still work but are **deprecated** (warning, removed in a later release): the value lands in the shell history, the process list and transcripts. **Never use them and never echo a secret.** Order: deprecated argument > stdin flag > environment variable > hidden prompt (terminal only; a new secret is asked twice). Pipe the value from a mode-600 file or a secret store: `printf %s "$(cat <file>)" | octo-cli -c <Command> --password-stdin …` — never type the literal value into a command. Not affected: `Update/DeleteApiSecret*` `-s` is the stored secret **hash** (an identifier, as `GetApiSecrets*` lists it), not the secret.
+> **Secrets never on the command line (octo-cli, AB#8044).** Passwords and client secrets are read from a hidden prompt, from standard input (`--password-stdin` / `-ps`, `--secret-stdin` / `-ss`, `--client-secret-stdin` / `-css`) or from an environment variable. The old arguments `-p`, `-s` and `-cs` still work but are **deprecated** (warning, removed in a later release): the value lands in the shell history, the process list and transcripts. **Never use them and never echo a secret.** Order: deprecated argument > stdin flag > environment variable > hidden prompt (terminal only; a new secret is asked twice). Pipe the value from a mode-600 file or a secret store: `octo-cli -c <Command> --password-stdin … < <file>` — never type the literal value into a command. Not affected: `Update/DeleteApiSecret*` `-s` is the stored secret **hash** (an identifier, as `GetApiSecrets*` lists it), not the secret.
 >
 > | Command | Stdin flag | Environment variable |
 > |---|---|---|
@@ -173,7 +173,7 @@ octo-cli -c DeleteUser -un <userName> [-y]
 #### ResetPassword
 ```
 octo-cli -c ResetPassword -un <userName> [--password-stdin] [-y]
-# e.g. printf %s "$(cat ~/.octo-cli/<user>.password)" | octo-cli -c ResetPassword -un <userName> --password-stdin -y
+# e.g. octo-cli -c ResetPassword -un <userName> --password-stdin -y < ~/.octo-cli/<user>.password
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
@@ -266,7 +266,7 @@ octo-cli -c AddAuthorizationCodeClient -id <clientId> -n <name> -u <clientUri> [
 #### AddClientCredentialsClient
 ```
 octo-cli -c AddClientCredentialsClient -id <clientId> -n <name> [--secret-stdin] [-apic]
-# e.g. printf %s "$(cat ~/.octo-cli/<clientId>.secret)" | octo-cli -c AddClientCredentialsClient -id <clientId> -n "<name>" --secret-stdin -apic
+# e.g. octo-cli -c AddClientCredentialsClient -id <clientId> -n "<name>" --secret-stdin -apic < ~/.octo-cli/<clientId>.secret
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|

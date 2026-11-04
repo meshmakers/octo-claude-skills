@@ -16,8 +16,8 @@ Authorization is **role-based**: creating and deleting a tenant needs the role `
 Requires an authenticated **octosystem** session (the only step that may ever need a human):
 
 ```bash
-(umask 077; openssl rand -base64 32 > ~/.octo-cli/claude-agent.secret)   # generate straight into a mode-600 file, never print it
-printf %s "$(cat ~/.octo-cli/claude-agent.secret)" | octo-cli -c AddClientCredentialsClient -id claude-agent -n "Claude Agent (non-interactive automation)" --secret-stdin -apic --context local_octosystem
+(umask 077; openssl rand -base64 32 > ~/.octo-cli/claude-agent.secret.tmp && mv ~/.octo-cli/claude-agent.secret.tmp ~/.octo-cli/claude-agent.secret)   # new file is created mode 600 (umask), then renamed over the target; never print it
+octo-cli -c AddClientCredentialsClient -id claude-agent -n "Claude Agent (non-interactive automation)" --secret-stdin -apic --context local_octosystem < ~/.octo-cli/claude-agent.secret
 octo-cli -c AddClientToRole -id claude-agent -r TenantManagement --context local_octosystem
 ```
 

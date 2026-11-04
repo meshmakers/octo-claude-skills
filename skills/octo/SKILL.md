@@ -296,7 +296,7 @@ A command addresses **one tenant: the tenant of its context**. octo-cli 3.5.27+ 
 
 ## Secrets Rule
 
-**Never put a secret in a command-line argument and never echo it.** No `-p`, `-s`, `-cs` (deprecated), no secret in a `printf`/`echo` literal, no `cat`/print of secret files, no secrets in comments, work items or reports. Use the prompt (human), `--password-stdin` / `--secret-stdin` / `--client-secret-stdin` piped from a mode-600 file (`printf %s "$(cat <file>)" | octo-cli -c ResetPassword -un <u> --password-stdin -y`) or the `OCTO_CLI_*` environment variables listed in `references/command-reference.md`. When you generate a password or secret, write it straight to a mode-600 file (`umask 077`) and tell the user the path, not the value.
+**Never put a secret in a command-line argument and never echo it.** No `-p`, `-s`, `-cs` (deprecated), no secret in a `printf`/`echo` literal, no `cat`/print of secret files, no secrets in comments, work items or reports. Use the prompt (human), `--password-stdin` / `--secret-stdin` / `--client-secret-stdin` piped from a mode-600 file (`octo-cli -c ResetPassword -un <u> --password-stdin -y < <file>` — redirect the file, no command substitution) or the `OCTO_CLI_*` environment variables listed in `references/command-reference.md`. When you generate a password or secret, write it to a new file under `umask 077` (a temp file in the same directory, then `mv` over the target, so an existing file never keeps a looser mode) and tell the user the path, not the value.
 
 ## Smart Behaviors
 
