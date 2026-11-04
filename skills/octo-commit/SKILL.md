@@ -324,6 +324,7 @@ repo_slug="$(git -C <repo> remote get-url origin | sed -E 's#\.git$##; s#.*[:/](
 
 gh pr create \
   --repo "$repo_slug" \
+  --head "$(git -C <repo> branch --show-current)" \
   --title "AB#<id> <Type>: <Description>" \
   --body "$(cat <<'EOF'
 ## Summary
