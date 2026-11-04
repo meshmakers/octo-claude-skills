@@ -196,7 +196,7 @@ Archive lifecycle mutations require the **StreamDataAdminRole**.
 | `EnableArchive` / `DisableArchive` | Re-enable / disable an archive (`-id`) | Mutating |
 | `RetryArchiveActivation` | Retry activation after a DDL failure (`-id`) | Mutating |
 | `DeleteArchive` | Drop the CrateDB table + soft-delete archive (`-id`) | Destructive |
-| `ListRollupsForArchive` | List rollups attached to a source archive (`-id`) | Read-only |
+| `ListRollupsForArchive` | List rollups attached to a source archive (`-id`), incl. time zone and day start | Read-only |
 | `FreezeRollupArchive` | Freeze a rollup at a timestamp (`-id`, `-u`) | Mutating |
 | `UnfreezeRollupArchive` | Clear FrozenUntil (`-id`, `-ag` accept gaps) | Mutating |
 | `RewindRollupWatermark` | Rewind a rollup's watermark to re-aggregate (`-id`, `-t`) | Destructive |
