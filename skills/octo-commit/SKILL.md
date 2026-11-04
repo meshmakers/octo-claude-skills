@@ -358,8 +358,10 @@ Report the PR URL(s) to the user when done.
 
 **See the PR through the CodeRabbit review** (GitHub repos). CodeRabbit (`coderabbitai[bot]`) reviews every non-draft PR automatically; if no review starts, comment `@coderabbitai review`. If the plugin `octo-claude-pm` is installed, its `agent-operating-rules` §2 apply in full.
 
-1. Read CodeRabbit's PR comment (`gh pr view <n> --repo meshmakers/<repo-name> --comments`). Its **pre-merge checks** table contains the *Title check*. If it failed, correct the title with `gh pr edit <n> --repo meshmakers/<repo-name> --title "…"` — the GitHub status check `CodeRabbit` can stay green while the title check fails, so do not rely on the status alone.
-2. Go through every review finding (inline comments: `gh api repos/meshmakers/<repo-name>/pulls/<n>/comments`). Fix valid findings on the branch; answer every finding with what was changed or why it was not addressed.
+`<owner>/<repo>` is the GitHub repository of the PR, taken from `git -C <repo> remote get-url origin` (mostly `meshmakers/<repo>`; some are under `reikla/`, see Repo Remotes).
+
+1. Read CodeRabbit's PR comment (`gh pr view <n> --repo <owner>/<repo> --comments`). Its **pre-merge checks** table contains the *Title check*. If it failed, correct the title with `gh pr edit <n> --repo <owner>/<repo> --title "…"` — the GitHub status check `CodeRabbit` can stay green while the title check fails, so do not rely on the status alone.
+2. Go through every review finding (inline comments, all pages: `gh api --paginate repos/<owner>/<repo>/pulls/<n>/comments`). Fix valid findings on the branch; answer every finding with what was changed or why it was not addressed.
 
 ---
 
