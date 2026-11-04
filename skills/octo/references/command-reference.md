@@ -1196,11 +1196,27 @@ octo-cli -c PreviewBlueprintUpdate -tv <targetVersion> [-m <updateMode>]
 
 Also for a blueprint that is **not installed** on the tenant (adoption, AB#8256): the seed is diffed against the tenant's entities
 by rtId, whatever their blueprint source - adds, updates with the changed attributes, unchanged, tenant-owned skipped; nothing
-is deleted. `BlankedAttributes` lists tenant values the seed would empty (seed omits the attribute or sets it empty): the install
-keeps those tenant values, they are not part of the update. `InstallBlueprint` then applies exactly the listed adds and updates
-and records the installation. Run it
+is deleted. `BlankedAttributes` lists tenant values the seed would empty: the install keeps those tenant values, they are not
+part of the update. `InstallBlueprint` then applies exactly the listed adds and updates and records the installation. Run it
 before installing a blueprint into a tenant that already holds its content (manual `ImportRt`). Older services answer with a
 placeholder (`EntitiesToAdd 1`, no changes, warning "fresh application").
+
+`BlankedAttributes` (printed as a table, values never shown - only kind and size) and its `Reason`:
+
+| Reason | Meaning |
+|---|---|
+| `SeedEmpty` | The seed value is empty (`null`, `""`, empty array, empty record). Only then - a non-empty seed is never `SeedEmpty` (AB#8263). |
+| `SeedEmptiesJsonField` | The seed is a non-empty JSON text (a configuration in a string attribute, e.g. a dashboard widget `Config`) with an empty string where the tenant's JSON has a filled one. `Incoming` names the first such field: `string (184 chars), empties $.valueAttribute`. The tenant value wins because that field may be a credential. |
+| `SeedOmitted` | The seed does not declare the attribute. |
+| `ResetToDefault` | The seed omits an attribute with a CK default and the tenant value differs from it; `Incoming` is `default (<value>)`. |
+
+**Forcing the seed value.** A listed attribute keeps the tenant value unless it is confirmed on `UpdateBlueprint`:
+`--confirm-blanking <rtId>:<attribute>` (repeatable, one entity/attribute pair each; the preview prints the exact argument) or
+`--allow-blanking` for every listed one. A confirmed attribute takes the whole seed value. `InstallBlueprint` has no confirmation
+flag: after an adoption install that kept a value, run `UpdateBlueprint -tv <same blueprint id> --confirm-blanking <rtId>:<attribute>`
+against the now installed version. Confirm a `SeedEmptiesJsonField` attribute when the new seed clears that field on purpose
+(a widget switched from a query value to a formula); keep it when the field is a credential the tenant filled. Confirm related
+attributes together (e.g. a widget's `Config` and its emptied `DataSourceRtId`), otherwise the entity is half old, half new.
 
 #### UpdateBlueprint
 Applies a blueprint update to the active tenant.
@@ -1213,6 +1229,8 @@ octo-cli -c UpdateBlueprint -tv <targetVersion> [-m <updateMode>] [-nb] [-dr]
 | `-m` | `updateMode` | `Safe`, `Merge` (default), `Full`, or `Migration` | No |
 | `-nb` | `no-backup` | Skip the pre-update tenant backup (not recommended) | No |
 | `-dr` | `dry-run` | Simulate the update without persisting changes | No |
+| `-cb` | `confirm-blanking` | `<rtId>:<attribute>` - take the seed value for this attribute although the preview lists it under `BlankedAttributes` (repeatable) | No |
+| `-ab` | `allow-blanking` | Take the seed value for every listed blanked attribute (loud warning; prefer `--confirm-blanking`) | No |
 
 #### RollbackBlueprint
 Rolls the active tenant back to a previously-created blueprint backup. **Destructive.**
