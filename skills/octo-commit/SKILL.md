@@ -317,11 +317,13 @@ git -C <repo> push
 
 ### Step 9: Create PR (if feature branch)
 
-**For GitHub repos** (majority of OctoMesh repos). `<owner>/<repo>` is the GitHub repository, taken from `git -C <repo> remote get-url origin` (mostly `meshmakers/<repo>`; some are under `reikla/`, see Repo Remotes):
+**For GitHub repos** (majority of OctoMesh repos). Derive the `owner/repo` slug from the origin URL (mostly `meshmakers/<repo>`; some are under `reikla/`, see Repo Remotes). The `sed` keeps the last two path parts, so HTTPS URLs, `git@github.com:` and SSH host aliases such as `git@github-company:` all work:
 
 ```bash
+repo_slug="$(git -C <repo> remote get-url origin | sed -E 's#\.git$##; s#.*[:/]([^/:]+/[^/]+)$#\1#')"
+
 gh pr create \
-  --repo <owner>/<repo> \
+  --repo "$repo_slug" \
   --title "AB#<id> <Type>: <Description>" \
   --body "$(cat <<'EOF'
 ## Summary
@@ -356,10 +358,10 @@ az repos pr create \
 
 Report the PR URL(s) to the user when done.
 
-**See the PR through the CodeRabbit review** (GitHub repos; `<owner>/<repo>` as for `gh pr create`). CodeRabbit (`coderabbitai[bot]`) reviews every non-draft PR automatically; if no review starts, comment `@coderabbitai review`. If the plugin `octo-claude-pm` is installed, its `agent-operating-rules` §2 apply in full.
+**See the PR through the CodeRabbit review** (GitHub repos; `$repo_slug` as for `gh pr create`). CodeRabbit (`coderabbitai[bot]`) reviews every non-draft PR automatically; if no review starts, comment `@coderabbitai review`. If the plugin `octo-claude-pm` is installed, its `agent-operating-rules` §2 apply in full.
 
-1. Read CodeRabbit's PR comment (`gh pr view <n> --repo <owner>/<repo> --comments`). Its **pre-merge checks** table contains the *Title check*. If it failed, correct the title with `gh pr edit <n> --repo <owner>/<repo> --title "…"` — the GitHub status check `CodeRabbit` can stay green while the title check fails, so do not rely on the status alone.
-2. Go through every review finding (inline comments, all pages: `gh api --paginate repos/<owner>/<repo>/pulls/<n>/comments`). Fix valid findings on the branch, commit and push the fixes (push approval as in Step 7), then answer every finding with what was changed (commit hash) or why it was not addressed — never answer before the fix is on the PR.
+1. Read CodeRabbit's PR comment (`gh pr view <n> --repo "$repo_slug" --comments`). Its **pre-merge checks** table contains the *Title check*. If it failed, correct the title with `gh pr edit <n> --repo "$repo_slug" --title "…"` — the GitHub status check `CodeRabbit` can stay green while the title check fails, so do not rely on the status alone.
+2. Go through every review finding (inline comments, all pages: `gh api --paginate "repos/$repo_slug/pulls/<n>/comments"`). Fix valid findings on the branch, commit and push the fixes (push approval as in Step 7), then answer every finding with what was changed (commit hash) or why it was not addressed — never answer before the fix is on the PR.
 
 ---
 
