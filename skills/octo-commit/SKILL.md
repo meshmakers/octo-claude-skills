@@ -1,6 +1,6 @@
 ---
 name: octo-commit
-description: "Structured workflow for committing finished work across OctoMesh repositories: scans repos for changes, resolves or creates the Azure DevOps work item, builds the AB# commit message, verifies the build/tests, and optionally opens a PR. Enforces the review checkpoint — never pushes or opens a PR without explicit user approval in the current session. Trigger on: commit, push, PR, pull request, merge, finish work, done, ship it, wrap up, AB#, work item, ready to commit, close task, create branch, feature branch, feat/, dev/, Azure DevOps."
+description: "Structured workflow for committing finished work across OctoMesh repositories: scans repos for changes, resolves or creates the Azure DevOps work item, builds the AB# commit message and PR title (AB#<id> <Fix|New|Chore|Refactor|Test|Docs>: …), verifies the build/tests, and optionally opens a PR and sees it through the CodeRabbit review. Enforces the review checkpoint — never pushes or opens a PR without explicit user approval in the current session. Trigger on: commit, push, PR, pull request, PR title, merge, finish work, done, ship it, wrap up, AB#, work item, CodeRabbit, title check, ready to commit, close task, create branch, feature branch, feat/, dev/, Azure DevOps."
 allowed-tools:
   - "Bash(git status:*)"
   - "Bash(git diff:*)"
@@ -13,6 +13,8 @@ allowed-tools:
   - "Bash(git config:*)"
   - "Bash(git remote:*)"
   - "Bash(gh pr create:*)"
+  - "Bash(gh pr view:*)"
+  - "Bash(gh pr edit:*)"
   - "Bash(az boards:*)"
   - "Bash(az repos pr create:*)"
   - "Bash(az devops:*)"
@@ -40,19 +42,24 @@ Structured workflow for committing finished work across OctoMesh repositories wi
 - Committing locally may be fine when asked; **pushing and PR creation always require a fresh, explicit go-ahead** ("push it", "create the PR", "ship it").
 - When in doubt, ask via **AskUserQuestion** before any `git push` / `gh pr create` / `az repos pr create`.
 
-## Commit Message Format
+## Commit Message and PR Title Format
 
 ```
-AB#<WorkItemId> <New|Fix>: <Description>
+AB#<WorkItemId> <Type>: <Description>
 ```
 
-| Work Item Type | Prefix | Example |
-|---------------|--------|---------|
-| User Story (or legacy Issue) | `New` | `AB#4521 New: Add pipeline validation endpoint` |
-| Task | `New` (default) | `AB#4081 New: Add blueprint variables` |
-| Bug | `Fix` | `AB#4493 Fix: Resolve null reference in CK compilation` |
+The same format applies to commit messages and PR titles. `<Type>` is exactly one of `Fix`, `New`, `Chore`, `Refactor`, `Test`, `Docs` — CodeRabbit's title check (org-wide config in `meshmakers/coderabbit`) flags any other word (`Change`, `Feat`, `Update`) or a missing type. Automated commits (release manifests, docs-harvest bots, dependabot) and merge commits are exempt. Source: [meshmaker Development Guidelines](https://dev.azure.com/meshmakers/OctoMesh/_wiki/wikis/OctoMesh.wiki/141/Development-Guidelines-for-meshmaker-Teams).
 
-`New` and `Fix` cover the overwhelming majority of OctoMesh commits. **Task** has no distinct prefix convention in the git history — default to `New` and confirm the prefix with the user if the change is clearly a correction (then `Fix`).
+| Type | Use for | Example |
+|------|---------|---------|
+| `New` | New functionality (User Story, legacy Issue, Task) | `AB#4521 New: Add pipeline validation endpoint` |
+| `Fix` | Correction of wrong behaviour (Bug, or a Task that corrects something) | `AB#4493 Fix: Resolve null reference in CK compilation` |
+| `Refactor` | Restructuring without behaviour change | `AB#1234 Refactor: Extract the catalog resolver` |
+| `Test` | Tests only | `AB#1234 Test: Cover the empty-seed case` |
+| `Docs` | Documentation only (READMEs, CLAUDE.md, skills, guides) | `AB#1234 Docs: Describe the title convention` |
+| `Chore` | Maintenance: dependency or version bumps, build/CI configuration, tooling | `AB#1234 Chore: Bump the pipeline template pin` |
+
+`New` and `Fix` cover most commits. Choose the type from what the change does; the work item type is only a hint (Bug → usually `Fix`, User Story/Task → usually `New`). Confirm with the user when the change does not fit one type clearly.
 
 **Description:** imperative mood, concise (e.g., "Add validation" not "Added validation").
 
@@ -276,7 +283,7 @@ If the user defers ("I'll look at it later"), STOP — you may commit locally on
 
 ### Step 8: Commit and Push
 
-Build the commit message using the format `AB#<id> <New|Fix>: <Description>`.
+Build the commit message using the format `AB#<id> <Type>: <Description>` (type from the table in "Commit Message and PR Title Format").
 
 **Co-Authored-By convention:** OctoMesh repos use a **model-specific** trailer of the form
 `Co-Authored-By: Claude <model name> <noreply@anthropic.com>` — not a bare `Claude`. Use the
@@ -290,7 +297,7 @@ git -C <repo> add <specific-files>
 
 # Commit with heredoc for proper formatting
 git -C <repo> commit -m "$(cat <<'EOF'
-AB#<id> <New|Fix>: <Description>
+AB#<id> <Type>: <Description>
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
 EOF
@@ -310,12 +317,15 @@ git -C <repo> push
 
 ### Step 9: Create PR (if feature branch)
 
-**For GitHub repos** (majority of OctoMesh repos):
+**For GitHub repos** (majority of OctoMesh repos). Derive the `owner/repo` slug from the origin URL (mostly `meshmakers/<repo>`; some are under `reikla/`, see Repo Remotes). The `sed` keeps the last two path parts, so HTTPS URLs, `git@github.com:` and SSH host aliases such as `git@github-company:` all work:
 
 ```bash
+repo_slug="$(git -C <repo> remote get-url origin | sed -E 's#\.git$##; s#.*[:/]([^/:]+/[^/]+)$#\1#')"
+
 gh pr create \
-  --repo meshmakers/<repo-name> \
-  --title "AB#<id> <New|Fix>: <Description>" \
+  --repo "$repo_slug" \
+  --head "$(git -C <repo> branch --show-current)" \
+  --title "AB#<id> <Type>: <Description>" \
   --body "$(cat <<'EOF'
 ## Summary
 - <bullet points of changes>
@@ -341,13 +351,18 @@ az repos pr create \
   --repository <repo-name> \
   --source-branch <branch> \
   --target-branch main \
-  --title "AB#<id> <New|Fix>: <Description>" \
+  --title "AB#<id> <Type>: <Description>" \
   --work-items <id> \
   --org https://dev.azure.com/meshmakers \
   --project OctoMesh
 ```
 
 Report the PR URL(s) to the user when done.
+
+**See the PR through the CodeRabbit review** (GitHub repos; `$repo_slug` as for `gh pr create`). CodeRabbit (`coderabbitai[bot]`) reviews every non-draft PR automatically; if no review starts, comment `@coderabbitai review`. If the plugin `octo-claude-pm` is installed, its `agent-operating-rules` §2 apply in full.
+
+1. Read CodeRabbit's PR comment (`gh pr view <n> --repo "$repo_slug" --comments`). Its **pre-merge checks** table contains the *Title check*. If it failed, correct the title with `gh pr edit <n> --repo "$repo_slug" --title "…"` — the GitHub status check `CodeRabbit` can stay green while the title check fails, so do not rely on the status alone.
+2. Go through every review finding (inline comments, all pages: `gh api --paginate "repos/$repo_slug/pulls/<n>/comments"`). Fix valid findings on the branch, commit and push the fixes (push approval as in Step 7), then answer every finding with what was changed (commit hash) or why it was not addressed — never answer before the fix is on the PR.
 
 ---
 
@@ -378,7 +393,8 @@ See `${CLAUDE_PLUGIN_ROOT}/skills/octo-commit/references/repo-remotes.md` for th
 | Pushing without approval | Get explicit go-ahead **this session** before any push/PR |
 | Committing without work item | Always resolve AB# first -- search or create |
 | Wrong WIQL command | Use `az boards query --wiql`, NOT `az boards work-item query` |
-| Wrong prefix (New vs Fix) | Bug -> Fix; User Story/Issue/Task -> New (confirm Task if it's a fix) |
+| Wrong or missing type (`Change`, `Feat`, `AB#123: …`) | Exactly one of `Fix`, `New`, `Chore`, `Refactor`, `Test`, `Docs` — CodeRabbit's title check flags anything else |
+| Trusting the green `CodeRabbit` status | Read the pre-merge checks in CodeRabbit's PR comment; a failed title check can leave the status green |
 | Creating a new Issue | Issue is legacy — create a User Story under a Feature |
 | Committing against an Epic or Feature | Reference a User Story / Bug / Task; create one under the Feature if needed |
 | Story or Bug without parent | Every new User Story / Bug needs a parent Feature (Sustain Feature for maintenance) |
