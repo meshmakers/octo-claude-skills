@@ -1304,10 +1304,11 @@ octo-cli -c DeleteArchive -id <rtId> [-y]
 | `-y` | `yes` | Skip confirmation prompt | No |
 
 #### ListRollupsForArchive
-Lists every rollup archive attached to a source archive (runtime id, status, schedule, watermark, freeze state).
+Lists every rollup archive attached to a source archive (runtime id, status, schedule, watermark, freeze state, reference time zone and day start).
 ```
 octo-cli -c ListRollupsForArchive -id <archiveRtId>
 ```
+Each line ends with `timeZone=<IANA id>, dayStart=<HH:mm>` (AB#7362): a gas-day rollup reads `timeZone=Europe/Vienna, dayStart=06:00` (days of 23/24/25 hours across DST); `dayStart=00:00` is midnight days; `<none>` means no reference time zone (fixed-size UTC buckets) or a server that does not report it.
 
 #### FreezeRollupArchive
 Freezes a rollup archive at a timestamp. Monotonic — rejected if the new value is earlier than the current FrozenUntil. The orchestrator stops producing buckets whose bucketEnd falls in the frozen range; already-aggregated rows are preserved.
