@@ -4,7 +4,7 @@ An agent can create a throwaway **scratch tenant**, work in it as its administra
 
 ## How It Works
 
-1. **`LogInClientCredentials`** — headless OAuth2 `client_credentials` login. Reads `-id`/`-s` arguments or the `OCTO_CLI_CLIENT_ID` / `OCTO_CLI_CLIENT_SECRET` environment variables. The token has **no user identity**; it carries the roles the client holds in the tenant it was issued for.
+1. **`LogInClientCredentials`** — headless OAuth2 `client_credentials` login. Reads the client ID from `-id` or `OCTO_CLI_CLIENT_ID` and the secret from standard input (`--secret-stdin`), the `OCTO_CLI_CLIENT_SECRET` environment variable or the hidden prompt (interactive terminal only) — never as `-s`, which is deprecated (shell history, process list). The token has **no user identity**; it carries the roles the client holds in the tenant it was issued for.
 2. **Client mirroring** — a client created in the system tenant (`octosystem`) with `-apic` (`AutoProvisionInChildTenants`) is copied (same ClientId, same secret, same scopes) into the tenants below it. A mirror has **no roles** in a child on its own.
 3. **`Create --scratch`** — records the creating client as the creator of the new tenant, and identity gives **that client's mirror** the `TenantOwners` group in the new tenant (all roles; only that client, only that tenant). The grant is re-applied on every identity restart and mirror provisioning; removing the client from `TenantOwners` revokes it for good (`GetTenants` shows `scratchAccessRevoked`).
 4. **`Delete --disable-features -y`** — switches off every capability the tenant has enabled (AI Services, Communication, Reporting, Stream Data) with the caller's token for that tenant, then deletes it.
