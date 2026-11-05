@@ -2,6 +2,18 @@
 
 All flags use short form with `-` prefix. Required flags are marked with **(R)**.
 
+> **Secrets never on the command line (octo-cli, AB#8044).** Passwords and client secrets are read from a hidden prompt, from standard input (`--password-stdin` / `-ps`, `--secret-stdin` / `-ss`, `--client-secret-stdin` / `-css`) or from an environment variable. The old arguments `-p`, `-s` and `-cs` still work but are **deprecated** (warning, removed in a later release): the value lands in the shell history, the process list and transcripts. **Never use them and never echo a secret.** A deprecated argument and its stdin flag together are refused (`Use either … not both`). Order: deprecated argument or stdin flag > environment variable > hidden prompt (terminal only; a new secret is asked twice). Exceptions without a prompt: `CreateUser` without a source creates the user without a password; `UpdateIdentityProvider` without a source keeps the stored client secret. Pipe the value from a mode-600 file or a secret store: `octo-cli -c <Command> --password-stdin … < <file>` — never type the literal value into a command. Not affected: `Update/DeleteApiSecret*` `-s` is the stored secret **hash** (an identifier, as `GetApiSecrets*` lists it), not the secret.
+>
+> | Command | Stdin flag | Environment variable |
+> |---|---|---|
+> | `ResetPassword`, `Setup`, `CreateUser` | `--password-stdin` (`-ps`) | `OCTO_CLI_NEW_PASSWORD` |
+> | `AddClientCredentialsClient`, `AddDeviceCodeClient` | `--secret-stdin` (`-ss`) | `OCTO_CLI_NEW_CLIENT_SECRET` |
+> | `AddOAuthIdentityProvider`, `AddAzureEntryIdIdentityProvider`, `UpdateIdentityProvider` | `--client-secret-stdin` (`-css`) | `OCTO_CLI_IDP_CLIENT_SECRET` |
+> | `LogInClientCredentials` | `--secret-stdin` (`-ss`) | `OCTO_CLI_CLIENT_SECRET` |
+> | `RedeemAiTicket` | – (two tokens) | `OCTO_CLI_AI_ACCESS_TOKEN`, `OCTO_CLI_AI_REFRESH_TOKEN` (`-at`/`-rt` deprecated); real tokens also need the expiries `-aex` and `-rex` (UTC, ISO-8601). Both tokens and both expiries together, or none of the four (dev fake pair); a partial set fails |
+>
+> `ResetPassword` asks for confirmation before it reads the password; with `--password-stdin` stdin is a pipe, so add `-y`.
+>
 > **Confirmation prompts:** Destructive commands (Delete, Clean, ClearCache, ResetPassword, RemoveUserFromRole) prompt for confirmation before executing. Add `-y` (`--yes`) to skip the prompt in scripts/CI.
 
 ## Context Management
@@ -91,12 +103,13 @@ octo-cli -c LogIn [-i]
 ### LogInClientCredentials
 Non-interactive login using the OAuth2 client_credentials flow — for headless/CI scenarios. Requires a client created with `AddClientCredentialsClient`. The tenant comes from the active context (its `TenantId` must be set). When the credentials are supplied via env vars, the authentication service auto-reacquires tokens on expiry.
 ```
-octo-cli -c LogInClientCredentials [-id <clientId>] [-s <secret>]
+octo-cli -c LogInClientCredentials [-id <clientId>] [--secret-stdin]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-id` | `clientId` | Client ID. Falls back to env var `OCTO_CLI_CLIENT_ID`. | No |
-| `-s` | `secret` | Client secret. Falls back to env var `OCTO_CLI_CLIENT_SECRET`. | No |
+| `-ss` | `secret-stdin` | Read the client secret from standard input. Without it: env var `OCTO_CLI_CLIENT_SECRET`, then a hidden prompt (terminal only). | No |
+| `-s` | `secret` | **Deprecated** — secret on the command line. Do not use. | No |
 
 ### AuthStatus
 Gets authentication status. No arguments. For client_credentials tokens, the output shows an "Auth Method" line and omits the User Info section (there is no userinfo for these tokens).
@@ -111,12 +124,13 @@ octo-cli -c AuthStatus
 ### Setup
 Initial identity services setup.
 ```
-octo-cli -c Setup [-e <email>] [-p <password>]
+octo-cli -c Setup [-e <email>] [--password-stdin]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-e` | `email` | E-Mail of admin | No |
-| `-p` | `password` | Password of admin | No |
+| `-ps` | `password-stdin` | Read the admin password from standard input (else `OCTO_CLI_NEW_PASSWORD`, else hidden prompt, asked twice) | No |
+| `-p` | `password` | **Deprecated** — password on the command line. Do not use. | No |
 
 ### Users
 
@@ -128,13 +142,14 @@ octo-cli -c GetUsers
 
 #### CreateUser
 ```
-octo-cli -c CreateUser -un <userName> -e <eMail> [-p <password>]
+octo-cli -c CreateUser -un <userName> -e <eMail> [--password-stdin]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-un` | `userName` | User name | Yes |
 | `-e` | `eMail` | E-Mail of user | Yes |
-| `-p` | `password` | Password | No |
+| `-ps` | `password-stdin` | Read the password from standard input (else `OCTO_CLI_NEW_PASSWORD`; no prompt — without a source the user has no password) | No |
+| `-p` | `password` | **Deprecated** — password on the command line. Do not use. | No |
 
 #### UpdateUser
 ```
@@ -157,12 +172,14 @@ octo-cli -c DeleteUser -un <userName> [-y]
 
 #### ResetPassword
 ```
-octo-cli -c ResetPassword -un <userName> -p <password> [-y]
+octo-cli -c ResetPassword -un <userName> [--password-stdin] [-y]
+# e.g. octo-cli -c ResetPassword -un <userName> --password-stdin -y < ~/.octo-cli/<user>.password
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-un` | `userName` | User name | Yes |
-| `-p` | `password` | New password | Yes |
+| `-ps` | `password-stdin` | Read the new password from standard input (else `OCTO_CLI_NEW_PASSWORD`, else hidden prompt, asked twice). With stdin, `-y` is needed. | No |
+| `-p` | `password` | **Deprecated** — password on the command line. Do not use. | No |
 | `-y` | `yes` | Skip confirmation prompt | No |
 
 #### AddUserToRole
@@ -248,24 +265,27 @@ octo-cli -c AddAuthorizationCodeClient -id <clientId> -n <name> -u <clientUri> [
 
 #### AddClientCredentialsClient
 ```
-octo-cli -c AddClientCredentialsClient -id <clientId> -n <name> -s <secret> [-apic]
+octo-cli -c AddClientCredentialsClient -id <clientId> -n <name> [--secret-stdin] [-apic]
+# e.g. octo-cli -c AddClientCredentialsClient -id <clientId> -n "<name>" --secret-stdin -apic < ~/.octo-cli/<clientId>.secret
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-id` | `clientId` | Client ID, must be unique | Yes |
 | `-n` | `name` | Display name of client | Yes |
-| `-s` | `secret` | Secret for client credential auth | Yes |
+| `-ss` | `secret-stdin` | Read the client secret from standard input (else `OCTO_CLI_NEW_CLIENT_SECRET`, else hidden prompt, asked twice) | No |
+| `-s` | `secret` | **Deprecated** — secret on the command line. Do not use. | No |
 | `-apic` | `autoProvision` | If set, this client is auto-provisioned (mirrored) into every new sub-tenant of the calling tenant. Use for service-to-service / CI-CD identities that must reach many tenants with one ClientId/secret pair. | No |
 
 #### AddDeviceCodeClient
 ```
-octo-cli -c AddDeviceCodeClient -id <clientId> -n <name> -s <secret>
+octo-cli -c AddDeviceCodeClient -id <clientId> -n <name> [--secret-stdin]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-id` | `clientId` | Client ID, must be unique | Yes |
 | `-n` | `name` | Display name of client | Yes |
-| `-s` | `secret` | Secret for client credential auth | Yes |
+| `-ss` | `secret-stdin` | Read the client secret from standard input (else `OCTO_CLI_NEW_CLIENT_SECRET`, else hidden prompt, asked twice) | No |
+| `-s` | `secret` | **Deprecated** — secret on the command line. Do not use. | No |
 
 #### UpdateClient
 ```
@@ -360,14 +380,15 @@ octo-cli -c GetIdentityProviders
 
 #### AddOAuthIdentityProvider
 ```
-octo-cli -c AddOAuthIdentityProvider -n <name> -e <enabled> -cid <clientId> -cs <clientSecret> -t <type> [-asr <allowSelfRegistration>] [-dgid <defaultGroupRtId>]
+octo-cli -c AddOAuthIdentityProvider -n <name> -e <enabled> -cid <clientId> [--client-secret-stdin] -t <type> [-asr <allowSelfRegistration>] [-dgid <defaultGroupRtId>]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-n` | `name` | Name of identity provider (unique) | Yes |
 | `-e` | `enabled` | `true` or `false` | Yes |
 | `-cid` | `clientId` | Client ID from provider | Yes |
-| `-cs` | `clientSecret` | Client secret from provider | Yes |
+| `-css` | `client-secret-stdin` | Read the provider client secret from standard input (else `OCTO_CLI_IDP_CLIENT_SECRET`, else hidden prompt, asked twice) | No |
+| `-cs` | `clientSecret` | **Deprecated** — secret on the command line. Do not use. | No |
 | `-t` | `type` | Provider type: `google`, `microsoft`, `facebook` | Yes |
 | `-asr` | `allowSelfRegistration` | Allow self-registration (`true`/`false`) | No |
 | `-dgid` | `defaultGroupRtId` | Default group RtId for new users | No |
@@ -402,7 +423,7 @@ octo-cli -c AddAdIdentityProvider -n <name> -e <enabled> -h <host> -p <port> [-a
 
 #### AddAzureEntryIdIdentityProvider
 ```
-octo-cli -c AddAzureEntryIdIdentityProvider -n <name> -t <tenantId> -e <enabled> -cid <clientId> -cs <clientSecret> [-asr <allowSelfRegistration>] [-dgid <defaultGroupRtId>]
+octo-cli -c AddAzureEntryIdIdentityProvider -n <name> -t <tenantId> -e <enabled> -cid <clientId> [--client-secret-stdin] [-asr <allowSelfRegistration>] [-dgid <defaultGroupRtId>]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
@@ -410,7 +431,8 @@ octo-cli -c AddAzureEntryIdIdentityProvider -n <name> -t <tenantId> -e <enabled>
 | `-t` | `tenantId` | Azure Entra ID tenant ID | Yes |
 | `-e` | `enabled` | `true` or `false` | Yes |
 | `-cid` | `clientId` | Client ID from Azure | Yes |
-| `-cs` | `clientSecret` | Client secret from Azure | Yes |
+| `-css` | `client-secret-stdin` | Read the provider client secret from standard input (else `OCTO_CLI_IDP_CLIENT_SECRET`, else hidden prompt, asked twice) | No |
+| `-cs` | `clientSecret` | **Deprecated** — secret on the command line. Do not use. | No |
 | `-asr` | `allowSelfRegistration` | Allow self-registration (`true`/`false`) | No |
 | `-dgid` | `defaultGroupRtId` | Default group RtId for new users | No |
 
@@ -429,7 +451,7 @@ octo-cli -c AddOctoTenantIdentityProvider -n <name> -e <enabled> -ptid <parentTe
 
 #### UpdateIdentityProvider
 ```
-octo-cli -c UpdateIdentityProvider -id <identifier> [-n <name>] [-e <enabled>] [-cid <clientId>] [-cs <clientSecret>] [-asr <allowSelfRegistration>] [-dgid <defaultGroupRtId>]
+octo-cli -c UpdateIdentityProvider -id <identifier> [-n <name>] [-e <enabled>] [-cid <clientId>] [--client-secret-stdin] [-asr <allowSelfRegistration>] [-dgid <defaultGroupRtId>]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
@@ -437,7 +459,8 @@ octo-cli -c UpdateIdentityProvider -id <identifier> [-n <name>] [-e <enabled>] [
 | `-n` | `name` | Name (unique) | No |
 | `-e` | `enabled` | `true` or `false` | No |
 | `-cid` | `clientId` | Client ID | No |
-| `-cs` | `clientSecret` | Client secret | No |
+| `-css` | `client-secret-stdin` | Read the provider client secret from standard input (else `OCTO_CLI_IDP_CLIENT_SECRET`; without a source the stored secret is kept — never a prompt) | No |
+| `-cs` | `clientSecret` | **Deprecated** — secret on the command line. Do not use. | No |
 | `-asr` | `allowSelfRegistration` | Allow self-registration (`true`/`false`) | No |
 | `-dgid` | `defaultGroupRtId` | Default group RtId for new users | No |
 

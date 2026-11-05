@@ -55,7 +55,7 @@ Run `octo-cli -c AuthStatus` to determine:
 - Current identity service URL (determines environment)
 - JWT claims: subject, roles, issuer, audience, expiration
 
-If not authenticated: inform the user and offer to run `octo-cli -c LogIn -i` (interactive browser device login). For headless/CI scenarios use `octo-cli -c LogInClientCredentials` instead (reads `-id`/`-s` or the `OCTO_CLI_CLIENT_ID`/`OCTO_CLI_CLIENT_SECRET` env vars; tenant comes from the active context). `AuthStatus` shows an "Auth Method" line and omits the User Info section for client-credentials tokens. Agent-driven tasks that need a throwaway tenant never require interactive login — see `references/temp-tenants.md`.
+If not authenticated: inform the user and offer to run `octo-cli -c LogIn -i` (interactive browser device login). For headless/CI scenarios use `octo-cli -c LogInClientCredentials` instead (reads `-id` and the secret from the `OCTO_CLI_CLIENT_ID`/`OCTO_CLI_CLIENT_SECRET` env vars or `--secret-stdin`; the hidden prompt is only for an interactive terminal; tenant comes from the active context). `AuthStatus` shows an "Auth Method" line and omits the User Info section for client-credentials tokens. Agent-driven tasks that need a throwaway tenant never require interactive login — see `references/temp-tenants.md`.
 
 ### 3. Environment Detection from URLs
 
@@ -89,7 +89,7 @@ Command-name + one-line purpose + safety type only. **For full flag detail, read
 | `ListContexts` | List all contexts with auth status; `-n` detail, `-j` JSON | Read-only |
 | `RemoveContext` | Remove a named context | Mutating |
 | `LogIn` | Interactive browser/device login (`-i`) | Mutating |
-| `LogInClientCredentials` | Headless OAuth2 client_credentials login (`-id`/`-s` or env vars) | Mutating |
+| `LogInClientCredentials` | Headless OAuth2 client_credentials login (env vars or `--secret-stdin`) | Mutating |
 | `AuthStatus` | Show authentication status, claims, environment | Read-only |
 
 ### Identity Services
@@ -294,10 +294,14 @@ On "switch to <env>" / "connect to <env>": read `references/environments.md` for
 
 A command addresses **one tenant: the tenant of its context**. octo-cli 3.5.27+ never sends a token issued for another tenant: it exchanges it per tenant (cached) or stops with exit `-4` and a message naming tenant and cause (no fallback). Authority in a child tenant comes **only from explicit provisioning**: `octo-cli -c ProvisionCurrentUser -ttid <child>` once per child tenant, new tenants included. For many tenants use the octo-tools helper, not a script: `Register-OctoCliContext -Installation <i> -TenantId a,b,c -NoSwitch`, then `Invoke-OctoTenantSweep -Installation <i> -Tenant a,b,c -CliArguments '-c','LibraryStatus' [-WhatIf] [-Json]` (one row per tenant: Ok / Denied + cause / Failed; continues after a denial; never touches a token). **Never write scripts that read a token out of the context file and call a child tenant** — they are denied once the gate is enforced; GraphQL goes through `octo-cli -c GraphQl -tid <tenant> -q ...` (also inside the sweep: `-CliArguments \'-c\',\'GraphQl\',\'-tid\',\'{tenant}\',\'-q\',$q -IncludeOutput`). The Python explorers in `scripts/` address the context's own tenant and keep working. Denial causes, per-tenant contexts for CI, and a worked example: `references/tenant-tokens.md`.
 
+## Secrets Rule
+
+**Never put a secret in a command-line argument and never echo it.** No `-p`, `-s`, `-cs` (deprecated), no secret in a `printf`/`echo` literal, no `cat`/print of secret files, no secrets in comments, work items or reports. Use the prompt (human), `--password-stdin` / `--secret-stdin` / `--client-secret-stdin` piped from a mode-600 file (`octo-cli -c ResetPassword -un <u> --password-stdin -y < <file>` — redirect the file, no command substitution) or the `OCTO_CLI_*` environment variables listed in `references/command-reference.md`. When you generate a password or secret, write it to a new file under `umask 077` (a temp file in the same directory, then `mv` over the target, so an existing file never keeps a looser mode) and tell the user the path, not the value.
+
 ## Smart Behaviors
 
 - **"who am i" / "status":** run `AuthStatus`, summarize user, environment, tenant, roles, token expiry.
-- **Generate test credentials:** when details are missing, use unique usernames like `testuser-<4-random-chars>` and suggest a strong password.
+- **Generate test credentials:** when details are missing, use unique usernames like `testuser-<4-random-chars>` and generate a strong password into a mode-600 file (never show it in a command line or the transcript).
 - **Batch ("create 3 test users"):** loop the command with unique values; show the full plan, execute after confirmation.
 - **"with my roles":** `GetUsers` → identify current user → apply the same roles via `AddUserToRole`.
 - **Tenant context:** use the active context's tenant; never add `-tid` to commands that use the configured tenant (`EnableCommunication`, `EnableReporting`, `EnableStreamData`, `EnableAi`, `RunFixupScripts`). Only pass `-tid` on Asset Repository tenant commands that require it.

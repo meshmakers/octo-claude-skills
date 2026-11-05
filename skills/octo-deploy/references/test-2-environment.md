@@ -63,7 +63,7 @@ Notes:
 
 - **Interactive (human):** `octo-cli -c Login -i` — browser/device-code flow.
 - **Headless (agent/CI):** `octo-cli -c LogInClientCredentials` with
-  `OCTO_CLI_CLIENT_ID`/`OCTO_CLI_CLIENT_SECRET` (or `-id`/`-s`). Requires a
+  `OCTO_CLI_CLIENT_ID`/`OCTO_CLI_CLIENT_SECRET` (or `-id` plus `--secret-stdin`; never the deprecated `-s`). Requires a
   client-credentials client provisioned for the target tenant (the octo skill's
   `references/temp-tenants.md` documents the pattern for local; whether the
   `claude-agent` client exists on test-2's `octosystem` is NOT verified — check
