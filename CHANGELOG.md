@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.24.0] — 2026-11-05
+
+### Changed
+
+- **`octo-commit`** — CodeRabbit review and merge (AB#8295): every CodeRabbit finding is checked for validity against the code and the work item instead of being applied blindly; every thread is answered (`Fixed in <commit>` or `Declined: <reason>`), then `@coderabbitai resolve`; the PR is merged after CodeRabbit's approval (`reviewDecision` `APPROVED`), green checks and `mergeStateStatus` `CLEAN` — never `--admin` or `--auto`, never another person's PR; larger changes or doubt get a CoreDev review instead. Three new rows in *Common Mistakes*, `gh pr checks` added to the allowed tools, description and README row updated. With `octo-claude-pm` 0.32.0 its merge guard checks the conditions on GitHub.
+
 ## [0.23.0] — 2026-11-04
 
 ### Changed
