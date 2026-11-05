@@ -2,11 +2,17 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [0.25.0] — 2026-11-05
 
 ### Changed
 
-- **`octo`, `octo-deploy`** — secrets never on the command line (AB#8142, follows octo-cli AB#8044). `command-reference.md`, `temp-tenants.md`, `SKILL.md` and the test-2 authentication note use the prompt, `--password-stdin` / `--secret-stdin` / `--client-secret-stdin` and the `OCTO_CLI_*` environment variables instead of `-p`, `-s` and `-cs` (deprecated in octo-cli) for `ResetPassword`, `Setup`, `CreateUser`, `AddClientCredentialsClient`, `AddDeviceCodeClient`, `AddOAuthIdentityProvider`, `AddAzureEntryIdIdentityProvider`, `UpdateIdentityProvider` and `LogInClientCredentials`. New short "Secrets Rule" section in `octo/SKILL.md`: never put secrets in arguments, never echo them. No version bump (the release is separate).
+- **`octo`, `octo-deploy`** — secrets never on the command line (AB#8142, follows octo-cli AB#8044). `command-reference.md`, `temp-tenants.md`, `SKILL.md` and the test-2 authentication note use the prompt, `--password-stdin` / `--secret-stdin` / `--client-secret-stdin` and the `OCTO_CLI_*` environment variables instead of `-p`, `-s` and `-cs` (deprecated in octo-cli) for `ResetPassword`, `Setup`, `CreateUser`, `AddClientCredentialsClient`, `AddDeviceCodeClient`, `AddOAuthIdentityProvider`, `AddAzureEntryIdIdentityProvider`, `UpdateIdentityProvider` and `LogInClientCredentials`. New short "Secrets Rule" section in `octo/SKILL.md`: never put secrets in arguments, never echo them.
+
+## [0.24.0] — 2026-11-05
+
+### Changed
+
+- **`octo-commit`** — CodeRabbit review and merge (AB#8295): every CodeRabbit finding is checked for validity against the code and the work item instead of being applied blindly; every thread is answered (`Fixed in <commit>` or `Declined: <reason>`), then `@coderabbitai resolve`; the PR is merged after CodeRabbit's approval (`reviewDecision` `APPROVED`), green checks and `mergeStateStatus` `CLEAN` — never `--admin` or `--auto`, never another person's PR; larger changes or doubt get a CoreDev review instead. Three new rows in *Common Mistakes*, `gh pr checks` added to the allowed tools, description and README row updated. With `octo-claude-pm` 0.32.0 its merge guard checks the conditions on GitHub.
 
 ## [0.23.0] — 2026-11-04
 
