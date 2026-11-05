@@ -55,7 +55,7 @@ Run `octo-cli -c AuthStatus` to determine:
 - Current identity service URL (determines environment)
 - JWT claims: subject, roles, issuer, audience, expiration
 
-If not authenticated: inform the user and offer to run `octo-cli -c LogIn -i` (interactive browser device login). For headless/CI scenarios use `octo-cli -c LogInClientCredentials` instead (reads `-id` and the secret from the `OCTO_CLI_CLIENT_ID`/`OCTO_CLI_CLIENT_SECRET` env vars, `--secret-stdin` or a hidden prompt; tenant comes from the active context). `AuthStatus` shows an "Auth Method" line and omits the User Info section for client-credentials tokens. Agent-driven tasks that need a throwaway tenant never require interactive login — see `references/temp-tenants.md`.
+If not authenticated: inform the user and offer to run `octo-cli -c LogIn -i` (interactive browser device login). For headless/CI scenarios use `octo-cli -c LogInClientCredentials` instead (reads `-id` and the secret from the `OCTO_CLI_CLIENT_ID`/`OCTO_CLI_CLIENT_SECRET` env vars or `--secret-stdin`; the hidden prompt is only for an interactive terminal; tenant comes from the active context). `AuthStatus` shows an "Auth Method" line and omits the User Info section for client-credentials tokens. Agent-driven tasks that need a throwaway tenant never require interactive login — see `references/temp-tenants.md`.
 
 ### 3. Environment Detection from URLs
 

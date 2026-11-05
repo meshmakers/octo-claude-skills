@@ -32,7 +32,8 @@ All steps run without user interaction, and **every command uses `--context` so 
 
 ```bash
 export OCTO_CLI_CLIENT_ID=claude-agent
-export OCTO_CLI_CLIENT_SECRET=$(cat ~/.octo-cli/claude-agent.secret)
+IFS= read -r OCTO_CLI_CLIENT_SECRET < ~/.octo-cli/claude-agent.secret   # no command substitution: `set -x` would trace the value
+export OCTO_CLI_CLIENT_SECRET
 
 # 1. Authenticate against the system tenant (token stored in local_octosystem)
 octo-cli -c LogInClientCredentials --context local_octosystem

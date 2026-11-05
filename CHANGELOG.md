@@ -6,7 +6,7 @@ All notable changes to the octo-claude-skills plugin. Format loosely follows [Ke
 
 ### Changed
 
-- **`octo`, `octo-deploy`** — secrets never on the command line (AB#8142, follows octo-cli AB#8044). `command-reference.md`, `temp-tenants.md`, `SKILL.md` and the test-2 authentication note use the prompt, `--password-stdin` / `--secret-stdin` / `--client-secret-stdin` and the `OCTO_CLI_*` environment variables instead of `-p`, `-s` and `-cs` (deprecated in octo-cli) for `ResetPassword`, `Setup`, `CreateUser`, `AddClientCredentialsClient`, `AddDeviceCodeClient`, `AddOAuthIdentityProvider`, `AddAzureEntryIdIdentityProvider`, `UpdateIdentityProvider` and `LogInClientCredentials`. New short "Secrets Rule" section in `octo/SKILL.md`: never put secrets in arguments, never echo them.
+- **`octo`, `octo-deploy`** — secrets never on the command line (AB#8142, follows octo-cli AB#8044). `command-reference.md`, `temp-tenants.md`, `SKILL.md` and the test-2 authentication note use the prompt, `--password-stdin` / `--secret-stdin` / `--client-secret-stdin` and the `OCTO_CLI_*` environment variables instead of `-p`, `-s` and `-cs` (deprecated in octo-cli) for `ResetPassword`, `Setup`, `CreateUser`, `AddClientCredentialsClient`, `AddDeviceCodeClient`, `AddOAuthIdentityProvider`, `AddAzureEntryIdIdentityProvider`, `UpdateIdentityProvider` and `LogInClientCredentials`. New short "Secrets Rule" section in `octo/SKILL.md`: never put secrets in arguments, never echo them. `temp-tenants.md` reads the client secret with `read -r` instead of command substitution (no value in `set -x` traces); the command reference names the two commands without a prompt (`CreateUser`, `UpdateIdentityProvider`).
 
 ## [0.24.0] — 2026-11-05
 

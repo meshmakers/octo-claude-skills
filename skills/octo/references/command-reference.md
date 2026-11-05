@@ -2,7 +2,7 @@
 
 All flags use short form with `-` prefix. Required flags are marked with **(R)**.
 
-> **Secrets never on the command line (octo-cli, AB#8044).** Passwords and client secrets are read from a hidden prompt, from standard input (`--password-stdin` / `-ps`, `--secret-stdin` / `-ss`, `--client-secret-stdin` / `-css`) or from an environment variable. The old arguments `-p`, `-s` and `-cs` still work but are **deprecated** (warning, removed in a later release): the value lands in the shell history, the process list and transcripts. **Never use them and never echo a secret.** Order: deprecated argument > stdin flag > environment variable > hidden prompt (terminal only; a new secret is asked twice). Pipe the value from a mode-600 file or a secret store: `octo-cli -c <Command> --password-stdin … < <file>` — never type the literal value into a command. Not affected: `Update/DeleteApiSecret*` `-s` is the stored secret **hash** (an identifier, as `GetApiSecrets*` lists it), not the secret.
+> **Secrets never on the command line (octo-cli, AB#8044).** Passwords and client secrets are read from a hidden prompt, from standard input (`--password-stdin` / `-ps`, `--secret-stdin` / `-ss`, `--client-secret-stdin` / `-css`) or from an environment variable. The old arguments `-p`, `-s` and `-cs` still work but are **deprecated** (warning, removed in a later release): the value lands in the shell history, the process list and transcripts. **Never use them and never echo a secret.** Order: deprecated argument > stdin flag > environment variable > hidden prompt (terminal only; a new secret is asked twice). Exceptions without a prompt: `CreateUser` without a source creates the user without a password; `UpdateIdentityProvider` without a source keeps the stored client secret. Pipe the value from a mode-600 file or a secret store: `octo-cli -c <Command> --password-stdin … < <file>` — never type the literal value into a command. Not affected: `Update/DeleteApiSecret*` `-s` is the stored secret **hash** (an identifier, as `GetApiSecrets*` lists it), not the secret.
 >
 > | Command | Stdin flag | Environment variable |
 > |---|---|---|
@@ -13,7 +13,7 @@ All flags use short form with `-` prefix. Required flags are marked with **(R)**
 > | `RedeemAiTicket` | – (two tokens) | `OCTO_CLI_AI_ACCESS_TOKEN`, `OCTO_CLI_AI_REFRESH_TOKEN` (`-at`/`-rt` deprecated) |
 >
 > `ResetPassword` asks for confirmation before it reads the password; with `--password-stdin` stdin is a pipe, so add `-y`.
-
+>
 > **Confirmation prompts:** Destructive commands (Delete, Clean, ClearCache, ResetPassword, RemoveUserFromRole) prompt for confirmation before executing. Add `-y` (`--yes`) to skip the prompt in scripts/CI.
 
 ## Context Management
