@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.25.1] — 2026-11-05
+
+### Changed
+
+- **`octo`** — `temp-tenants.md` no longer says `LogInClientCredentials` reads the secret from `-s` (AB#8303, follow-up of AB#8142): the secret comes from `--secret-stdin`, `OCTO_CLI_CLIENT_SECRET` or the hidden prompt, and `-s` is named only as deprecated (shell history, process list). No other secret examples with `-s` were left in the skills; the `-p`/`-s` hits that remain are a port, a server name and a path.
+
 ## [0.25.0] — 2026-11-05
 
 ### Changed
