@@ -95,6 +95,8 @@ Before the override builder runs, `WorkloadReconciler` calls `AppendClusterSecre
 
 Injected entries are **prepended** so any entity-supplied override on the same path still wins, then flow through the normal secret pipeline into `{release}-octo-secrets`. Each adapter chart's `secrets.*` block must accept both plaintext strings (legacy) and `valueFrom` maps — see the `octo-mesh.secretEnv` helper in `octo-mesh-adapter` / `octo-eda-adapter` templates.
 
+**Secret defaults are not a Helm tier.** An Application's `SecretDefaults` (System.Communication 4.15.0) never reach the operator: the controller leaves them out of `WorkloadDeployedDto` and projects them itself, on `DeployWorkload`, into a platform-owned `System.Communication/SecretDefault` in the Application's tenant and its subtree. No values file, no `{release}-octo-secrets` entry, no Helm release history, no pod env carries them, and no operator change is needed for them. If one ever shows up in a values file or the release Secret, that is a leak to report, not a tier to support. A secret the pod itself needs stays a secret-flagged `ValueOverride` (above); one only platform nodes need (e.g. a CAPTCHA secret for `VerifyCaptcha@1`) is a secret default — see `octo-app-builder` (`references/app-workload.md` §Secrets).
+
 ## Pre-flight, Watcher, Cancellation
 
 Three mechanisms surface the real failure reason behind `helm upgrade --install --atomic` (which otherwise collapses everything into one opaque `context deadline exceeded` stderr line):

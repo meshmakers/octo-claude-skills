@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.26.0] — 2026-11-06
+
+### Changed
+
+- **`pipeline-expert`, `octo-app-builder`, `octo-operator`** — secret defaults of an Application (AB#7252, Feature AB#7219; System.Communication 4.15.0, controller AB#7244, mesh adapter AB#7246/AB#7251). `pipeline-expert`: `VerifyCaptcha@1` in `node-reference-mesh.md` (settings, output `{ valid, source, reason }`, deployment default vs tenant override, no fallback for an undecryptable override) and `RevealSecret@1` with why it refuses `System.Communication/SecretDefault` (platform-only: no tenant identity may obtain it); `GetPipelineConfigByCkTypeId@1` refuses the type; `MakeHttpRequest@1` is not for CAPTCHA checks; one line each in the `SKILL.md` node tables. `octo-app-builder`: `references/app-workload.md` §Secrets — secret-flagged `ValueOverride` only for secrets the pod needs, `SecretDefaults` for secrets only platform nodes need; the seed declares the key without a value (the secret seed lint refuses values, placeholders and `${...}` variables, and blueprints have no install-time parameters), the operator writes the value after the install (Studio or GraphQL from stdin), the deploy refuses the Application until then, re-apply keeps it; pointer in `SKILL.md`. `octo-operator`: secret defaults are not a Helm tier — they never reach the operator, a values file or the release Secret. Worked sample: `octo-communication-controller-services/samples/Blueprints/SecretDefaultDemo/`. Needs the controller and mesh adapter releases of Feature AB#7219.
+
 ## [0.25.1] — 2026-11-05
 
 ### Changed
