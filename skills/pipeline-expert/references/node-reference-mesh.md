@@ -775,16 +775,20 @@ endpoint is fixed in code (no URL setting), so a pipeline cannot send the secret
 
 Output at `targetPath`, exactly: `valid` (bool), `source` (`tenant` / `default` / `none`, never a value), and only when
 `valid` is false `reason`: `not-configured` (neither secret set, no HTTP call), `invalid-token` (empty token, or the
-provider refused the token), `verification-unavailable` (provider error, timeout, unusable answer, or a tenant secret
-that cannot be decrypted).
+provider refused the token), `verification-unavailable` (provider error, timeout, unusable answer, or a set tenant
+secret that cannot be decrypted).
 
 **Deployment default vs tenant override.**
 - *Default*: an operator declares it once on the Application (`SecretDefaults`, key = `defaultKey`) and deploys; the
-  Communication Controller projects it into the Application's tenant and its whole subtree. Pipelines reach it only
-  through `defaultKey`, in the executing tenant.
+  Communication Controller projects it into the Application's tenant and its subtree (narrowed by the entry's
+  `AllowedTenantIds`, if any). The projection is best effort per tenant: a tenant without System.Communication 4.15.0,
+  an unresolvable tenant or a failed write is a Warning/Error event on the Application while the deploy succeeds, so
+  a successful deploy does not prove that every tenant has the value. Pipelines reach it only through `defaultKey`, in
+  the executing tenant; where it is missing the node answers `not-configured` (or uses the override).
 - *Override*: a Secret attribute of the tenant's own configuration entity (`tenantSecret`). When it is set it wins;
-  clearing it falls back to the default. A set but undecryptable override does **not** fall back
-  (`verification-unavailable`).
+  clearing it falls back to the default. An override encrypted with a key id the adapter's key ring lacks counts as
+  not set (an error naming the key id goes to the log) and falls back to the default; any other override that cannot
+  be decrypted does **not** fall back (`verification-unavailable`).
 - `tenantSecret` naming the `SecretDefault` type or the Application's `SecretDefaults` is refused.
 
 ```yaml
@@ -806,8 +810,10 @@ that cannot be decrypted).
   identity: ServiceAccount
 ```
 
-Branch on `reason` (`not-configured` = the operator must act; anything else = the client may retry), never on
-the provider's own codes, which are not output. End the pipeline with `Project@1` `clear: true` so the response holds
+Check `valid` first; `reason` exists only when it is false. Then branch on `reason`: `invalid-token` = the client
+may solve the CAPTCHA again; `not-configured` = the operator must act; `verification-unavailable` = retry later, and
+if it persists the operator must act (the provider is down or a secret is wrong or unreadable). Never branch on the
+provider's own codes, which are not output. End the pipeline with `Project@1` `clear: true` so the response holds
 the verdict only. Full worked sample (Application, override type, route, verify commands):
 `octo-communication-controller-services/samples/Blueprints/SecretDefaultDemo/`. Test with Cloudflare's public test
 secrets (`1x0000000000000000000000000000000AA` passes, `2x0000000000000000000000000000000AA` fails, token

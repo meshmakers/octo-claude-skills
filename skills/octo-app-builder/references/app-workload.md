@@ -134,12 +134,18 @@ Secret for nothing. A static frontend that shows a CAPTCHA needs only the public
   (`systemCommunicationApplications.update`, the whole `secretDefaults` list, value as `secretValue`, document from
   stdin — never on a command line). Until then `DeployWorkload` refuses the Application ("the SecretDefaults entry
   '<key>' has no SecretValue"). Re-apply and blueprint updates keep the value (TenantOwned, carried over by record key).
-- **`DeployWorkload` projects it**, a redeploy after a new value rotates it everywhere. Scope is the Application's own
-  tenant plus every descendant, never siblings; an optional `SecretDefaultAllowedTenantIds` list only narrows it.
+- **`DeployWorkload` projects it**, a redeploy after a new value rotates it. Scope is the Application's own tenant
+  plus every descendant, never siblings; an optional `SecretDefaultAllowedTenantIds` list only narrows it. The
+  projection is best effort per tenant: a skipped tenant (no System.Communication 4.15.0, not resolvable) or a failed
+  write is a Warning/Error event on the Application, and the deploy still succeeds. Read those events before revoking
+  an old secret at the provider.
 - **Nobody in a served tenant can read it** (`RevealSecret@1`, GraphQL, MCP, export all refuse or show `isSet` only).
   Only platform nodes use it — today `VerifyCaptcha@1` (`defaultKey` = the Key). A tenant that wants its own value
   keeps it in its own Secret attribute (`tenantSecret` of the node); the projection never touches that.
-- Key: `^[A-Za-z0-9][A-Za-z0-9._-]*$`, at most 128 characters, unique per Application.
+- Key: `^[A-Za-z0-9][A-Za-z0-9._-]*$`, at most 128 characters, unique per Application. The key is the well-known
+  name of the `SecretDefault` in every target tenant, one per key and tenant: Applications whose scopes overlap (two
+  in one tenant, or one in an ancestor of the other) need distinct keys. With the same key the source closer to the
+  root wins (a Warning event names the refused one), otherwise the last deploy overwrites the other's value.
 
 Worked sample with the Application, a tenant override type, the `VerifyCaptcha@1` route and the verify commands:
 `octo-communication-controller-services/samples/Blueprints/SecretDefaultDemo/`. Pipeline side: `pipeline-expert`,
