@@ -783,7 +783,8 @@ secret that cannot be decrypted).
   Communication Controller projects it into the Application's tenant and its subtree (narrowed by the entry's
   `AllowedTenantIds`, if any). The projection is best effort per tenant: a tenant without System.Communication 4.15.0,
   an unresolvable tenant or a failed write is a Warning/Error event on the Application while the deploy succeeds, so
-  a successful deploy does not prove that every tenant has the value. Pipelines reach it only through `defaultKey`, in
+  a successful deploy does not prove that every tenant has the value: check the Application's events after the
+  deploy, fix the cause and deploy again for a skipped or failed tenant. Pipelines reach it only through `defaultKey`, in
   the executing tenant; where it is missing the node answers `not-configured` (or uses the override).
 - *Override*: a Secret attribute of the tenant's own configuration entity (`tenantSecret`). When it is set it wins;
   clearing it falls back to the default. An override encrypted with a key id the adapter's key ring lacks counts as

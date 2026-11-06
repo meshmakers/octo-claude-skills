@@ -137,8 +137,9 @@ Secret for nothing. A static frontend that shows a CAPTCHA needs only the public
 - **`DeployWorkload` projects it**, a redeploy after a new value rotates it. Scope is the Application's own tenant
   plus every descendant, never siblings; an optional `SecretDefaultAllowedTenantIds` list only narrows it. The
   projection is best effort per tenant: a skipped tenant (no System.Communication 4.15.0, not resolvable) or a failed
-  write is a Warning/Error event on the Application, and the deploy still succeeds. Read those events before revoking
-  an old secret at the provider.
+  write is a Warning/Error event on the Application, and the deploy still succeeds. After every deploy read those
+  events; for a skipped or failed tenant fix the cause and deploy again (the projection is retried), and revoke an
+  old secret at the provider only once no such event is left.
 - **Nobody in a served tenant can read it** (`RevealSecret@1`, GraphQL, MCP, export all refuse or show `isSet` only).
   Only platform nodes use it — today `VerifyCaptcha@1` (`defaultKey` = the Key). A tenant that wants its own value
   keeps it in its own Secret attribute (`tenantSecret` of the node); the projection never touches that.
