@@ -103,6 +103,55 @@ injection. Shared clusters (test-2 etc.): push to `<registry>` instead.
 - For a dedicated chart later: publish `<app>` chart via the standard CI to the
   Helm repo and set `ChartName` accordingly — the rest stays identical.
 
+## Secrets: secret defaults vs. secret ValueOverrides
+
+Decide by **who uses the secret**:
+
+| The secret is used by | Declare it as | Where the value ends up |
+|---|---|---|
+| the app's own pod (its database password, an API key the server calls with) | a `Values` entry with `IsSecret: true` and the value in `SecretValue` | the release's Kubernetes Secret, referenced from the Helm values |
+| platform nodes in every tenant the app serves (e.g. a CAPTCHA secret `VerifyCaptcha@1` checks with) | an entry of the Application's `SecretDefaults` (System.Communication 4.15.0 or newer) | a platform-owned `System.Communication/SecretDefault` in the Application's tenant and its whole subtree; never Helm values, the pod or a Kubernetes Secret |
+
+**Never a secret ValueOverride when the pod does not need the value**: it would land in the pod and its Kubernetes
+Secret for nothing. A static frontend that shows a CAPTCHA needs only the public **site key** — an ordinary
+`Values` entry — while the **secret** is a secret default.
+
+```yaml
+    - id: System.Communication/SecretDefaults-1
+      value:
+        - ckRecordId: System.Communication/SecretDefaultProjection-1
+          attributes:
+            - id: System.Communication/SecretDefaultKey-1          # = well-known name in every served tenant
+              value: my-app-captcha-secret
+            - id: System.Communication/SecretDefaultDescription-1
+              value: Turnstile secret of the registration form
+            # no SecretDefaultValue: a seed may not carry a secret
+```
+
+- **The value is set after the install, never in the seed.** The secret seed lint (`octo-bpm validate`, blueprint
+  build) refuses a value, a `<...>` / `TODO_SET_*` placeholder and a `${...}` variable in a Secret slot, and blueprints
+  have no install-time parameters. The operator writes `SecretValue` in the Studio or with GraphQL
+  (`systemCommunicationApplications.update`, the whole `secretDefaults` list, value as `secretValue`, document from
+  stdin — never on a command line). Until then `DeployWorkload` refuses the Application ("the SecretDefaults entry
+  '<key>' has no SecretValue"). Re-apply and blueprint updates keep the value (TenantOwned, carried over by record key).
+- **`DeployWorkload` projects it**, a redeploy after a new value rotates it. Scope is the Application's own tenant
+  plus every descendant, never siblings; an optional `SecretDefaultAllowedTenantIds` list only narrows it. The
+  projection is best effort per tenant: a skipped tenant (no System.Communication 4.15.0, not resolvable) or a failed
+  write is a Warning/Error event on the Application, and the deploy still succeeds. After every deploy read those
+  events; for a skipped or failed tenant fix the cause and deploy again (the projection is retried), and revoke an
+  old secret at the provider only once no such event is left.
+- **Nobody in a served tenant can read it** (`RevealSecret@1`, GraphQL, MCP, export all refuse or show `isSet` only).
+  Only platform nodes use it — today `VerifyCaptcha@1` (`defaultKey` = the Key). A tenant that wants its own value
+  keeps it in its own Secret attribute (`tenantSecret` of the node); the projection never touches that.
+- Key: `^[A-Za-z0-9][A-Za-z0-9._-]*$`, at most 128 characters, unique per Application. The key is the well-known
+  name of the `SecretDefault` in every target tenant, one per key and tenant: Applications whose scopes overlap (two
+  in one tenant, or one in an ancestor of the other) need distinct keys. With the same key the source closer to the
+  root wins (a Warning event names the refused one), otherwise the last deploy overwrites the other's value.
+
+Worked sample with the Application, a tenant override type, the `VerifyCaptcha@1` route and the verify commands:
+`octo-communication-controller-services/samples/Blueprints/SecretDefaultDemo/`. Pipeline side: `pipeline-expert`,
+`VerifyCaptcha@1`.
+
 ## Deploy + operate
 
 ```powershell

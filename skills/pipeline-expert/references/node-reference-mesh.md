@@ -213,6 +213,31 @@ Retrieve all pipeline configurations matching a CK type ID.
 | `ckTypeIdPath` | string | optional | JSONPath to CK type ID |
 | `targetPath` | string | required | Where to store config array |
 
+Refuses the type id `System.Communication/SecretDefault` before it reads anything (platform-only, see `VerifyCaptcha@1`).
+
+### RevealSecret@1
+
+The only node that writes the plaintext of a `Secret` attribute into the data context; every other read sees
+`{"isSet": true|false}`. Use it only when the pipeline itself must send the secret somewhere (an SMTP password,
+an API key header). Not for CAPTCHA secrets: use `VerifyCaptcha@1`.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `ckTypeId` / `ckTypeIdPath` | string | one required | CK type of the entity |
+| `rtId` / `rtIdPath` | string | one required | Entity id |
+| `attributeName` | string | required | Secret attribute; a dotted path reaches a Secret inside a single `Record`; record arrays are refused |
+| `targetPath` | string | `$` | Where the plaintext is written (masked as `***` in debug points, logs and the execution result) |
+| `identity` | `Caller` \| `ServiceAccount` | `Caller` | Identity the entity is read as; `System` is refused |
+
+Not set, or encrypted with a key the adapter's key ring lacks, writes `null`.
+
+**Refused for platform-only secrets.** `RevealSecret@1` fails before it reads when the type is
+`System.Communication/SecretDefault` or the attribute is the Application's `SecretDefaults`, for `Caller` and
+`ServiceAccount` alike. A secret default is supplied once by the operator for every tenant an Application serves,
+and no tenant identity, tenant administrators included, may obtain it; a node that put it into the data context would
+hand it to every pipeline author of every served tenant. Platform nodes such as `VerifyCaptcha@1` use it and return
+only a result.
+
 ### GetNotificationTemplate@1
 
 Retrieve notification template (subject and body) by name.
@@ -727,6 +752,73 @@ Make HTTP requests and store response.
       value: application/json
   targetPath: $.response
 ```
+
+Never use it to call a CAPTCHA or other verification endpoint with a secret: the pipeline would have to reveal the
+secret first, and the URL is the pipeline author's choice. Use `VerifyCaptcha@1`.
+
+### VerifyCaptcha@1
+
+Verifies a CAPTCHA token with the **tenant's own secret, else the platform's secret default**, and writes only the
+verdict. The secret never enters the data context, a debug point, a log line or the execution result; the provider
+endpoint is fixed in code (no URL setting), so a pipeline cannot send the secret elsewhere.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `provider` | enum | required | `Turnstile` (Cloudflare) |
+| `tokenPath` | string | required | JSONPath to the token the client submitted |
+| `remoteIpPath` | string | optional | JSONPath to the client IP, passed to the provider |
+| `tenantSecret` | object | optional | The tenant override: `ckTypeId`, one of `rtId` / `rtIdPath` / `wellKnownName`, `attributeName` (a `Secret` attribute) |
+| `defaultKey` | string | required | Well-known name of the `System.Communication/SecretDefault` used when no tenant secret is set |
+| `targetPath` | string | required | Where the verdict is written |
+| `timeoutSeconds` | int | 10 | 1 to 60; no answer in time is `verification-unavailable` |
+| `identity` | `Caller` \| `ServiceAccount` | `Caller` | Identity the tenant secret is read as; `System` is refused. The default is always read by the platform itself |
+
+Output at `targetPath`, exactly: `valid` (bool), `source` (`tenant` / `default` / `none`, never a value), and only when
+`valid` is false `reason`: `not-configured` (neither secret set, no HTTP call), `invalid-token` (empty token, or the
+provider refused the token), `verification-unavailable` (provider error, timeout, unusable answer, or a set tenant
+secret that cannot be decrypted).
+
+**Deployment default vs tenant override.**
+- *Default*: an operator declares it once on the Application (`SecretDefaults`, key = `defaultKey`) and deploys; the
+  Communication Controller projects it into the Application's tenant and its subtree (narrowed by the entry's
+  `AllowedTenantIds`, if any). The projection is best effort per tenant: a tenant without System.Communication 4.15.0,
+  an unresolvable tenant or a failed write is a Warning/Error event on the Application while the deploy succeeds, so
+  a successful deploy does not prove that every tenant has the value: check the Application's events after the
+  deploy, fix the cause and deploy again for a skipped or failed tenant. Pipelines reach it only through `defaultKey`, in
+  the executing tenant; where it is missing the node answers `not-configured` (or uses the override).
+- *Override*: a Secret attribute of the tenant's own configuration entity (`tenantSecret`). When it is set it wins;
+  clearing it falls back to the default. An override encrypted with a key id the adapter's key ring lacks counts as
+  not set (an error naming the key id goes to the log) and falls back to the default; any other override that cannot
+  be decrypted does **not** fall back (`verification-unavailable`).
+- `tenantSecret` naming the `SecretDefault` type or the Application's `SecretDefaults` is refused.
+
+```yaml
+- type: FromHttpRequest@2          # trigger
+  path: /verify-captcha
+  method: Post
+  allowAnonymous: true             # public form: read the override as ServiceAccount
+  requiredRoles: []
+# transformations:
+- type: VerifyCaptcha@1
+  provider: Turnstile
+  tokenPath: $.body.captchaToken
+  tenantSecret:
+    ckTypeId: SecretDefaultDemo/CaptchaConfiguration
+    wellKnownName: CaptchaConfiguration
+    attributeName: CaptchaSecret
+  defaultKey: demo-captcha-secret
+  targetPath: $.verdict
+  identity: ServiceAccount
+```
+
+Check `valid` first; `reason` exists only when it is false. Then branch on `reason`: `invalid-token` = the client
+may solve the CAPTCHA again; `not-configured` = the operator must act; `verification-unavailable` = retry later, and
+if it persists the operator must act (the provider is down or a secret is wrong or unreadable). Never branch on the
+provider's own codes, which are not output. End the pipeline with `Project@1` `clear: true` so the response holds
+the verdict only. Full worked sample (Application, override type, route, verify commands):
+`octo-communication-controller-services/samples/Blueprints/SecretDefaultDemo/`. Test with Cloudflare's public test
+secrets (`1x0000000000000000000000000000000AA` passes, `2x0000000000000000000000000000000AA` fails, token
+`XXXX.DUMMY.TOKEN.XXXX`), never a real key.
 
 ### StatisticalAnomalyDetection@1
 
