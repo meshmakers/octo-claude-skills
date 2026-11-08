@@ -65,9 +65,28 @@ Notes:
 - **Headless (agent/CI):** `octo-cli -c LogInClientCredentials` with
   `OCTO_CLI_CLIENT_ID`/`OCTO_CLI_CLIENT_SECRET` (or `-id` plus `--secret-stdin`; never the deprecated `-s`). Requires a
   client-credentials client provisioned for the target tenant (the octo skill's
-  `references/temp-tenants.md` documents the pattern for local; whether the
-  `claude-agent` client exists on test-2's `octosystem` is NOT verified — check
-  with `GetClients` on a test-2 octosystem context before relying on it).
+  `references/temp-tenants.md` documents the pattern for local).
+- **Agent client per workstation (test-2):** every workstation that runs agents
+  against test-2 has its own client in `octosystem`, so one machine can be
+  revoked on its own: id `claude-agent-<user>-<workstation>` (e.g.
+  `claude-agent-gerald-wks-1`; `claude-agent` is the legacy shared client).
+  Grant `client_credentials` only, scopes `openid profile email role octo_api`,
+  role `TenantManagement` only (create/delete scratch tenants). Created with
+  `-apic`, so it is mirrored into **new** sub-tenants only — not into existing
+  child tenants (no `ProvisionClientInExistingTenants`).
+  - Create the secret file **first**:
+    `(umask 077; set -C; openssl rand -base64 48 | tr -d '\n' > ~/.octo-cli/<client>.secret)`
+    (`set -C` fails instead of overwriting an existing file),
+    then `AddClientCredentialsClient … --secret-stdin < ~/.octo-cli/<client>.secret`.
+    A client created with an unknown secret must be deleted and recreated —
+    adding a second secret leaves the unknown one valid.
+  - The human stores the secret in the team's secret store (path: see
+    `agent-operating-rules` `references/environments.md` if `octo-claude-pm` is
+    installed); agents never write it there.
+  - Verify with a temporary context: pipe the secret into
+    `LogInClientCredentials -id <client> --secret-stdin`, then `AuthStatus` shows
+    role `TenantManagement`, `client_id <client>` and the audiences `octoAPI`
+    plus the MCP audience.
 
 ## Creating a tenant on test-2
 

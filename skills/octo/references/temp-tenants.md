@@ -25,14 +25,17 @@ octo-cli -c AddClientToRole -id claude-agent -r TenantManagement --context local
 - The secret goes in through `--secret-stdin` (or `OCTO_CLI_NEW_CLIENT_SECRET`, or the hidden prompt) — never as `-s`, which is deprecated (shell history, process list).
 - Convention: store the secret at `~/.octo-cli/<clientId>.secret` (same sensitivity class as the tokens in `~/.octo-cli/contexts.json`). On the local dev environment the client `claude-agent` may already exist and its secret is at `~/.octo-cli/claude-agent.secret` — check its roles with `GetClients` before relying on it.
 - `-apic` mirrors into tenants below the creating tenant; the mirror of a client of `octosystem` is provisioned when identity sets a tenant up. Tenants that existed **before** the client was created get the mirror with `ProvisionClientInExistingTenants -id claude-agent` or `ProvisionClientInTenant -id claude-agent -ctid <tenantId>`.
+- **Shared environments (test-2):** not `claude-agent`, but one client per workstation, `claude-agent-<user>-<workstation>`, with only `TenantManagement`, `-apic` and **no** `ProvisionClientInExistingTenants` (it only needs the scratch tenants it creates). Details: octo-deploy `references/test-2-environment.md`.
+- Create the secret file **before** `AddClientCredentialsClient` (as above). A client created with a secret nobody kept must be deleted and recreated — adding a second secret leaves the unknown one valid.
 
 ## Agent Workflow
 
 All steps run without user interaction, and **every command uses `--context` so the active context is never changed**. Export the credentials once; while they stay exported, octo-cli re-acquires the token on expiry (no refresh token exists for `client_credentials`).
 
 ```bash
-export OCTO_CLI_CLIENT_ID=claude-agent
-IFS= read -r OCTO_CLI_CLIENT_SECRET < ~/.octo-cli/claude-agent.secret   # no command substitution: `set -x` would trace the value
+CLIENT=claude-agent   # shared environments (test-2): claude-agent-<user>-<workstation>, contexts test-2_* instead of local_*
+export OCTO_CLI_CLIENT_ID=$CLIENT
+IFS= read -r OCTO_CLI_CLIENT_SECRET < ~/.octo-cli/$CLIENT.secret || [ -n "$OCTO_CLI_CLIENT_SECRET" ]   # no command substitution: `set -x` would trace the value; `||` keeps `set -e` alive for a file without trailing newline
 export OCTO_CLI_CLIENT_SECRET
 
 # 1. Authenticate against the system tenant (token stored in local_octosystem)

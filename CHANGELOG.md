@@ -2,6 +2,13 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.25.3] — 2026-11-08
+
+### Changed
+
+- **`octo-deploy`** — `test-2-environment.md` documents the per-workstation agent client on test-2 (AB#8475): `claude-agent-<user>-<workstation>` in `octosystem`, client_credentials only, role `TenantManagement` only, `-apic` without mirroring into existing child tenants, secret file created before the client, verification with `AuthStatus`. Replaces the note that the `claude-agent` client on test-2 was unverified.
+- **`octo`** — `temp-tenants.md` points shared environments to the per-workstation client and notes that a client created with an unknown secret must be recreated.
+
 ## [0.25.2] — 2026-11-08
 
 ### Changed
