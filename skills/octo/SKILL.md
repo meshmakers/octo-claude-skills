@@ -154,7 +154,7 @@ Command-name + one-line purpose + safety type only. **For full flag detail, read
 
 #### CK Catalog / Library Management
 
-Requires the **DataModelManagement** role for catalog import/refresh.
+Changing the data model requires scope `octo_api` **and** the tenant role **DataModelManagement** (since r3.5.67): `ImportCk`, `ImportFromCatalog`, `FixAll`, `RefreshCatalogs`, `RefreshBlueprintCatalogs` and `InstallBlueprint`/`UpdateBlueprint`/`UninstallBlueprint`. `TenantOwners` carry it; without it the call fails with `403` code `DataModelManagementRequired` — an administrator of that tenant grants the role in the tenant (users: `AddUserToRole -un <user> -r DataModelManagement` or `TenantOwners` membership; client-credentials clients: `AddClientToRole -id <clientId> -r DataModelManagement`, then log in again for a new token), never work around it.
 
 | Command | Purpose | Type |
 |---|---|---|
