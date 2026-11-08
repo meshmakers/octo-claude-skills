@@ -75,7 +75,8 @@ Notes:
   `-apic`, so it is mirrored into **new** sub-tenants only — not into existing
   child tenants (no `ProvisionClientInExistingTenants`).
   - Create the secret file **first**:
-    `umask 077; openssl rand -base64 48 | tr -d '\n' > ~/.octo-cli/<client>.secret`,
+    `(umask 077; set -C; openssl rand -base64 48 | tr -d '\n' > ~/.octo-cli/<client>.secret)`
+    (`set -C` fails instead of overwriting an existing file),
     then `AddClientCredentialsClient … --secret-stdin < ~/.octo-cli/<client>.secret`.
     A client created with an unknown secret must be deleted and recreated —
     adding a second secret leaves the unknown one valid.
