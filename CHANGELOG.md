@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.25.2] — 2026-11-08
+
+### Changed
+
+- **`octo`** — changing the data model needs the tenant role `DataModelManagement` (AB#8529, asset repository from r3.5.67): `ImportCk`, `ImportFromCatalog`, `FixAll`, `RefreshCatalogs`, `RefreshBlueprintCatalogs` and the blueprint install/update/uninstall commands answer `403` with code `DataModelManagementRequired` without it. SKILL.md and `command-reference.md` no longer say the scope `octo_api.data_model_management` is enough.
+
 ## [0.25.1] — 2026-11-05
 
 ### Changed
