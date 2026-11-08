@@ -25,6 +25,8 @@ octo-cli -c AddClientToRole -id claude-agent -r TenantManagement --context local
 - The secret goes in through `--secret-stdin` (or `OCTO_CLI_NEW_CLIENT_SECRET`, or the hidden prompt) — never as `-s`, which is deprecated (shell history, process list).
 - Convention: store the secret at `~/.octo-cli/<clientId>.secret` (same sensitivity class as the tokens in `~/.octo-cli/contexts.json`). On the local dev environment the client `claude-agent` may already exist and its secret is at `~/.octo-cli/claude-agent.secret` — check its roles with `GetClients` before relying on it.
 - `-apic` mirrors into tenants below the creating tenant; the mirror of a client of `octosystem` is provisioned when identity sets a tenant up. Tenants that existed **before** the client was created get the mirror with `ProvisionClientInExistingTenants -id claude-agent` or `ProvisionClientInTenant -id claude-agent -ctid <tenantId>`.
+- **Shared environments (test-2):** not `claude-agent`, but one client per workstation, `claude-agent-<user>-<workstation>`, with only `TenantManagement`, `-apic` and **no** `ProvisionClientInExistingTenants` (it only needs the scratch tenants it creates). Details: octo-deploy `references/test-2-environment.md`.
+- Create the secret file **before** `AddClientCredentialsClient` (as above). A client created with a secret nobody kept must be deleted and recreated — adding a second secret leaves the unknown one valid.
 
 ## Agent Workflow
 
