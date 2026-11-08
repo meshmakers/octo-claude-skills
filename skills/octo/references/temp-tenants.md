@@ -33,8 +33,9 @@ octo-cli -c AddClientToRole -id claude-agent -r TenantManagement --context local
 All steps run without user interaction, and **every command uses `--context` so the active context is never changed**. Export the credentials once; while they stay exported, octo-cli re-acquires the token on expiry (no refresh token exists for `client_credentials`).
 
 ```bash
-export OCTO_CLI_CLIENT_ID=claude-agent
-IFS= read -r OCTO_CLI_CLIENT_SECRET < ~/.octo-cli/claude-agent.secret   # no command substitution: `set -x` would trace the value
+CLIENT=claude-agent   # shared environments (test-2): claude-agent-<user>-<workstation>, contexts test-2_* instead of local_*
+export OCTO_CLI_CLIENT_ID=$CLIENT
+IFS= read -r OCTO_CLI_CLIENT_SECRET < ~/.octo-cli/$CLIENT.secret || [ -n "$OCTO_CLI_CLIENT_SECRET" ]   # no command substitution: `set -x` would trace the value; `||` keeps `set -e` alive for a file without trailing newline
 export OCTO_CLI_CLIENT_SECRET
 
 # 1. Authenticate against the system tenant (token stored in local_octosystem)
