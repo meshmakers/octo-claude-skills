@@ -134,7 +134,10 @@ Secret attribute in a seed is only ever empty or omitted; blueprints have no ins
 
   Re-apply and blueprint updates keep the entry (TenantOwned, carried over by record key).
 - **`DeployWorkload` projects it**, a redeploy after a new value rotates it. Scope is the Application's own tenant
-  plus every descendant, never siblings; an optional `SecretDefaultAllowedTenantIds` list only narrows it. The
+  plus every descendant, never siblings; an absent or empty `SecretDefaultAllowedTenantIds` list means all of them, a
+  non-empty one narrows the targets to the listed tenants. A tenant created or loaded after the deploy gets the default
+  only with the next deploy; until then `VerifyCaptcha@1` there answers `not-configured` (unless the tenant has its own
+  secret), so deploy the Application again when you add a served tenant. The
   projection is best effort per tenant: a skipped tenant (no System.Communication 4.15.0, not resolvable) or a failed
   write is a Warning/Error event on the Application, and the deploy still succeeds. After every deploy read those
   events; for a skipped or failed tenant fix the cause and deploy again (the projection is retried), and revoke an

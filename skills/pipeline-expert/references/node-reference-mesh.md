@@ -781,7 +781,7 @@ secret that cannot be decrypted).
 **Deployment default vs tenant override.**
 - *Default*: an operator declares it once on the Application (`SecretDefaults`, key = `defaultKey`) and deploys; the
   Communication Controller projects it into the Application's tenant and its subtree (narrowed by the entry's
-  `AllowedTenantIds`, if any). The projection is best effort per tenant: a tenant without System.Communication 4.15.0,
+  `AllowedTenantIds`, if not empty); a tenant added later gets it only with the next deploy. The projection is best effort per tenant: a tenant without System.Communication 4.15.0,
   an unresolvable tenant or a failed write is a Warning/Error event on the Application while the deploy succeeds, so
   a successful deploy does not prove that every tenant has the value: check the Application's events after the
   deploy, fix the cause and deploy again for a skipped or failed tenant. Pipelines reach it only through `defaultKey`, in
