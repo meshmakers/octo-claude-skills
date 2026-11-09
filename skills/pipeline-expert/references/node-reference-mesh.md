@@ -794,7 +794,7 @@ Generate reports via reporting service and store to file system.
 
 Query Claude AI for document analysis, information extraction, and (optionally) live OctoMesh data queries via MCP.
 
-**Required: a question** — either `question` inline or a `promptTemplateName` whose template has a `UserTemplate`. The API key is optional — prefer `apiKeyConfigurationName` (references an `AiConfiguration` CK entity; the key is never exposed in the pipeline data context) over the inline `apiKey`. **There is no default model**: set `aiModel` on the AiConfiguration (recommended), `DefaultModelId` on the prompt template, or `model` on the node — otherwise the node fails with "AI model is required".
+**Required: a question** — either `question` inline or a `promptTemplateName` whose template has a `UserTemplate`. **An API key must resolve** — the node fails before the API call without one. It comes from `apiKeyConfigurationName` (preferred: references an `AiConfiguration` CK entity; the key is never exposed in the pipeline data context) or from the inline `apiKey`; each of the two properties is optional on its own. **There is no default model**: set `aiModel` on the AiConfiguration (recommended), `DefaultModelId` on the prompt template, or `model` on the node — otherwise the node fails with "AI model is required".
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -832,7 +832,7 @@ Query Claude AI for document analysis, information extraction, and (optionally) 
   targetPath: $.extractedData
 ```
 
-**Guaranteed JSON (`jsonSchema`).** With a schema (and `responseFormat: json`) the node asks the API for constrained decoding with the schema, then validates the parsed answer against the full schema after cheap local repairs (JSON extracted from prose, naked quotes, trailing commas, unclosed brackets, repeated keys). If it still does not parse or validate, it makes at most `maxJsonRepairAttempts` repair calls that send only the broken answer, the errors and the schema — never the original prompt or content. An answer that stays invalid **fails the node** with the violated JSONPath(s), e.g. `$.sections[1].sortOrder: PropertyRequired` (`continueOnError` applies as usual). Keywords the API does not support for constrained decoding (`minimum`/`maximum`, `minLength`/`maxLength`/`pattern`, `minItems`/`maxItems`, …) are enforced only by the local validation. Without `jsonSchema` nothing of this runs.
+**Guaranteed JSON (`jsonSchema`).** With a schema (and `responseFormat: json`) the node asks the API for constrained decoding with the schema, then validates the parsed answer against the full schema after cheap local repairs (JSON extracted from prose, naked quotes, trailing commas, unclosed brackets, repeated keys). If it still does not parse or validate, it makes at most `maxJsonRepairAttempts` repair calls that send only the broken answer, the errors and the schema — the original prompt and source content are not sent again as inputs (the broken answer itself may of course quote parts of the content). An answer that stays invalid **fails the node** with the violated JSONPath(s), e.g. `$.sections[1].sortOrder: PropertyRequired` (`continueOnError` applies as usual). Keywords the API does not support for constrained decoding (`minimum`/`maximum`, `minLength`/`maxLength`/`pattern`, `minItems`/`maxItems`, …) are enforced only by the local validation. The copy sent to the API also sets `additionalProperties: false` on every object, so the model emits only the declared properties — a schema that needs free-form keys (maps, `patternProperties`) cannot be satisfied; use fixed property names or an array of key/value objects. Without `jsonSchema` nothing of this runs.
 
 ```yaml
 - type: AnthropicAiQuery@1
@@ -852,8 +852,7 @@ Query Claude AI for document analysis, information extraction, and (optionally) 
   apiKeyConfigurationName: anthropic-prod
   promptTemplateName: knowledge-ingest     # AiPromptTemplate, Uses edge from this pipeline
   path: $.sourceText
-  responseFormat: json
-  jsonSchema: '…'                          # schema of the generated page
+  responseFormat: json                     # add jsonSchema (as above) for guaranteed JSON
   targetPath: $.page
 ```
 
