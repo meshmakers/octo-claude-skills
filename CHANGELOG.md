@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.26.2] — 2026-11-09
+
+### Changed
+
+- **`octo`** — `temp-tenants.md` notes that a `--scratch` creator client can no longer grant itself an app role a blueprint seeds later (identity AB#8569, `403 self-grant`); a user administrator or another client must grant it. `TenantOwners` is described as every built-in platform role except `SecretManagement`, not "all roles" (AB#8583).
+
 ## [0.26.1] — 2026-11-09
 
 ### Changed
