@@ -818,6 +818,8 @@ Query Claude AI for document analysis, information extraction, and (optionally) 
 | `maxToolRounds` | int | 10 | Max MCP tool-use rounds (loop guard) |
 | `mcpToolNames` | string[] | optional | Whitelist of MCP tool names to expose (reduces context; e.g. `["query_entities_simple"]`). If unset, all tools are available |
 | `conversationHistoryPath` | string | optional | JSONPath to a conversation-history array (entries `{role, content}`) for multi-turn conversations |
+| `usageOutputPath` | string | optional | Where to write the token usage and cost estimate of all API calls of this execution. See *Usage* below |
+| `cacheSource` | bool | false | Send the source content as its own block with a prompt-cache breakpoint. See *Source caching* below |
 | `path` | string | `$` | Source path for main content (inherited) |
 | `targetPath` | string | required | Where to store the response |
 
@@ -855,6 +857,75 @@ Query Claude AI for document analysis, information extraction, and (optionally) 
   responseFormat: json                     # add jsonSchema (as above) for guaranteed JSON
   targetPath: $.page
 ```
+
+**Usage (`usageOutputPath`).** The node sums the `usage` of every API call of one execution — tool rounds and JSON repair calls included — and writes it to `usageOutputPath`:
+
+```json
+{ "model": "claude-sonnet-4-6", "calls": 2, "inputTokens": 1240, "outputTokens": 610,
+  "cacheReadInputTokens": 5200, "cacheCreationInputTokens": 0,
+  "estimatedCostUsd": 0.01443, "priceListDate": "2026-10" }
+```
+
+`inputTokens` is the uncached part only; the prompt size is the sum of the three input fields. `estimatedCostUsd` is an **estimate** from the adapter's built-in Anthropic list prices (first-party API, cache writes at the 5-minute rate); it is `null` for a model the adapter does not know (a warning is logged). Only calls with a successful HTTP response are counted; a failed API request adds nothing. With `continueOnError: true` the usage is written for a failed query too — but only if at least one call succeeded: when the first request already fails, `calls` stays 0 and `usageOutputPath` is **not written**, so downstream nodes must not assume it exists. Without `usageOutputPath` nothing is written.
+
+**Source caching (`cacheSource`).** With `cacheSource: true` the main content (the value at `path`) is sent as its own block with a prompt-cache breakpoint; the `dataPaths` context and the question follow in a second block. The text the model reads is unchanged. The cache is a **prefix match** (tools, then system prompt, then messages), so a call reads the source from the cache (`cacheReadInputTokens` > 0) only when tools, system prompt and source are identical:
+- every MCP tool round of one execution (each round resends the whole conversation, so a large source is otherwise paid again per round);
+- repeated runs of the **same** node over the same source within 5 minutes — e.g. reviewer rounds that only change the draft passed in `dataPaths`.
+
+A generation node and a verification node with different system prompts (different templates) do **not** share the cached source. The first call pays 1.25× input for the cache write, so it pays off from the second hit. Sources below the model's minimum cacheable length (512–4096 tokens) are not cached. Put the large, stable document into `path` and what changes between calls into `dataPaths`.
+
+```yaml
+- type: AnthropicAiQuery@1
+  description: Review the draft against the source (runs once per reviewer round)
+  apiKeyConfigurationName: anthropic-prod
+  promptTemplateName: knowledge-verify
+  path: $.sourceText          # large and identical in every round -> cached
+  dataPaths: [$.page]         # the draft changes per round -> after the breakpoint, does not break the hit
+  cacheSource: true
+  usageOutputPath: $.usage.verify
+  targetPath: $.check
+```
+
+### McpToolCall@1
+
+Calls **one allowlisted tool** on the tenant's OctoMesh MCP service, deterministically — no model decides — as a configured **service account**. Use it for the write after an AI step: `AnthropicAiQuery@1` reads (optionally with MCP tools) and returns schema-valid JSON, then `McpToolCall@1` writes it through e.g. `knowledge_upsert_page`, so the tool's content guard and versioning apply.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `allowedTools` | string[] | **required** | Exact MCP tool names this node may call. There is no "call any tool" mode |
+| `toolName` | string | one of | The tool to call. Exactly one of `toolName` / `toolNamePath` |
+| `toolNamePath` | string | one of | JSONPath to a string naming the tool (e.g. chosen earlier). Still checked against `allowedTools` |
+| `argumentsPath` | string | optional | JSONPath to a JSON **object** sent as the tool arguments. Unset = `{}` |
+| `aiConfigurationName` | string | optional | `AiConfiguration` whose `mcpServerUrl` is used (recommended; needs a `Uses` association) |
+| `mcpServerUrl` | string | optional | Fallback URL, e.g. `https://localhost:5017` locally. The tenant is appended: `{url}/{tenantId}/mcp` |
+| `mcpServiceAccountConfigName` | string | **required** | `ServiceAccountConfiguration` the call runs as (e.g. `knowledge-curator`) |
+| `targetPath` | string | `$` | Where the tool result is written: `structuredContent` if the tool sends it; else a **single** text content that starts with `{` or `[` parsed as JSON; else the text (several texts joined by newlines). A text like `42` or `true` stays a string |
+| `timeoutSeconds` | int | 90 | Timeout of the MCP calls |
+| `continueOnError` | bool | false | Continue when the **call** fails. Never applies to configuration errors or allowlist violations |
+
+```yaml
+- type: AnthropicAiQuery@1
+  description: Generate the page as JSON (read-only tools)
+  apiKeyConfigurationName: AiConfig
+  promptTemplateName: knowledge-ingest
+  path: $.sourceText
+  responseFormat: json
+  jsonSchema: '{"type":"object","properties":{"slug":{"type":"string"},"title":{"type":"string"},"sections":{"type":"array","items":{"type":"object","properties":{"heading":{"type":"string"},"sectionContent":{"type":"string"},"sortOrder":{"type":"integer"}},"required":["heading","sectionContent","sortOrder"]}}},"required":["slug","title","sections"]}'
+  targetPath: $.page
+- type: McpToolCall@1
+  description: Write the page as knowledge-curator
+  allowedTools: [knowledge_upsert_page]
+  toolName: knowledge_upsert_page
+  argumentsPath: $.page               # passed unchanged: keys must match the tool's parameters (slug, title, sections)
+  aiConfigurationName: AiConfig       # supplies McpServerUrl (Uses association)
+  mcpServiceAccountConfigName: knowledge-curator
+  targetPath: $.write
+```
+
+Behaviour:
+- **Before any network call** the node checks the configuration, the tool name against `allowedTools` (exact, case-sensitive), that the arguments are an object and that a URL resolves. A tool outside the list fails with *"MCP tool 'x' is not in this node's allowedTools [...]. The tool was not called."*
+- **Fail-closed identity:** without a token for `mcpServiceAccountConfigName` the tool is never called — MCP is never called unauthenticated. The missing token counts as a call failure: with `continueOnError: false` the node fails; with `continueOnError: true` the pipeline continues **without the write**, so later nodes run although nothing was written. Credentials stay in the `ServiceAccountConfiguration` — never put a token or secret into the pipeline YAML. What the account may write is decided by its roles and the MCP service, not by the pipeline.
+- **Errors:** a protocol error fails with *"MCP error {code} on tool 'x': {message}"* (e.g. `-32602` for unknown tool or invalid parameters); a tool that returns an error result fails with *"MCP tool 'x' returned an error: {text}"* (e.g. a content-guard refusal). Error messages never contain the token.
 
 ### ApplyDataPointMappings@1
 
