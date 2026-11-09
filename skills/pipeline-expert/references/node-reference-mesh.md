@@ -794,20 +794,23 @@ Generate reports via reporting service and store to file system.
 
 Query Claude AI for document analysis, information extraction, and (optionally) live OctoMesh data queries via MCP.
 
-**Only `question` is required.** The API key is optional — prefer `apiKeyConfigurationName` (references an `AiConfiguration` CK entity; the key is never exposed in the pipeline data context) over the inline `apiKey`.
+**Required: a question** — either `question` inline or a `promptTemplateName` whose template has a `UserTemplate`. The API key is optional — prefer `apiKeyConfigurationName` (references an `AiConfiguration` CK entity; the key is never exposed in the pipeline data context) over the inline `apiKey`. **There is no default model**: set `aiModel` on the AiConfiguration (recommended), `DefaultModelId` on the prompt template, or `model` on the node — otherwise the node fails with "AI model is required".
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `question` | string | **required** | Question/prompt for the AI |
-| `apiKeyConfigurationName` | string | optional | Name of the `AiConfiguration` entity in GlobalConfiguration to load the API key from. **Takes precedence over `apiKey`** — preferred, secure |
+| `question` | string | optional* | Question/prompt for the AI. *Required unless `promptTemplateName` supplies a `UserTemplate`; overrides the template's text |
+| `promptTemplateName` | string | optional | Well-known name of a `System.Ai/AiPromptTemplate` with `PromptPurpose: KnowledgeGeneration` (System.Ai 4.7.0+). Loads system prompt, question and model settings from it — see *Prompt by name* below |
+| `apiKeyConfigurationName` | string | optional | Name of the `AiConfiguration` entity in GlobalConfiguration to load `apiKey`, `mcpServerUrl`, `aiModel`, `maxTokens`, `temperature` from. **Takes precedence over the node's values** — preferred, secure |
 | `apiKey` | string | optional | Inline Anthropic API key (nullable). Avoid — exposes the key in the pipeline definition |
-| `model` | string | `claude-sonnet-4-20250514` | Claude model ID |
+| `model` | string | none | Claude model ID. Order: template `DefaultModelId` → AiConfiguration `aiModel` → `model` |
 | `dataPaths` | string[] | optional | Additional context paths to include in the query |
-| `systemPrompt` | string | (built-in default) | System prompt |
-| `maxTokens` | int | 1000 | Max response tokens |
-| `temperature` | double | 0.1 | Response temperature (0.0-1.0) |
+| `systemPrompt` | string | (built-in default) | System prompt. Overrides the template's `SystemPromptFragment`; without both, the built-in default text applies |
+| `maxTokens` | int | 1000 | Max response tokens. Order: template → AiConfiguration → node |
+| `temperature` | double | 0.1 | Response temperature (0.0-1.0). Order: template → AiConfiguration → node |
 | `responseFormat` | string | `json` | Expected format: `json` or `text` |
-| `jsonFormatSample` | string | (built-in sample) | Example JSON structure for structured responses |
+| `jsonFormatSample` | string | (built-in sample) | Example JSON structure for structured responses (not used when `jsonSchema` is set) |
+| `jsonSchema` | string | optional | JSON Schema (as a JSON string) the answer must satisfy; only with `responseFormat: json`. See *Guaranteed JSON* below |
+| `maxJsonRepairAttempts` | int | 1 | Repair calls when a `jsonSchema` answer is invalid (hard cap 2, `0` = none). Ignored without `jsonSchema` |
 | `includeRawResponse` | bool | false | Store the raw AI response |
 | `rawResponseOutputPath` | string | optional | Where to store the raw response |
 | `continueOnError` | bool | false | Continue the pipeline if the query fails |
@@ -820,14 +823,38 @@ Query Claude AI for document analysis, information extraction, and (optionally) 
 
 ```yaml
 - type: AnthropicAiQuery@1
-  apiKeyConfigurationName: anthropic-prod   # references an AiConfiguration entity
-  model: claude-sonnet-4-20250514
+  apiKeyConfigurationName: anthropic-prod   # references an AiConfiguration entity (supplies aiModel)
   question: "Extract the invoice number and total from this document"
   systemPrompt: "You are a document analysis assistant."
   responseFormat: json
   jsonFormatSample: '{"invoiceNumber": "string", "total": 0.0}'
   path: $.documentText
   targetPath: $.extractedData
+```
+
+**Guaranteed JSON (`jsonSchema`).** With a schema (and `responseFormat: json`) the node asks the API for constrained decoding with the schema, then validates the parsed answer against the full schema after cheap local repairs (JSON extracted from prose, naked quotes, trailing commas, unclosed brackets, repeated keys). If it still does not parse or validate, it makes at most `maxJsonRepairAttempts` repair calls that send only the broken answer, the errors and the schema — never the original prompt or content. An answer that stays invalid **fails the node** with the violated JSONPath(s), e.g. `$.sections[1].sortOrder: PropertyRequired` (`continueOnError` applies as usual). Keywords the API does not support for constrained decoding (`minimum`/`maximum`, `minLength`/`maxLength`/`pattern`, `minItems`/`maxItems`, …) are enforced only by the local validation. Without `jsonSchema` nothing of this runs.
+
+```yaml
+- type: AnthropicAiQuery@1
+  apiKeyConfigurationName: anthropic-prod
+  question: "Write a wiki page from the source text."
+  path: $.sourceText
+  responseFormat: json
+  jsonSchema: '{"type":"object","properties":{"title":{"type":"string"},"sections":{"type":"array","minItems":1,"items":{"type":"object","properties":{"heading":{"type":"string"},"sectionContent":{"type":"string"}},"required":["heading","sectionContent"]}}},"required":["title","sections"]}'
+  maxJsonRepairAttempts: 1
+  targetPath: $.page
+```
+
+**Prompt by name (`promptTemplateName`).** The node reads an `AiPromptTemplate` (`PromptPurpose: KnowledgeGeneration`) by its well-known name from the pipeline's configuration hand-over — the same way as the AiConfiguration of `apiKeyConfigurationName`, so **the pipeline needs a `Uses` association to the template entity** (like it has one to its AiConfiguration). From the template: `SystemPromptFragment` (+ `FewShotExamples`, appended in `<examples>…</examples>`) → system prompt, `UserTemplate` → question, `DefaultModelId` / `Temperature` / `MaxTokens` → model settings. Inline `question` / `systemPrompt` override the template's texts only. The node fails before any API call, naming the template, when it is not handed over (no `Uses` edge), is another CK type, has another `PromptPurpose`, or has no `UserTemplate` while the node sets no `question`. **Limitation:** the adapter caches the hand-over when the pipeline is registered — after changing a prompt, **redeploy the pipeline**. A node without `promptTemplateName` behaves exactly as before.
+
+```yaml
+- type: AnthropicAiQuery@1
+  apiKeyConfigurationName: anthropic-prod
+  promptTemplateName: knowledge-ingest     # AiPromptTemplate, Uses edge from this pipeline
+  path: $.sourceText
+  responseFormat: json
+  jsonSchema: '…'                          # schema of the generated page
+  targetPath: $.page
 ```
 
 ### ApplyDataPointMappings@1

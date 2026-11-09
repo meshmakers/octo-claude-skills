@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.26.1] — 2026-11-09
+
+### Changed
+
+- **`pipeline-expert`** — `node-reference-mesh.md`: `AnthropicAiQuery@1` documents guaranteed JSON (`jsonSchema`, `maxJsonRepairAttempts`: constrained decoding, local validation, at most two context-free repair calls, failure names the JSONPath) and prompt by name (`promptTemplateName`: `AiPromptTemplate` with `PromptPurpose: KnowledgeGeneration` via the pipeline's `Uses` hand-over, inline `question`/`systemPrompt` override, model settings template → AiConfiguration → node, redeploy after a prompt change) (AB#8498, octo-mesh-adapter). Fixed stale facts in the same section: `question` is no longer always required, and there is no default model (the table named a retired model id).
+
 ## [0.25.3] — 2026-11-08
 
 ### Changed
