@@ -2,11 +2,24 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
-## [0.26.0] — 2026-11-06
+## [0.26.0] — 2026-11-09
 
 ### Changed
 
-- **`pipeline-expert`, `octo-app-builder`, `octo-operator`** — secret defaults of an Application (AB#7252, Feature AB#7219; System.Communication 4.15.0, controller AB#7244, mesh adapter AB#7246/AB#7251). `pipeline-expert`: `VerifyCaptcha@1` in `node-reference-mesh.md` (settings, output `{ valid, source, reason }`, deployment default vs tenant override, an override encrypted with an unknown key id falls back to the default, any other undecryptable override does not; check `valid` before `reason`) and `RevealSecret@1` with why it refuses `System.Communication/SecretDefault` (platform-only: no tenant identity may obtain it); `GetPipelineConfigByCkTypeId@1` refuses the type; `MakeHttpRequest@1` is not for CAPTCHA checks; one line each in the `SKILL.md` node tables. `octo-app-builder`: `references/app-workload.md` §Secrets — secret-flagged `ValueOverride` only for secrets the pod needs, `SecretDefaults` for secrets only platform nodes need; the seed declares the key without a value (the secret seed lint refuses values, placeholders and `${...}` variables, and blueprints have no install-time parameters), the operator writes the value after the install (Studio or GraphQL from stdin), the deploy refuses the Application until then, re-apply keeps it; the projection is best effort per tenant (read the events before revoking an old secret); keys are one namespace per target tenant, so overlapping Applications need distinct keys; pointer in `SKILL.md`. `octo-operator`: secret defaults are not a Helm tier — they never reach the operator, a values file or the release Secret. Worked sample: `octo-communication-controller-services/samples/Blueprints/SecretDefaultDemo/`. Needs the controller and mesh adapter releases of Feature AB#7219.
+- **`pipeline-expert`, `octo-app-builder`, `octo-operator`** — secret defaults of an Application (AB#7252, Feature AB#7219; System.Communication 4.15.0, controller AB#7244, mesh adapter AB#7246/AB#7251). `pipeline-expert`: `VerifyCaptcha@1` in `node-reference-mesh.md` (settings, output `{ valid, source, reason }`, deployment default vs tenant override, an override encrypted with an unknown key id falls back to the default, any other undecryptable override does not; two entities with the same well-known name are refused and count as not set; check `valid` before `reason`) and `RevealSecret@1` with why it refuses `System.Communication/SecretDefault` (platform-only: no tenant identity may obtain it); `GetPipelineConfigByCkTypeId@1` refuses the type; `MakeHttpRequest@1` is not for CAPTCHA checks; one line each in the `SKILL.md` node tables. `octo-app-builder`: `references/app-workload.md` §Secrets — secret-flagged `ValueOverride` only for secrets the pod needs, `SecretDefaults` for secrets only platform nodes need; the seed declares no `SecretDefaults` entry (an entry without a value makes the deploy refuse the Application; the secret seed lint refuses values, placeholders and `${...}` variables, and blueprints have no install-time parameters), the operator adds key and value after the install (Studio or GraphQL from stdin) and deploys, re-apply keeps the entry; the projection is best effort per tenant (read the events, and the controller's per-deploy summary log line, before revoking an old secret); keys are one namespace per target tenant, so overlapping Applications need distinct keys; pointer in `SKILL.md`. `octo-operator`: secret defaults are not a Helm tier — they never reach the operator, a values file or the release Secret. Worked sample: `octo-communication-controller-services/samples/Blueprints/SecretDefaultDemo/` (controller PR #96). Needs the controller and mesh adapter releases of Feature AB#7219.
+
+## [0.25.3] — 2026-11-08
+
+### Changed
+
+- **`octo-deploy`** — `test-2-environment.md` documents the per-workstation agent client on test-2 (AB#8475): `claude-agent-<user>-<workstation>` in `octosystem`, client_credentials only, role `TenantManagement` only, `-apic` without mirroring into existing child tenants, secret file created before the client, verification with `AuthStatus`. Replaces the note that the `claude-agent` client on test-2 was unverified.
+- **`octo`** — `temp-tenants.md` points shared environments to the per-workstation client and notes that a client created with an unknown secret must be recreated.
+
+## [0.25.2] — 2026-11-08
+
+### Changed
+
+- **`octo`** — changing the data model needs the tenant role `DataModelManagement` (AB#8529, asset repository from r3.5.67): `ImportCk`, `ImportFromCatalog`, `FixAll`, `RefreshCatalogs`, `RefreshBlueprintCatalogs` and the blueprint install/update/uninstall commands answer `403` with code `DataModelManagementRequired` without it. SKILL.md and `command-reference.md` no longer say the scope `octo_api.data_model_management` is enough.
 
 ## [0.25.1] — 2026-11-05
 

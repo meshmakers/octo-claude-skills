@@ -1086,7 +1086,7 @@ python3 -c "import zipfile, sys; z=zipfile.ZipFile(sys.argv[1]); [print(z.read(n
 
 ### CK Catalog / Library Management
 
-Browse CK model catalogs, check dependencies/upgrades, import models, and report installed-library status. The **DataModelManagement** role (scope `octo_api.data_model_management`) is required for catalog import/refresh.
+Browse CK model catalogs, check dependencies/upgrades, import models, and report installed-library status. Import, `FixAll`, catalog refresh and the blueprint install/update/uninstall commands require scope `octo_api` **and** the tenant role **DataModelManagement** (since r3.5.67; the scope `octo_api.data_model_management` alone is no longer enough). A caller without the role gets `403` with code `DataModelManagementRequired`; an administrator of the tenant grants it with `AddUserToRole -un <user> -r DataModelManagement` (users) or `AddClientToRole -id <clientId> -r DataModelManagement` (client-credentials clients; the client needs a new token afterwards).
 
 #### ListCatalogs
 Lists available CK model catalog sources. No arguments.
