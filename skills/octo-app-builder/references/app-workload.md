@@ -116,30 +116,31 @@ Decide by **who uses the secret**:
 Secret for nothing. A static frontend that shows a CAPTCHA needs only the public **site key** — an ordinary
 `Values` entry — while the **secret** is a secret default.
 
-```yaml
-    - id: System.Communication/SecretDefaults-1
-      value:
-        - ckRecordId: System.Communication/SecretDefaultProjection-1
-          attributes:
-            - id: System.Communication/SecretDefaultKey-1          # = well-known name in every served tenant
-              value: my-app-captcha-secret
-            - id: System.Communication/SecretDefaultDescription-1
-              value: Turnstile secret of the registration form
-            # no SecretDefaultValue: a seed may not carry a secret
-```
+The seed declares **no** `SecretDefaults` entry. An entry without `SecretValue` makes `DeployWorkload` refuse the
+Application ("the SecretDefaults entry '<key>' has no SecretValue"), and the secret seed lint (`octo-bpm validate`,
+blueprint build) refuses a value, a `<...>` / `TODO_SET_*` placeholder and a `${...}` variable in a Secret slot, so a
+Secret attribute in a seed is only ever empty or omitted; blueprints have no install-time parameters either.
 
-- **The value is set after the install, never in the seed.** The secret seed lint (`octo-bpm validate`, blueprint
-  build) refuses a value, a `<...>` / `TODO_SET_*` placeholder and a `${...}` variable in a Secret slot, and blueprints
-  have no install-time parameters. The operator writes `SecretValue` in the Studio or with GraphQL
-  (`systemCommunicationApplications.update`, the whole `secretDefaults` list, value as `secretValue`, document from
-  stdin — never on a command line). Until then `DeployWorkload` refuses the Application ("the SecretDefaults entry
-  '<key>' has no SecretValue"). Re-apply and blueprint updates keep the value (TenantOwned, carried over by record key).
+- **The operator adds the entry after the install** — key and value together — in the Studio or with GraphQL
+  (`systemCommunicationApplications.update`, the whole `secretDefaults` list, document from stdin, never on a command
+  line), then deploys the Application:
+
+  ```graphql
+  mutation { runtime { systemCommunicationApplications { update(entities: [{ rtId: "<application rtId>", item: {
+    secretDefaults: [{ key: "my-app-captcha-secret", secretValue: "<from stdin>",
+                       description: "Turnstile secret of the registration form" }] } }]) {
+    rtId secretDefaults { key secretValue { isSet } } } } } }
+  ```
+
+  Re-apply and blueprint updates keep the entry (TenantOwned, carried over by record key).
 - **`DeployWorkload` projects it**, a redeploy after a new value rotates it. Scope is the Application's own tenant
   plus every descendant, never siblings; an optional `SecretDefaultAllowedTenantIds` list only narrows it. The
   projection is best effort per tenant: a skipped tenant (no System.Communication 4.15.0, not resolvable) or a failed
   write is a Warning/Error event on the Application, and the deploy still succeeds. After every deploy read those
   events; for a skipped or failed tenant fix the cause and deploy again (the projection is retried), and revoke an
-  old secret at the provider only once no such event is left.
+  old secret at the provider only once no such event is left. A failed event write is only logged, so no event is no
+  proof: the controller log has one line per deploy, `Secret defaults of application '<name>' (<rtId>) projected:
+  <n> written, <n> skipped, <n> failed` — revoke only after a line with 0 skipped and 0 failed.
 - **Nobody in a served tenant can read it** (`RevealSecret@1`, GraphQL, MCP, export all refuse or show `isSet` only).
   Only platform nodes use it — today `VerifyCaptcha@1` (`defaultKey` = the Key). A tenant that wants its own value
   keeps it in its own Secret attribute (`tenantSecret` of the node); the projection never touches that.
@@ -149,7 +150,8 @@ Secret for nothing. A static frontend that shows a CAPTCHA needs only the public
   root wins (a Warning event names the refused one), otherwise the last deploy overwrites the other's value.
 
 Worked sample with the Application, a tenant override type, the `VerifyCaptcha@1` route and the verify commands:
-`octo-communication-controller-services/samples/Blueprints/SecretDefaultDemo/`. Pipeline side: `pipeline-expert`,
+`octo-communication-controller-services/samples/Blueprints/SecretDefaultDemo/` (controller PR #96, not merged yet;
+where its seed still declares a `SecretDefaults` entry, the rule above wins). Pipeline side: `pipeline-expert`,
 `VerifyCaptcha@1`.
 
 ## Deploy + operate

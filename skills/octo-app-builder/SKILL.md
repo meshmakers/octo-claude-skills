@@ -153,8 +153,8 @@ Key decisions:
   the operator (staging/prod may not run it).
 - Secrets: a seed never carries one (lint). A secret the pod needs is a `Values`
   entry with `IsSecret`; a secret only platform nodes need in every served tenant
-  (e.g. a CAPTCHA secret) is an Application `SecretDefaults` entry, value written
-  after the install — see [references/app-workload.md](references/app-workload.md) §Secrets.
+  (e.g. a CAPTCHA secret) is an Application `SecretDefaults` entry the operator
+  adds (key + value) after the install, then deploys — see [references/app-workload.md](references/app-workload.md) §Secrets.
 
 Install into the local blueprint catalog:
 

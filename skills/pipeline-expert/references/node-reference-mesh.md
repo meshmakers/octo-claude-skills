@@ -791,6 +791,9 @@ secret that cannot be decrypted).
   not set (an error naming the key id goes to the log) and falls back to the default; any other override that cannot
   be decrypted does **not** fall back (`verification-unavailable`).
 - `tenantSecret` naming the `SecretDefault` type or the Application's `SecretDefaults` is refused.
+- Two entities with the same well-known name (two `SecretDefault`s with the `defaultKey`, or two tenant entities
+  found by `wellKnownName`) are refused: none of them is used (an error goes to the log), so the node treats that
+  secret as not set.
 
 ```yaml
 - type: FromHttpRequest@2          # trigger
@@ -816,7 +819,7 @@ may solve the CAPTCHA again; `not-configured` = the operator must act; `verifica
 if it persists the operator must act (the provider is down or a secret is wrong or unreadable). Never branch on the
 provider's own codes, which are not output. End the pipeline with `Project@1` `clear: true` so the response holds
 the verdict only. Full worked sample (Application, override type, route, verify commands):
-`octo-communication-controller-services/samples/Blueprints/SecretDefaultDemo/`. Test with Cloudflare's public test
+`octo-communication-controller-services/samples/Blueprints/SecretDefaultDemo/` (controller PR #96, not merged yet). Test with Cloudflare's public test
 secrets (`1x0000000000000000000000000000000AA` passes, `2x0000000000000000000000000000000AA` fails, token
 `XXXX.DUMMY.TOKEN.XXXX`), never a real key.
 
