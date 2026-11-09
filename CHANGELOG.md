@@ -6,7 +6,7 @@ All notable changes to the octo-claude-skills plugin. Format loosely follows [Ke
 
 ### Added
 
-- **`pipeline-expert`** — `node-reference-mesh.md`: new node `McpToolCall@1` (deterministic call of an allowlisted MCP tool as a `ServiceAccountConfiguration`, allowlist checked before any network call, fail-closed identity, MCP error code and message in the pipeline error, result into the data context) and, on `AnthropicAiQuery@1`, `usageOutputPath` (input/output/cache-read/cache-creation tokens and a cost estimate, summed over all calls) and `cacheSource` (prompt-cache breakpoint on the source block, with the byte-identity caveat for `dataPaths`). `SKILL.md` node list updated (AB#8658, octo-mesh-adapter).
+- **`pipeline-expert`** — `node-reference-mesh.md`: new node `McpToolCall@1` (deterministic call of an allowlisted MCP tool as a `ServiceAccountConfiguration`, allowlist checked before any network call, fail-closed identity, MCP error code and message in the pipeline error, result into the data context) and, on `AnthropicAiQuery@1`, `usageOutputPath` (input/output/cache-read/cache-creation tokens and a cost estimate, summed over all successfully answered calls; not written when no call succeeded) and `cacheSource` (prompt-cache breakpoint on the source block, with the byte-identity caveat for `dataPaths`). `SKILL.md` node list updated (AB#8658, octo-mesh-adapter).
 
 ## [0.26.2] — 2026-11-09
 

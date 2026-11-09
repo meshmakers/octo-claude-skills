@@ -866,7 +866,7 @@ Query Claude AI for document analysis, information extraction, and (optionally) 
   "estimatedCostUsd": 0.01443, "priceListDate": "2026-10" }
 ```
 
-`inputTokens` is the uncached part only; the prompt size is the sum of the three input fields. `estimatedCostUsd` is an **estimate** from the adapter's built-in Anthropic list prices (first-party API, cache writes at the 5-minute rate); it is `null` for a model the adapter does not know (a warning is logged). With `continueOnError: true` the usage is written for a failed query too. Without `usageOutputPath` nothing is written.
+`inputTokens` is the uncached part only; the prompt size is the sum of the three input fields. `estimatedCostUsd` is an **estimate** from the adapter's built-in Anthropic list prices (first-party API, cache writes at the 5-minute rate); it is `null` for a model the adapter does not know (a warning is logged). Only calls with a successful HTTP response are counted; a failed API request adds nothing. With `continueOnError: true` the usage is written for a failed query too — but only if at least one call succeeded: when the first request already fails, `calls` stays 0 and `usageOutputPath` is **not written**, so downstream nodes must not assume it exists. Without `usageOutputPath` nothing is written.
 
 **Source caching (`cacheSource`).** With `cacheSource: true` the main content (the value at `path`) is sent as its own block with a prompt-cache breakpoint; the `dataPaths` context and the question follow in a second block. The text the model reads is unchanged. The cache is a **prefix match** (tools, then system prompt, then messages), so a call reads the source from the cache (`cacheReadInputTokens` > 0) only when tools, system prompt and source are identical:
 - every MCP tool round of one execution (each round resends the whole conversation, so a large source is otherwise paid again per round);
@@ -899,7 +899,7 @@ Calls **one allowlisted tool** on the tenant's OctoMesh MCP service, determinist
 | `aiConfigurationName` | string | optional | `AiConfiguration` whose `mcpServerUrl` is used (recommended; needs a `Uses` association) |
 | `mcpServerUrl` | string | optional | Fallback URL, e.g. `https://localhost:5017` locally. The tenant is appended: `{url}/{tenantId}/mcp` |
 | `mcpServiceAccountConfigName` | string | **required** | `ServiceAccountConfiguration` the call runs as (e.g. `knowledge-curator`) |
-| `targetPath` | string | `$` | Where the tool result is written (`structuredContent` if the tool sends it, else the text parsed as JSON, else the text) |
+| `targetPath` | string | `$` | Where the tool result is written: `structuredContent` if the tool sends it; else a **single** text content that starts with `{` or `[` parsed as JSON; else the text (several texts joined by newlines). A text like `42` or `true` stays a string |
 | `timeoutSeconds` | int | 90 | Timeout of the MCP calls |
 | `continueOnError` | bool | false | Continue when the **call** fails. Never applies to configuration errors or allowlist violations |
 
@@ -910,13 +910,13 @@ Calls **one allowlisted tool** on the tenant's OctoMesh MCP service, determinist
   promptTemplateName: knowledge-ingest
   path: $.sourceText
   responseFormat: json
-  jsonSchema: '{"type":"object","properties":{"title":{"type":"string"},"markdown":{"type":"string"}},"required":["title","markdown"]}'
+  jsonSchema: '{"type":"object","properties":{"slug":{"type":"string"},"title":{"type":"string"},"sections":{"type":"array","items":{"type":"object","properties":{"heading":{"type":"string"},"sectionContent":{"type":"string"},"sortOrder":{"type":"integer"}},"required":["heading","sectionContent","sortOrder"]}}},"required":["slug","title","sections"]}'
   targetPath: $.page
 - type: McpToolCall@1
   description: Write the page as knowledge-curator
   allowedTools: [knowledge_upsert_page]
   toolName: knowledge_upsert_page
-  argumentsPath: $.page               # an object whose keys are the tool's parameters
+  argumentsPath: $.page               # passed unchanged: keys must match the tool's parameters (slug, title, sections)
   aiConfigurationName: AiConfig       # supplies McpServerUrl (Uses association)
   mcpServiceAccountConfigName: knowledge-curator
   targetPath: $.write
@@ -924,7 +924,7 @@ Calls **one allowlisted tool** on the tenant's OctoMesh MCP service, determinist
 
 Behaviour:
 - **Before any network call** the node checks the configuration, the tool name against `allowedTools` (exact, case-sensitive), that the arguments are an object and that a URL resolves. A tool outside the list fails with *"MCP tool 'x' is not in this node's allowedTools [...]. The tool was not called."*
-- **Fail-closed identity:** without a token for `mcpServiceAccountConfigName` the node fails; it never calls MCP unauthenticated. Credentials stay in the `ServiceAccountConfiguration` — never put a token or secret into the pipeline YAML. What the account may write is decided by its roles and the MCP service, not by the pipeline.
+- **Fail-closed identity:** without a token for `mcpServiceAccountConfigName` the tool is never called — MCP is never called unauthenticated. The missing token counts as a call failure: with `continueOnError: false` the node fails; with `continueOnError: true` the pipeline continues **without the write**, so later nodes run although nothing was written. Credentials stay in the `ServiceAccountConfiguration` — never put a token or secret into the pipeline YAML. What the account may write is decided by its roles and the MCP service, not by the pipeline.
 - **Errors:** a protocol error fails with *"MCP error {code} on tool 'x': {message}"* (e.g. `-32602` for unknown tool or invalid parameters); a tool that returns an error result fails with *"MCP tool 'x' returned an error: {text}"* (e.g. a content-guard refusal). Error messages never contain the token.
 
 ### ApplyDataPointMappings@1
