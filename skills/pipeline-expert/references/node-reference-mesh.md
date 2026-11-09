@@ -815,6 +815,8 @@ Query Claude AI for document analysis, information extraction, and (optionally) 
 | `rawResponseOutputPath` | string | optional | Where to store the raw response |
 | `continueOnError` | bool | false | Continue the pipeline if the query fails |
 | `mcpServerUrl` | string | optional | OctoMesh MCP server URL (e.g. `https://localhost:5017`). When set, Claude can call MCP tools to query live OctoMesh data; the tenant ID is appended automatically as `{url}/{tenantId}/mcp` |
+| `mcpServiceAccountConfigName` | string | optional | `ServiceAccountConfiguration` whose token authenticates the MCP calls. **Without it (or `mcpDelegateToCaller`) MCP is not called at all** — see *MCP needs an identity* below |
+| `mcpDelegateToCaller` | bool | false | Run the MCP calls as the calling user (delegated token via `mcpServiceAccountConfigName`; same as `identity: Caller`). Fail-closed: no caller token or no delegated token fails the node. Needs a trigger with a caller (`FromHttpRequest@2`, not anonymous) |
 | `maxToolRounds` | int | 10 | Max MCP tool-use rounds (loop guard) |
 | `mcpToolNames` | string[] | optional | Whitelist of MCP tool names to expose (reduces context; e.g. `["query_entities_simple"]`). If unset, all tools are available |
 | `conversationHistoryPath` | string | optional | JSONPath to a conversation-history array (entries `{role, content}`) for multi-turn conversations |
@@ -832,6 +834,18 @@ Query Claude AI for document analysis, information extraction, and (optionally) 
   jsonFormatSample: '{"invoiceNumber": "string", "total": 0.0}'
   path: $.documentText
   targetPath: $.extractedData
+```
+
+**MCP needs an identity.** The MCP service only answers authenticated calls. An MCP URL — `mcpServerUrl` on the node or, more often, `mcpServerUrl` inherited from the AiConfiguration of `apiKeyConfigurationName` — is used **only** when the node also has an identity: `mcpServiceAccountConfigName` (service account) or `mcpDelegateToCaller: true` / `identity: Caller` (calling user, together with `mcpServiceAccountConfigName`). Without one the node **skips MCP**: no call to the MCP service, one warning per execution — `[<node path>]: AnthropicAiQuery@1 skips MCP: an MCP server URL is configured … but no identity to call it with — set 'mcpServiceAccountConfigName' …` — and the query runs **without tools** (a no-tools instruction is added to the system prompt so the model does not invent tool results). If an AI step must use live data, set `mcpServiceAccountConfigName`; if it should not, the warning is harmless but tells you the AiConfiguration hands it an MCP URL.
+
+```yaml
+- type: AnthropicAiQuery@1
+  apiKeyConfigurationName: anthropic-prod      # AiConfiguration also supplies mcpServerUrl
+  mcpServiceAccountConfigName: ai-assistant    # identity for the MCP calls - without it: no tools
+  mcpToolNames: [query_entities_simple]
+  question: "Which invoices are open?"
+  responseFormat: text
+  targetPath: $.answer
 ```
 
 **Guaranteed JSON (`jsonSchema`).** With a schema (and `responseFormat: json`) the node asks the API for constrained decoding with the schema, then validates the parsed answer against the full schema after cheap local repairs (JSON extracted from prose, naked quotes, trailing commas, unclosed brackets, repeated keys). If it still does not parse or validate, it makes at most `maxJsonRepairAttempts` repair calls that send only the broken answer, the errors and the schema — the original prompt and source content are not sent again as inputs (the broken answer itself may of course quote parts of the content). An answer that stays invalid **fails the node** with the violated JSONPath(s), e.g. `$.sections[1].sortOrder: PropertyRequired` (`continueOnError` applies as usual). Keywords the API does not support for constrained decoding (`minimum`/`maximum`, `minLength`/`maxLength`/`pattern`, `minItems`/`maxItems`, …) are enforced only by the local validation. The copy sent to the API also sets `additionalProperties: false` on every object, so the model emits only the declared properties — a schema that needs free-form keys (maps, `patternProperties`) cannot be satisfied; use fixed property names or an array of key/value objects. Without `jsonSchema` nothing of this runs.
