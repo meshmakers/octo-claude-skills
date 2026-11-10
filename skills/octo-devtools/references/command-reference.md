@@ -363,7 +363,7 @@ Kill all running dotnet processes.
 
 ### `Remove-BinAndObjFolders`
 Delete all `bin/` and `obj/` folders recursively.
-- `-path` (string): Root path to clean (defaults to workspace root)
+- `-path` (string): Root path to clean (default `.` - the current folder). Pass the lane: `(Join-Path $rootPath 'branches/main')` with a workspace-root profile, `$rootPath` with a profile loaded from inside the main checkout; never the workspace root, which holds every lane and feature environment
 - **Safety:** Destructive — removes all build output folders
 
 ## Authentication / Context (octo-cli)
