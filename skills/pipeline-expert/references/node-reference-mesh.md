@@ -779,13 +779,20 @@ provider refused the token), `verification-unavailable` (provider error, timeout
 secret that cannot be decrypted).
 
 **Deployment default vs tenant override.**
-- *Default*: an operator declares it once on the Application (`SecretDefaults`, key = `defaultKey`) and deploys; the
-  Communication Controller projects it into the Application's tenant and its subtree (narrowed by the entry's
-  `AllowedTenantIds`, if not empty); a tenant added later gets it only with the next deploy. The projection is best effort per tenant: a tenant without System.Communication 4.15.0,
-  an unresolvable tenant or a failed write is a Warning/Error event on the Application while the deploy succeeds, so
-  a successful deploy does not prove that every tenant has the value: check the Application's events after the
-  deploy, fix the cause and deploy again for a skipped or failed tenant. Pipelines reach it only through `defaultKey`, in
-  the executing tenant; where it is missing the node answers `not-configured` (or uses the override).
+- *Default*: an operator adds it once on the Application after the install (`SecretDefaults` entry, key =
+  `defaultKey`; Studio *Further attributes* or GraphQL with the secret as a variable — a blueprint seed declares no
+  entry) and deploys, or a CD writes it from a secret store. The Communication Controller projects it into the
+  Application's tenant and its whole subtree; `AllowedTenantIds` absent or empty = that whole set, a non-empty list
+  only narrows it. Only a deployed Application is a source: the projection runs on deploy, on every tenant load (a
+  tenant created later receives it without a redeploy) and on `POST {tenant}/v1/secretDefaults/reconcile`;
+  undeploying the Application, or a redeploy the deploy guard refuses, withdraws it. The projection is best effort
+  per tenant: a tenant without System.Communication 4.15.0, an unresolvable tenant or a failed write is a
+  Warning/Error event linked to the Application while the deploy succeeds, so a successful deploy does not prove that
+  every tenant has the value: check the Application's events after the deploy, fix the cause and deploy again for a
+  skipped or failed tenant. `SecretDefault.Value` is Hidden (System.Communication 4.16.0 and later): no GraphQL, REST
+  or MCP read, not even `isSet`; the presence of the `SecretDefault` entity is the "set" signal. Pipelines reach it
+  only through `defaultKey`, in the executing tenant; where it is missing the node answers `not-configured` (or uses
+  the override).
 - *Override*: a Secret attribute of the tenant's own configuration entity (`tenantSecret`). When it is set it wins;
   clearing it falls back to the default. An override encrypted with a key id the adapter's key ring lacks counts as
   not set (an error naming the key id goes to the log) and falls back to the default; any other override that cannot
@@ -819,8 +826,8 @@ may solve the CAPTCHA again; `not-configured` = the operator must act; `verifica
 if it persists the operator must act (the provider is down or a secret is wrong or unreadable). Never branch on the
 provider's own codes, which are not output. End the pipeline with `Project@1` `clear: true` so the response holds
 the verdict only. Full worked sample (Application, override type, route, verify commands):
-`octo-communication-controller-services/samples/Blueprints/SecretDefaultDemo/` (controller PR #96, not merged yet). Test with Cloudflare's public test
-secrets (`1x0000000000000000000000000000000AA` passes, `2x0000000000000000000000000000000AA` fails, token
+`octo-communication-controller-services/samples/Blueprints/SecretDefaultDemo/` (controller PR #96). Test with Cloudflare's
+public test secrets (`1x0000000000000000000000000000000AA` passes, `2x0000000000000000000000000000000AA` fails, token
 `XXXX.DUMMY.TOKEN.XXXX`), never a real key.
 
 ### StatisticalAnomalyDetection@1

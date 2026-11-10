@@ -121,41 +121,62 @@ Application ("the SecretDefaults entry '<key>' has no SecretValue"), and the sec
 blueprint build) refuses a value, a `<...>` / `TODO_SET_*` placeholder and a `${...}` variable in a Secret slot, so a
 Secret attribute in a seed is only ever empty or omitted; blueprints have no install-time parameters either.
 
-- **The operator adds the entry after the install** — key and value together — in the Studio or with GraphQL
-  (`systemCommunicationApplications.update`, the whole `secretDefaults` list, document from stdin, never on a command
-  line), then deploys the Application:
+- **The operator adds the entry after the install** — key and value together — and deploys the Application:
+  - **Refinery Studio:** Application -> **Further attributes** -> `SecretDefaults` -> add a row: `Key`, `SecretValue`
+    (write-only; empty on a later edit keeps the stored value), optionally `AllowedTenantIds` and `Description` ->
+    **Save** -> **Deploy**.
+  - **GraphQL:** `systemCommunicationApplications.update` with the whole `secretDefaults` list (it replaces the list:
+    use it while the Application carries no other entry, otherwise the Studio form). The secret is a **GraphQL
+    variable**, never inline in the document, never on a command line — e.g. the variables JSON on stdin with
+    `octo-cli -c GraphQl -tid <tenant> -f write-secret-default.graphql -vars @/dev/stdin`:
 
-  ```graphql
-  mutation { runtime { systemCommunicationApplications { update(entities: [{ rtId: "<application rtId>", item: {
-    secretDefaults: [{ key: "my-app-captcha-secret", secretValue: "<from stdin>",
-                       description: "Turnstile secret of the registration form" }] } }]) {
-    rtId secretDefaults { key secretValue { isSet } } } } } }
-  ```
+    ```graphql
+    mutation writeSecretDefault($secretValue: String!) {
+      runtime { systemCommunicationApplications { update(entities: [{ rtId: "<application rtId>", item: {
+        secretDefaults: [{ key: "my-app-captcha-secret", secretValue: $secretValue,
+                           description: "Turnstile secret of the registration form" }] } }]) {
+        rtId secretDefaults { key allowedTenantIds secretValue { isSet } } } } }
+    }
+    ```
+  - **A CD from a secret store**, as the Energy Community app on test-2 (Vault -> `SecretDefaults` before the
+    deploy). The store is then the source of truth; a Studio edit is overwritten by the next run.
 
-  Re-apply and blueprint updates keep the entry (TenantOwned, carried over by record key).
-- **`DeployWorkload` projects it**, a redeploy after a new value rotates it. Scope is the Application's own tenant
-  plus every descendant, never siblings; an absent or empty `SecretDefaultAllowedTenantIds` list means all of them, a
-  non-empty one narrows the targets to the listed tenants. A tenant created or loaded after the deploy gets the default
-  only with the next deploy; until then `VerifyCaptcha@1` there answers `not-configured` (unless the tenant has its own
-  secret), so deploy the Application again when you add a served tenant. The
-  projection is best effort per tenant: a skipped tenant (no System.Communication 4.15.0, not resolvable) or a failed
-  write is a Warning/Error event on the Application, and the deploy still succeeds. After every deploy read those
-  events; for a skipped or failed tenant fix the cause and deploy again (the projection is retried), and revoke an
-  old secret at the provider only once no such event is left. A failed event write is only logged, so no event is no
-  proof: the controller log has one line per deploy, `Secret defaults of application '<name>' (<rtId>) projected:
-  <n> written, <n> skipped, <n> failed` — revoke only after a line with 0 skipped and 0 failed.
-- **Nobody in a served tenant can read it** (`RevealSecret@1`, GraphQL, MCP, export all refuse or show `isSet` only).
-  Only platform nodes use it — today `VerifyCaptcha@1` (`defaultKey` = the Key). A tenant that wants its own value
-  keeps it in its own Secret attribute (`tenantSecret` of the node); the projection never touches that.
+  Re-apply and blueprint updates keep the entry (TenantOwned, carried over by record key). Rotate by writing the new
+  value and deploying again.
+- **Scope.** The Application's own tenant plus its whole subtree, never siblings. `AllowedTenantIds` absent or empty
+  means exactly that set; a non-empty list narrows it to the listed tenants and never widens it (a listed tenant
+  outside the subtree is ignored). A tenant added below the Application later is covered automatically only while
+  the list is empty; with a non-empty list add its id to the list and deploy again.
+- **Projection.** Only a **deployed** Application (`DeploymentState` Pending or Deployed) is a source. The controller
+  projects on `DeployWorkload`, on every tenant load (service start, Enable, tenant update — so a tenant created or
+  loaded after the deploy receives the default without a redeploy) and on `POST {tenant}/v1/secretDefaults/reconcile`
+  (that tenant and its subtree; use it e.g. after deleting an Application, which no hook sees). **Undeploying the
+  Application withdraws its defaults** from every tenant, and so does a redeploy the deploy guard refuses (state
+  Error), even after an earlier successful deploy. The projection is best effort per tenant: a skipped tenant (no
+  System.Communication 4.15.0, not resolvable) or a failed write is a Warning/Error event, and the deploy still
+  succeeds. Events about an Application's defaults are **linked to the Application** (`relatesFrom` of
+  `System.Notification/Event`) when stored in its own tenant. After every deploy read those events; for a skipped or
+  failed tenant fix the cause and deploy again, and revoke an old secret at the provider only once no such event is
+  left. A failed event write is only logged, so no event is no proof: the controller log has one line per deploy,
+  `Secret defaults of application '<name>' (<rtId>) projected: <n> written, <n> skipped, <n> failed` — revoke only
+  after a line with 0 skipped and 0 failed.
+- **Is it set in a tenant?** `SecretDefault.Value` is `Hidden` (System.Communication 4.16.0 and later, so 4.18.0 too):
+  GraphQL, REST, MCP, import and export can neither read nor write it, not even `isSet`. The projected entity is the
+  signal — query `systemCommunicationSecretDefault` by `rtWellKnownName` = key and read `sourceTenantId`,
+  `sourceWorkloadRtId`, `lastProjectedAt`.
+- **Nobody in a served tenant can read it**: `RevealSecret@1` refuses `System.Communication/SecretDefault` for every
+  identity, and GraphQL, MCP and export cannot read the Hidden value. Only platform nodes use it — today
+  `VerifyCaptcha@1` (`defaultKey` = the Key), which uses the tenant's own secret when it is set and the default
+  otherwise. A tenant that wants its own value keeps it in its own Secret attribute (`tenantSecret` of the node); the
+  projection never touches that.
 - Key: `^[A-Za-z0-9][A-Za-z0-9._-]*$`, at most 128 characters, unique per Application. The key is the well-known
   name of the `SecretDefault` in every target tenant, one per key and tenant: Applications whose scopes overlap (two
   in one tenant, or one in an ancestor of the other) need distinct keys. With the same key the source closer to the
   root wins (a Warning event names the refused one), otherwise the last deploy overwrites the other's value.
 
 Worked sample with the Application, a tenant override type, the `VerifyCaptcha@1` route and the verify commands:
-`octo-communication-controller-services/samples/Blueprints/SecretDefaultDemo/` (controller PR #96, not merged yet;
-where its seed still declares a `SecretDefaults` entry, the rule above wins). Pipeline side: `pipeline-expert`,
-`VerifyCaptcha@1`.
+`octo-communication-controller-services/samples/Blueprints/SecretDefaultDemo/` (controller PR #96). Pipeline side:
+`pipeline-expert`, `VerifyCaptcha@1`.
 
 ## Deploy + operate
 
