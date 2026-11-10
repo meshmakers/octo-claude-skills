@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.27.1] — 2026-11-09
+
+### Changed
+
+- **`pipeline-expert`** — `node-reference-mesh.md`: `AnthropicAiQuery@1` states that MCP needs an identity — an MCP URL (node or inherited from the AiConfiguration) is used only with `mcpServiceAccountConfigName` or `mcpDelegateToCaller` / `identity: Caller`; otherwise the node skips MCP with one warning naming the node and the missing setting and runs without tools. Adds the missing `mcpServiceAccountConfigName` and `mcpDelegateToCaller` rows to the property table and an example; `SKILL.md` node list notes the rule (AB#8685, octo-mesh-adapter).
+
 ## [0.27.0] — 2026-11-09
 
 ### Added
