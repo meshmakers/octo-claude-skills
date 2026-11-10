@@ -1365,7 +1365,7 @@ octo-cli -c RewindRollupWatermark -id <rtId> -t <toBucketEnd>
 
 ### Operations of Asynchronous CK Methods
 
-A CK method declared `execution.mode: async` (e.g. `System.Bot/TenantRepository.Dump-1`, started by `Dump`) returns an operation handle; its state, progress and result are read through `runtime.operations` of the tenant of the context. The caller who started an operation and tenant administrators can read it; operations are kept 7 days after they ended. An unknown, expired or foreign id is `OPERATION_NOT_FOUND` (exit -3). Operations cannot be cancelled.
+A CK method declared `execution.mode: async` (e.g. `System.Bot/TenantRepository.Dump-1`, started by `Dump`) returns an operation handle; its state, progress and result are read through `runtime.operations` of the tenant of the context. Both commands write only the answer to standard output (banner and logs, incl. the `-w` progress, go to standard error), so `-j` can be piped to `jq`. The caller who started an operation and tenant administrators can read it; operations are kept 7 days after they ended. An unknown, expired or foreign id is `OPERATION_NOT_FOUND` (exit -3). Operations cannot be cancelled.
 
 #### GetOperation
 Shows one operation: state, stage, percent, stage parameters (e.g. `jobId`), result (JSON) or error (code + parameters), timestamps. Read only.
