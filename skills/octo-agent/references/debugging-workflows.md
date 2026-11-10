@@ -145,6 +145,9 @@ dotnet test -c DebugL --filter "FullyQualifiedName!~SystemTests"
 Remove-GlobalNuGetPackages -path <lane>/.nuget-packages   # isolated lane (RestorePackagesPath)
 Remove-GlobalNuGetPackages                                 # lane without it: the shared ~/.nuget/packages
 Remove-GlobalNuGetPackages -path $env:NUGET_PACKAGES       # when NUGET_PACKAGES is set in your session
+# Custom RestorePackagesPath in <lane>/Octo.User.props: pass that folder ($(MSBuildThisFileDirectory) = the lane folder);
+# octo-tools never cleans a custom cache itself
+Remove-GlobalNuGetPackages -path <value of RestorePackagesPath>
 
 # Rebuild from the root of the dependency chain
 Invoke-BuildAll -configuration DebugL -excludeFrontend $true

@@ -195,7 +195,7 @@ An alternative to the docker-compose infra: MongoDB / RabbitMQ / CrateDB, the CR
 | Cmdlet | Description | Safety |
 |---|---|---|
 | `Invoke-KillDotnet` | Kill all dotnet processes | Mutating |
-| `Remove-BinAndObjFolders` | Delete all bin/ and obj/ folders | **Destructive** |
+| `Remove-BinAndObjFolders [-path <folder>]` | Delete all bin/ and obj/ folders below `-path` (default: the current folder) - pass the lane | **Destructive** |
 
 ### Authentication / Context (octo-cli)
 
@@ -290,9 +290,9 @@ Interactive blocking applies to `Start-Octo` (without `-nonInteractive $true`) a
 - "build everything" / "build all" → `Invoke-BuildAll -branch branches/main -configuration DebugL`
 - "build without frontend" / "build backend" → `Invoke-BuildAll -branch branches/main -configuration DebugL -excludeFrontend $true`
 - "build asset repo" → `Invoke-Build -repositoryPath ./octo-asset-repo-services -configuration DebugL` (only if no NuGet changes!)
-- "rebuild after pull" / "sync and build" → `Sync-AllGitRepos` then `Invoke-BuildAll -branch branches/main -configuration DebugL`
+- "rebuild after pull" / "sync and build" → `Sync-AllGitRepos -branch branches/main` then `Invoke-BuildAll -branch branches/main -configuration DebugL`
 - "git status" / "repo status" → `Get-AllGitRepStatus`
-- "pull latest" / "sync repos" → `Sync-AllGitRepos`
+- "pull latest" / "sync repos" → `Sync-AllGitRepos -branch branches/main`
 - "push everything" → `Push-AllGitRepos` (confirm first!)
 - "start services" / "start octo" → `Start-Octo -nonInteractive $true -configuration DebugL` (agent default; never block the session)
 - "stop services" / "stop octo" → `Stop-Octo`
@@ -305,7 +305,7 @@ Interactive blocking applies to `Start-Octo` (without `-nonInteractive $true`) a
 - "deploy operator" → `Deploy-OctoOperator`
 - "k8s status" / "kubernetes status" → `Get-OctoKubernetesStatus`
 - "tear down kind" / "uninstall kubernetes" → `Uninstall-OctoKubernetes` (destructive — confirm)
-- "clean build" → confirm, then `Remove-BinAndObjFolders` + `Invoke-BuildAll -branch branches/main -configuration DebugL`
+- "clean build" → confirm, then `Remove-BinAndObjFolders -path (Join-Path $rootPath 'branches/main')` (it defaults to the current folder - never run it at the workspace root, it would hit every lane and feature environment) + `Invoke-BuildAll -branch branches/main -configuration DebugL`
 - "clean everything" → confirm each destructive step separately
 - "switch to local" / "login local" → `Invoke-OctoCliLoginLocal` (or `Register-OctoCliContext -Installation local -TenantId <tenant>`)
 - "register context for staging" / "add context for production" → `Register-OctoCliContext -Installation staging-1|prod-1|prod-2 -TenantId <tenant>`

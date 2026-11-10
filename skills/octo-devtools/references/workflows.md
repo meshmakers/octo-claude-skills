@@ -4,7 +4,7 @@ Multi-step workflows for typical development scenarios.
 
 > **Agent note:** Whenever Claude or a CI job starts services, ALWAYS use `Start-Octo -nonInteractive $true` and stop them with `Stop-Octo` from a separate invocation. Never use `Invoke-BuildAndStartOcto` from an agent session — it chains into the interactive `Start-Octo` and blocks indefinitely. The interactive `Start-Octo` (no `-nonInteractive`) is only for a human running it directly in a terminal.
 
-> **Which lane:** `-branch` is a lane folder relative to `$rootPath`. With the profile loaded from the `octo-tools` checkout at the workspace root (`$rootPath` = the workspace root - the setup feature environments need), pass `-branch branches/main` to build main; without `-branch` the cmdlets build `$rootPath` itself. Only a profile loaded from inside the main checkout may omit it. The `Invoke-BuildAll` examples below omit it.
+> **Which lane:** `-branch` is a lane folder relative to `$rootPath`. With the profile loaded from the `octo-tools` checkout at the workspace root (`$rootPath` = the workspace root - the setup feature environments need), pass `-branch branches/main` to build main; without `-branch` the cmdlets build `$rootPath` itself. Only a profile loaded from inside the main checkout may omit it. The same applies to `Sync-AllGitRepos -branch`. The `Invoke-BuildAll` / `Sync-AllGitRepos` examples below omit it.
 
 ## 1. First-Time Setup
 
@@ -118,7 +118,7 @@ When builds are broken or stale:
 
 ```
 1. Invoke-KillDotnet                               # Kill stale dotnet processes (Windows)
-2. Remove-BinAndObjFolders                         # Delete all bin/ and obj/ folders
+2. Remove-BinAndObjFolders -path (Join-Path $rootPath 'branches/main')   # bin/ and obj/ of this lane only (default: current folder)
 3. Remove-GlobalNuGetPackages -path <lane>/.nuget-packages   # Clear the lane's 999.0.0 packages (default path: ~/.nuget/packages for a lane without RestorePackagesPath)
 4. Invoke-BuildAll -configuration DebugL           # Full rebuild from scratch
 ```
