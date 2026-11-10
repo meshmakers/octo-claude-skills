@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.27.2] — 2026-11-10
+
+### Changed
+
+- **`pipeline-expert`** — `node-reference-mesh.md`: `AnthropicAiQuery@1` authenticates MCP with the token of exactly the configured `mcpServiceAccountConfigName`; a configured account that yields no token now means one warning, no MCP call and a query without tools (before: MCP calls sent unauthenticated). The caveat about a shared service-account token is removed — fixed in octo-mesh-adapter (AB#8699).
+
 ## [0.27.1] — 2026-11-09
 
 ### Changed
