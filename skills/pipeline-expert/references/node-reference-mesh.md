@@ -754,7 +754,8 @@ Make HTTP requests and store response.
 ```
 
 Never use it to call a CAPTCHA or other verification endpoint with a secret: the pipeline would have to reveal the
-secret first, and the URL is the pipeline author's choice. Use `VerifyCaptcha@1`.
+secret first, and the URL is the pipeline author's choice. For Cloudflare Turnstile use `VerifyCaptcha@1`, which
+supports only that provider; another provider needs a platform node of its own, not a revealed secret.
 
 ### VerifyCaptcha@1
 

@@ -158,8 +158,8 @@ Secret attribute in a seed is only ever empty or omitted; blueprints have no ins
   `System.Notification/Event`) when stored in its own tenant. After every deploy read those events; for a skipped or
   failed tenant fix the cause and deploy again, and revoke an old secret at the provider only once no such event is
   left. A failed event write is only logged, so no event is no proof: the controller log has one line per deploy,
-  `Secret defaults of application '<name>' (<rtId>) projected: <n> written, <n> skipped, <n> failed` — revoke only
-  after a line with 0 skipped and 0 failed.
+  `Secret defaults of application '<name>' (<rtId>) projected: <n> written, <n> removed, <n> skipped, <n> failed` —
+  revoke only after a line with 0 skipped and 0 failed.
 - **Is it set in a tenant?** `SecretDefault.Value` is `Hidden` (System.Communication 4.16.0 and later, so 4.18.0 too):
   GraphQL, REST, MCP, import and export can neither read nor write it, not even `isSet`. The projected entity is the
   signal — query `systemCommunicationSecretDefault` by `rtWellKnownName` = key and read `sourceTenantId`,
