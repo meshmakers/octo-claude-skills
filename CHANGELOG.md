@@ -2,11 +2,41 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
-## [0.26.0] — 2026-11-09
+## [0.28.0] — 2026-11-10
 
 ### Changed
 
 - **`pipeline-expert`, `octo-app-builder`, `octo-operator`** — secret defaults of an Application (AB#7252, Feature AB#7219; System.Communication 4.15.0, controller AB#7244, mesh adapter AB#7246/AB#7251). `pipeline-expert`: `VerifyCaptcha@1` in `node-reference-mesh.md` (settings, output `{ valid, source, reason }`, deployment default vs tenant override, an override encrypted with an unknown key id falls back to the default, any other undecryptable override does not; two entities with the same well-known name are refused and count as not set; check `valid` before `reason`) and `RevealSecret@1` with why it refuses `System.Communication/SecretDefault` (platform-only: no tenant identity may obtain it); `GetPipelineConfigByCkTypeId@1` refuses the type; `MakeHttpRequest@1` is not for CAPTCHA checks; one line each in the `SKILL.md` node tables. `octo-app-builder`: `references/app-workload.md` §Secrets — secret-flagged `ValueOverride` only for secrets the pod needs, `SecretDefaults` for secrets only platform nodes need; the seed declares no `SecretDefaults` entry (an entry without a value makes the deploy refuse the Application; the secret seed lint refuses values, placeholders and `${...}` variables, and blueprints have no install-time parameters), the operator adds key and value after the install (Studio or GraphQL from stdin) and deploys, re-apply keeps the entry; an empty `AllowedTenantIds` means every served tenant, a tenant added later needs another deploy; the projection is best effort per tenant (read the events, and the controller's per-deploy summary log line, before revoking an old secret); keys are one namespace per target tenant, so overlapping Applications need distinct keys; pointer in `SKILL.md`. `octo-operator`: secret defaults are not a Helm tier — they never reach the operator, a values file or the release Secret. Worked sample: `octo-communication-controller-services/samples/Blueprints/SecretDefaultDemo/` (controller PR #96). Needs the controller and mesh adapter releases of Feature AB#7219.
+
+## [0.27.2] — 2026-11-10
+
+### Changed
+
+- **`pipeline-expert`** — `node-reference-mesh.md`: `AnthropicAiQuery@1` authenticates MCP with the token of exactly the configured `mcpServiceAccountConfigName`; a configured account that yields no token now means one warning, no MCP call and a query without tools (before: MCP calls sent unauthenticated). The caveat about a shared service-account token is removed — fixed in octo-mesh-adapter (AB#8699).
+
+## [0.27.1] — 2026-11-09
+
+### Changed
+
+- **`pipeline-expert`** — `node-reference-mesh.md`: `AnthropicAiQuery@1` states that MCP needs an identity — an MCP URL (node or inherited from the AiConfiguration) is used only with `mcpServiceAccountConfigName` or `mcpDelegateToCaller` / `identity: Caller`; otherwise the node skips MCP with one warning naming the node and the missing setting and runs without tools. Adds the missing `mcpServiceAccountConfigName` and `mcpDelegateToCaller` rows to the property table and an example; `SKILL.md` node list notes the rule (AB#8685, octo-mesh-adapter).
+
+## [0.27.0] — 2026-11-09
+
+### Added
+
+- **`pipeline-expert`** — `node-reference-mesh.md`: new node `McpToolCall@1` (deterministic call of an allowlisted MCP tool as a `ServiceAccountConfiguration`, allowlist checked before any network call, fail-closed identity, MCP error code and message in the pipeline error, result into the data context) and, on `AnthropicAiQuery@1`, `usageOutputPath` (input/output/cache-read/cache-creation tokens and a cost estimate, summed over all successfully answered calls; not written when no call succeeded) and `cacheSource` (prompt-cache breakpoint on the source block, with the byte-identity caveat for `dataPaths`). `SKILL.md` node list updated (AB#8658, octo-mesh-adapter).
+
+## [0.26.2] — 2026-11-09
+
+### Changed
+
+- **`octo`** — `temp-tenants.md` notes that a `--scratch` creator client can no longer grant itself an app role a blueprint seeds later (identity AB#8569, `403 self-grant`); a user administrator or another client must grant it. `TenantOwners` is described as every built-in platform role except `SecretManagement`, not "all roles" (AB#8583).
+
+## [0.26.1] — 2026-11-09
+
+### Changed
+
+- **`pipeline-expert`** — `node-reference-mesh.md`: `AnthropicAiQuery@1` documents guaranteed JSON (`jsonSchema`, `maxJsonRepairAttempts`: constrained decoding, local validation, at most two context-free repair calls, failure names the JSONPath) and prompt by name (`promptTemplateName`: `AiPromptTemplate` with `PromptPurpose: KnowledgeGeneration` via the pipeline's `Uses` hand-over, inline `question`/`systemPrompt` override, model settings template → AiConfiguration → node, redeploy after a prompt change) (AB#8498, octo-mesh-adapter). Fixed stale facts in the same section: `question` is no longer always required, and there is no default model (the table named a retired model id).
 
 ## [0.25.3] — 2026-11-08
 

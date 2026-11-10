@@ -889,34 +889,40 @@ Generate reports via reporting service and store to file system.
 
 Query Claude AI for document analysis, information extraction, and (optionally) live OctoMesh data queries via MCP.
 
-**Only `question` is required.** The API key is optional — prefer `apiKeyConfigurationName` (references an `AiConfiguration` CK entity; the key is never exposed in the pipeline data context) over the inline `apiKey`.
+**Required: a question** — either `question` inline or a `promptTemplateName` whose template has a `UserTemplate`. **An API key must resolve** — the node fails before the API call without one. It comes from `apiKeyConfigurationName` (preferred: references an `AiConfiguration` CK entity; the key is never exposed in the pipeline data context) or from the inline `apiKey`; each of the two properties is optional on its own. **There is no default model**: set `aiModel` on the AiConfiguration (recommended), `DefaultModelId` on the prompt template, or `model` on the node — otherwise the node fails with "AI model is required".
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `question` | string | **required** | Question/prompt for the AI |
-| `apiKeyConfigurationName` | string | optional | Name of the `AiConfiguration` entity in GlobalConfiguration to load the API key from. **Takes precedence over `apiKey`** — preferred, secure |
+| `question` | string | optional* | Question/prompt for the AI. *Required unless `promptTemplateName` supplies a `UserTemplate`; overrides the template's text |
+| `promptTemplateName` | string | optional | Well-known name of a `System.Ai/AiPromptTemplate` with `PromptPurpose: KnowledgeGeneration` (System.Ai 4.7.0+). Loads system prompt, question and model settings from it — see *Prompt by name* below |
+| `apiKeyConfigurationName` | string | optional | Name of the `AiConfiguration` entity in GlobalConfiguration to load `apiKey`, `mcpServerUrl`, `aiModel`, `maxTokens`, `temperature` from. **Takes precedence over the node's values** — preferred, secure |
 | `apiKey` | string | optional | Inline Anthropic API key (nullable). Avoid — exposes the key in the pipeline definition |
-| `model` | string | `claude-sonnet-4-20250514` | Claude model ID |
+| `model` | string | none | Claude model ID. Order: template `DefaultModelId` → AiConfiguration `aiModel` → `model` |
 | `dataPaths` | string[] | optional | Additional context paths to include in the query |
-| `systemPrompt` | string | (built-in default) | System prompt |
-| `maxTokens` | int | 1000 | Max response tokens |
-| `temperature` | double | 0.1 | Response temperature (0.0-1.0) |
+| `systemPrompt` | string | (built-in default) | System prompt. Overrides the template's `SystemPromptFragment`; without both, the built-in default text applies |
+| `maxTokens` | int | 1000 | Max response tokens. Order: template → AiConfiguration → node |
+| `temperature` | double | 0.1 | Response temperature (0.0-1.0). Order: template → AiConfiguration → node |
 | `responseFormat` | string | `json` | Expected format: `json` or `text` |
-| `jsonFormatSample` | string | (built-in sample) | Example JSON structure for structured responses |
+| `jsonFormatSample` | string | (built-in sample) | Example JSON structure for structured responses (not used when `jsonSchema` is set) |
+| `jsonSchema` | string | optional | JSON Schema (as a JSON string) the answer must satisfy; only with `responseFormat: json`. See *Guaranteed JSON* below |
+| `maxJsonRepairAttempts` | int | 1 | Repair calls when a `jsonSchema` answer is invalid (hard cap 2, `0` = none). Ignored without `jsonSchema` |
 | `includeRawResponse` | bool | false | Store the raw AI response |
 | `rawResponseOutputPath` | string | optional | Where to store the raw response |
 | `continueOnError` | bool | false | Continue the pipeline if the query fails |
 | `mcpServerUrl` | string | optional | OctoMesh MCP server URL (e.g. `https://localhost:5017`). When set, Claude can call MCP tools to query live OctoMesh data; the tenant ID is appended automatically as `{url}/{tenantId}/mcp` |
+| `mcpServiceAccountConfigName` | string | optional | `ServiceAccountConfiguration` whose token authenticates the MCP calls. **Without it (or `mcpDelegateToCaller`) MCP is not called at all** — see *MCP needs an identity* below |
+| `mcpDelegateToCaller` | bool | false | Run the MCP calls as the calling user (delegated token via `mcpServiceAccountConfigName`; same as `identity: Caller`). Fail-closed: no caller token or no delegated token fails the node. Needs a trigger with a caller (`FromHttpRequest@2`, not anonymous) |
 | `maxToolRounds` | int | 10 | Max MCP tool-use rounds (loop guard) |
 | `mcpToolNames` | string[] | optional | Whitelist of MCP tool names to expose (reduces context; e.g. `["query_entities_simple"]`). If unset, all tools are available |
 | `conversationHistoryPath` | string | optional | JSONPath to a conversation-history array (entries `{role, content}`) for multi-turn conversations |
+| `usageOutputPath` | string | optional | Where to write the token usage and cost estimate of all API calls of this execution. See *Usage* below |
+| `cacheSource` | bool | false | Send the source content as its own block with a prompt-cache breakpoint. See *Source caching* below |
 | `path` | string | `$` | Source path for main content (inherited) |
 | `targetPath` | string | required | Where to store the response |
 
 ```yaml
 - type: AnthropicAiQuery@1
-  apiKeyConfigurationName: anthropic-prod   # references an AiConfiguration entity
-  model: claude-sonnet-4-20250514
+  apiKeyConfigurationName: anthropic-prod   # references an AiConfiguration entity (supplies aiModel)
   question: "Extract the invoice number and total from this document"
   systemPrompt: "You are a document analysis assistant."
   responseFormat: json
@@ -924,6 +930,111 @@ Query Claude AI for document analysis, information extraction, and (optionally) 
   path: $.documentText
   targetPath: $.extractedData
 ```
+
+**MCP needs an identity.** The MCP service only answers authenticated calls. An MCP URL — `mcpServerUrl` on the node or, more often, `mcpServerUrl` inherited from the AiConfiguration of `apiKeyConfigurationName` — is used **only** when the node also has an identity: `mcpServiceAccountConfigName` (service account) or `mcpDelegateToCaller: true` / `identity: Caller` (calling user, together with `mcpServiceAccountConfigName`). Without one the node **skips MCP**: no call to the MCP service, one warning per execution — `[<node path>]: AnthropicAiQuery@1 skips MCP: an MCP server URL is configured … but no identity to call it with — set 'mcpServiceAccountConfigName' …` — and the query runs **without tools** (a no-tools instruction is added to the system prompt so the model does not invent tool results). If an AI step must use live data, set `mcpServiceAccountConfigName`; if it should not, the warning is harmless but tells you the AiConfiguration hands it an MCP URL. In **service-account mode** (no delegation) the MCP calls run with the token of **exactly** the account `mcpServiceAccountConfigName` names — never another account's and never the adapter's own identity — and with that account configured but **no token obtainable** (missing or broken `ServiceAccountConfiguration`, token request refused), the node writes one warning — `MCP ServiceAccountConfiguration '<name>' did not yield an access token (…); no MCP call is made and the query runs without tools.` — makes **no** MCP call and runs the query without tools; the pipeline does not fail. With **delegation** (`mcpDelegateToCaller` / `identity: Caller`) and a resolved MCP URL, a missing caller token, a missing `mcpServiceAccountConfigName` or a failed delegated token **fails the node** (fail-closed).
+
+```yaml
+- type: AnthropicAiQuery@1
+  apiKeyConfigurationName: anthropic-prod      # AiConfiguration also supplies mcpServerUrl
+  mcpServiceAccountConfigName: ai-assistant    # identity for the MCP calls - without it: no tools
+  mcpToolNames: [query_entities_simple]
+  question: "Which invoices are open?"
+  responseFormat: text
+  targetPath: $.answer
+```
+
+**Guaranteed JSON (`jsonSchema`).** With a schema (and `responseFormat: json`) the node asks the API for constrained decoding with the schema, then validates the parsed answer against the full schema after cheap local repairs (JSON extracted from prose, naked quotes, trailing commas, unclosed brackets, repeated keys). If it still does not parse or validate, it makes at most `maxJsonRepairAttempts` repair calls that send only the broken answer, the errors and the schema — the original prompt and source content are not sent again as inputs (the broken answer itself may of course quote parts of the content). An answer that stays invalid **fails the node** with the violated JSONPath(s), e.g. `$.sections[1].sortOrder: PropertyRequired` (`continueOnError` applies as usual). Keywords the API does not support for constrained decoding (`minimum`/`maximum`, `minLength`/`maxLength`/`pattern`, `minItems`/`maxItems`, …) are enforced only by the local validation. The copy sent to the API also sets `additionalProperties: false` on every object, so the model emits only the declared properties — a schema that needs free-form keys (maps, `patternProperties`) cannot be satisfied; use fixed property names or an array of key/value objects. Without `jsonSchema` nothing of this runs.
+
+```yaml
+- type: AnthropicAiQuery@1
+  apiKeyConfigurationName: anthropic-prod
+  question: "Write a wiki page from the source text."
+  path: $.sourceText
+  responseFormat: json
+  jsonSchema: '{"type":"object","properties":{"title":{"type":"string"},"sections":{"type":"array","minItems":1,"items":{"type":"object","properties":{"heading":{"type":"string"},"sectionContent":{"type":"string"}},"required":["heading","sectionContent"]}}},"required":["title","sections"]}'
+  maxJsonRepairAttempts: 1
+  targetPath: $.page
+```
+
+**Prompt by name (`promptTemplateName`).** The node reads an `AiPromptTemplate` (`PromptPurpose: KnowledgeGeneration`) by its well-known name from the pipeline's configuration hand-over — the same way as the AiConfiguration of `apiKeyConfigurationName`, so **the pipeline needs a `Uses` association to the template entity** (like it has one to its AiConfiguration). From the template: `SystemPromptFragment` (+ `FewShotExamples`, appended in `<examples>…</examples>`) → system prompt, `UserTemplate` → question, `DefaultModelId` / `Temperature` / `MaxTokens` → model settings. Inline `question` / `systemPrompt` override the template's texts only. The node fails before any API call, naming the template, when it is not handed over (no `Uses` edge), is another CK type, has another `PromptPurpose`, or has no `UserTemplate` while the node sets no `question`. **Limitation:** the adapter caches the hand-over when the pipeline is registered — after changing a prompt, **redeploy the pipeline**. A node without `promptTemplateName` behaves exactly as before.
+
+```yaml
+- type: AnthropicAiQuery@1
+  apiKeyConfigurationName: anthropic-prod
+  promptTemplateName: knowledge-ingest     # AiPromptTemplate, Uses edge from this pipeline
+  path: $.sourceText
+  responseFormat: json                     # add jsonSchema (as above) for guaranteed JSON
+  targetPath: $.page
+```
+
+**Usage (`usageOutputPath`).** The node sums the `usage` of every API call of one execution — tool rounds and JSON repair calls included — and writes it to `usageOutputPath`:
+
+```json
+{ "model": "claude-sonnet-4-6", "calls": 2, "inputTokens": 1240, "outputTokens": 610,
+  "cacheReadInputTokens": 5200, "cacheCreationInputTokens": 0,
+  "estimatedCostUsd": 0.01443, "priceListDate": "2026-10" }
+```
+
+`inputTokens` is the uncached part only; the prompt size is the sum of the three input fields. `estimatedCostUsd` is an **estimate** from the adapter's built-in Anthropic list prices (first-party API, cache writes at the 5-minute rate); it is `null` for a model the adapter does not know (a warning is logged). Only calls with a successful HTTP response are counted; a failed API request adds nothing. With `continueOnError: true` the usage is written for a failed query too — but only if at least one call succeeded: when the first request already fails, `calls` stays 0 and `usageOutputPath` is **not written**, so downstream nodes must not assume it exists. Without `usageOutputPath` nothing is written.
+
+**Source caching (`cacheSource`).** With `cacheSource: true` the main content (the value at `path`) is sent as its own block with a prompt-cache breakpoint; the `dataPaths` context and the question follow in a second block. The text the model reads is unchanged. The cache is a **prefix match** (tools, then system prompt, then messages), so a call reads the source from the cache (`cacheReadInputTokens` > 0) only when tools, system prompt and source are identical:
+- every MCP tool round of one execution (each round resends the whole conversation, so a large source is otherwise paid again per round);
+- repeated runs of the **same** node over the same source within 5 minutes — e.g. reviewer rounds that only change the draft passed in `dataPaths`.
+
+A generation node and a verification node with different system prompts (different templates) do **not** share the cached source. The first call pays 1.25× input for the cache write, so it pays off from the second hit. Sources below the model's minimum cacheable length (512–4096 tokens) are not cached. Put the large, stable document into `path` and what changes between calls into `dataPaths`.
+
+```yaml
+- type: AnthropicAiQuery@1
+  description: Review the draft against the source (runs once per reviewer round)
+  apiKeyConfigurationName: anthropic-prod
+  promptTemplateName: knowledge-verify
+  path: $.sourceText          # large and identical in every round -> cached
+  dataPaths: [$.page]         # the draft changes per round -> after the breakpoint, does not break the hit
+  cacheSource: true
+  usageOutputPath: $.usage.verify
+  targetPath: $.check
+```
+
+### McpToolCall@1
+
+Calls **one allowlisted tool** on the tenant's OctoMesh MCP service, deterministically — no model decides — as a configured **service account**. Use it for the write after an AI step: `AnthropicAiQuery@1` reads (optionally with MCP tools) and returns schema-valid JSON, then `McpToolCall@1` writes it through e.g. `knowledge_upsert_page`, so the tool's content guard and versioning apply.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `allowedTools` | string[] | **required** | Exact MCP tool names this node may call. There is no "call any tool" mode |
+| `toolName` | string | one of | The tool to call. Exactly one of `toolName` / `toolNamePath` |
+| `toolNamePath` | string | one of | JSONPath to a string naming the tool (e.g. chosen earlier). Still checked against `allowedTools` |
+| `argumentsPath` | string | optional | JSONPath to a JSON **object** sent as the tool arguments. Unset = `{}` |
+| `aiConfigurationName` | string | optional | `AiConfiguration` whose `mcpServerUrl` is used (recommended; needs a `Uses` association) |
+| `mcpServerUrl` | string | optional | Fallback URL, e.g. `https://localhost:5017` locally. The tenant is appended: `{url}/{tenantId}/mcp` |
+| `mcpServiceAccountConfigName` | string | **required** | `ServiceAccountConfiguration` the call runs as (e.g. `knowledge-curator`) |
+| `targetPath` | string | `$` | Where the tool result is written: `structuredContent` if the tool sends it; else a **single** text content that starts with `{` or `[` parsed as JSON; else the text (several texts joined by newlines). A text like `42` or `true` stays a string |
+| `timeoutSeconds` | int | 90 | Timeout of the MCP calls |
+| `continueOnError` | bool | false | Continue when the **call** fails. Never applies to configuration errors or allowlist violations |
+
+```yaml
+- type: AnthropicAiQuery@1
+  description: Generate the page as JSON (read-only tools)
+  apiKeyConfigurationName: AiConfig
+  promptTemplateName: knowledge-ingest
+  path: $.sourceText
+  responseFormat: json
+  jsonSchema: '{"type":"object","properties":{"slug":{"type":"string"},"title":{"type":"string"},"sections":{"type":"array","items":{"type":"object","properties":{"heading":{"type":"string"},"sectionContent":{"type":"string"},"sortOrder":{"type":"integer"}},"required":["heading","sectionContent","sortOrder"]}}},"required":["slug","title","sections"]}'
+  targetPath: $.page
+- type: McpToolCall@1
+  description: Write the page as knowledge-curator
+  allowedTools: [knowledge_upsert_page]
+  toolName: knowledge_upsert_page
+  argumentsPath: $.page               # passed unchanged: keys must match the tool's parameters (slug, title, sections)
+  aiConfigurationName: AiConfig       # supplies McpServerUrl (Uses association)
+  mcpServiceAccountConfigName: knowledge-curator
+  targetPath: $.write
+```
+
+Behaviour:
+- **Before any network call** the node checks the configuration, the tool name against `allowedTools` (exact, case-sensitive), that the arguments are an object and that a URL resolves. A tool outside the list fails with *"MCP tool 'x' is not in this node's allowedTools [...]. The tool was not called."*
+- **Fail-closed identity:** without a token for `mcpServiceAccountConfigName` the tool is never called — MCP is never called unauthenticated. The missing token counts as a call failure: with `continueOnError: false` the node fails; with `continueOnError: true` the pipeline continues **without the write**, so later nodes run although nothing was written. Credentials stay in the `ServiceAccountConfiguration` — never put a token or secret into the pipeline YAML. What the account may write is decided by its roles and the MCP service, not by the pipeline.
+- **Errors:** a protocol error fails with *"MCP error {code} on tool 'x': {message}"* (e.g. `-32602` for unknown tool or invalid parameters); a tool that returns an error result fails with *"MCP tool 'x' returned an error: {text}"* (e.g. a content-guard refusal). Error messages never contain the token.
 
 ### ApplyDataPointMappings@1
 
