@@ -44,6 +44,8 @@ OctoMesh is a monorepo where repos produce NuGet packages consumed by downstream
 
 **The one difference that matters: `Invoke-Build` does NOT propagate NuGet packages between repos, `Invoke-BuildAll` does.** A repo built with `Invoke-Build` writes its package nowhere the other repos can see it, so every consumer keeps compiling and running against the previous version. That is why `Invoke-BuildAll` is the default and `Invoke-Build` is the narrow exception.
 
+**Which lane:** `-branch` is a lane folder relative to `$rootPath`. With the profile loaded from the `octo-tools` checkout at the workspace root (`$rootPath` = the workspace root - the setup feature environments need), pass `-branch branches/main` to build main; without `-branch` the cmdlets build `$rootPath` itself. Only a profile loaded from inside the main checkout may omit it.
+
 **The only sanctioned way to make a build cheaper is `-excludeFrontend $true`.** Do not narrow the build any further to save time — see the warning under the examples below.
 
 ### When to use `Invoke-BuildAll` (DEFAULT CHOICE)
@@ -52,10 +54,10 @@ OctoMesh is a monorepo where repos produce NuGet packages consumed by downstream
 
 ```
 # Full build (all repos including frontends)
-Invoke-BuildAll -configuration DebugL
+Invoke-BuildAll -branch branches/main -configuration DebugL
 
 # Backend only — skips Angular frontends (saves significant time)
-Invoke-BuildAll -configuration DebugL -excludeFrontend $true
+Invoke-BuildAll -branch branches/main -configuration DebugL -excludeFrontend $true
 ```
 
 **Do NOT reach for `-excludeAdditional $true` to save time.** It stops after the core library chain and skips the service repos, so a changed contract lands in the shared `nuget/` folder while identity, asset-repo and the other services keep running against the old one. The failure surfaces later, at service startup or at runtime, far away from the build that caused it. The parameter is documented in `references/command-reference.md` because it exists — not because it is a recommended shortcut.
@@ -114,6 +116,8 @@ A feature environment is the lane folder `<rootPath>/wt-<env>` of the octo-claud
 | `Invoke-BuildEnvironment -env <slug> [-syncMain] [-verifyTests\|-includeTests] [-DryRun]` | Incremental build of the environment's repos into its own feed and cache | Mutating (local) |
 | `Sync-OctoEnvironment -env <slug>` | Take main's new packages and catalog entries (packages built in the environment keep winning) | Mutating (local) |
 | `Remove-OctoEnvironment -env <slug>` | Remove the environment; refuses dirty or unpushed worktrees, keeps branches, no `-force` | **Destructive** |
+
+**Before a build:** `Invoke-BuildEnvironment` clears the environment's kill scope (`wt-<env>` and every in-place worktree) - on Windows it stops the matching dotnet processes, e.g. a running service of the environment; `-skipKill` opts out. **Before removal:** stop the environment's services first, or use octo-devstack `env_remove` (stops the slot and releases the lease); `Remove-OctoEnvironment` does neither.
 
 **In-place caveat:** an `-inPlace` worktree stays where it is. `Invoke-BuildEnvironment` builds it with the environment's feed, cache and catalog, but a plain `dotnet build` or Rider there is **not** isolated, and `Remove-OctoEnvironment` only unregisters it - it is never deleted.
 
@@ -283,10 +287,10 @@ Interactive blocking applies to `Start-Octo` (without `-nonInteractive $true`) a
 ## Smart Behaviors
 
 ### Natural language mapping
-- "build everything" / "build all" → `Invoke-BuildAll -configuration DebugL`
-- "build without frontend" / "build backend" → `Invoke-BuildAll -configuration DebugL -excludeFrontend $true`
+- "build everything" / "build all" → `Invoke-BuildAll -branch branches/main -configuration DebugL`
+- "build without frontend" / "build backend" → `Invoke-BuildAll -branch branches/main -configuration DebugL -excludeFrontend $true`
 - "build asset repo" → `Invoke-Build -repositoryPath ./octo-asset-repo-services -configuration DebugL` (only if no NuGet changes!)
-- "rebuild after pull" / "sync and build" → `Sync-AllGitRepos` then `Invoke-BuildAll -configuration DebugL`
+- "rebuild after pull" / "sync and build" → `Sync-AllGitRepos` then `Invoke-BuildAll -branch branches/main -configuration DebugL`
 - "git status" / "repo status" → `Get-AllGitRepStatus`
 - "pull latest" / "sync repos" → `Sync-AllGitRepos`
 - "push everything" → `Push-AllGitRepos` (confirm first!)
@@ -301,7 +305,7 @@ Interactive blocking applies to `Start-Octo` (without `-nonInteractive $true`) a
 - "deploy operator" → `Deploy-OctoOperator`
 - "k8s status" / "kubernetes status" → `Get-OctoKubernetesStatus`
 - "tear down kind" / "uninstall kubernetes" → `Uninstall-OctoKubernetes` (destructive — confirm)
-- "clean build" → confirm, then `Remove-BinAndObjFolders` + `Invoke-BuildAll -configuration DebugL`
+- "clean build" → confirm, then `Remove-BinAndObjFolders` + `Invoke-BuildAll -branch branches/main -configuration DebugL`
 - "clean everything" → confirm each destructive step separately
 - "switch to local" / "login local" → `Invoke-OctoCliLoginLocal` (or `Register-OctoCliContext -Installation local -TenantId <tenant>`)
 - "register context for staging" / "add context for production" → `Register-OctoCliContext -Installation staging-1|prod-1|prod-2 -TenantId <tenant>`
@@ -316,7 +320,7 @@ Interactive blocking applies to `Start-Octo` (without `-nonInteractive $true`) a
 Always use `-configuration DebugL` for build commands unless the user explicitly specifies a different configuration. This is the standard local development configuration.
 
 ### Build order awareness
-Feature work on a work item is built in its feature environment (`Invoke-BuildEnvironment`), not in `branches/main`. For main itself: when the user asks to build, default to `Invoke-BuildAll`, narrowing it at most with `-excludeFrontend $true` — do NOT attempt to manually orchestrate `Invoke-Build` calls in dependency order or manually copy NuGet packages. The `Invoke-BuildAll` script already handles the correct build order and NuGet propagation. Only use `Invoke-Build` for a single service repo where no NuGet packages are affected.
+Feature work on a work item is built in its feature environment (`Invoke-BuildEnvironment`), not in `branches/main`. For main itself: when the user asks to build, default to `Invoke-BuildAll -branch branches/main` (see "Which lane" above), narrowing it at most with `-excludeFrontend $true` — do NOT attempt to manually orchestrate `Invoke-Build` calls in dependency order or manually copy NuGet packages. The `Invoke-BuildAll` script already handles the correct build order and NuGet propagation. Only use `Invoke-Build` for a single service repo where no NuGet packages are affected.
 
 ### Workflow suggestions
 When the user describes a high-level goal (e.g., "set up a fresh dev environment"), suggest the appropriate multi-step workflow from `references/workflows.md` and offer to execute it step by step.

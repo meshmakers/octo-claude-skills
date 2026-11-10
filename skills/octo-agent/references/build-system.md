@@ -80,8 +80,8 @@ Invoke-BuildAll -configuration DebugL -excludeFrontend $true
 1. Each repo builds with `dotnet build -c DebugL`
 2. Build outputs `.nupkg` files to `bin/DebugL/` directories
 3. `Copy-NuGetPackages` copies `.nupkg` files from a repo's output to the lane feed `<lane>/nuget/`
-4. In DebugL each repo's `Directory.Build.props` puts `<repo>/../nuget` (the lane feed) first in `<RestoreSources>`; repos that declare their own `RestoreSources` keep their other feeds too (e.g. Telerik in octo-report-services)
-5. Packages are extracted into the lane's package cache. A lane is isolated when `<lane>/Octo.User.props` declares `RestorePackagesPath` - the cache is then `<lane>/.nuget-packages`, also for Rider and plain `dotnet build`. A lane without it (main before the switch below) still uses the shared `~/.nuget/packages`
+4. In DebugL each repo's `Directory.Build.props` adds `$(OctoRepoRootPath)../nuget` - the lane feed next to the repo in the plain `<lane>/<repo>` layout that lanes and feature environments use - to `<RestoreSources>`; repos that declare their own `RestoreSources` keep their other feeds too (e.g. Telerik in octo-report-services)
+5. Packages are extracted into the lane's package cache. A lane is isolated when `<lane>/Octo.User.props` declares `RestorePackagesPath` with the standard value `$(MSBuildThisFileDirectory).nuget-packages` - the cache is then `<lane>/.nuget-packages`, also for Rider and plain `dotnet build`. A lane without it (main before the switch below) still uses the shared `~/.nuget/packages`. A custom `RestorePackagesPath` value is kept by `Initialize-OctoLaneUserProps` (reported as `custom-restore-packages-path`), but the octo-tools builds set and clean only `<lane>/.nuget-packages`, so a custom cache is never cleaned
 
 Every lane builds the same `999.0.0` packages, so a shared cache lets one lane pick up another lane's build. Give main its own cache once:
 ```powershell

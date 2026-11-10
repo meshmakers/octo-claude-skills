@@ -4,6 +4,8 @@ Multi-step workflows for typical development scenarios.
 
 > **Agent note:** Whenever Claude or a CI job starts services, ALWAYS use `Start-Octo -nonInteractive $true` and stop them with `Stop-Octo` from a separate invocation. Never use `Invoke-BuildAndStartOcto` from an agent session — it chains into the interactive `Start-Octo` and blocks indefinitely. The interactive `Start-Octo` (no `-nonInteractive`) is only for a human running it directly in a terminal.
 
+> **Which lane:** `-branch` is a lane folder relative to `$rootPath`. With the profile loaded from the `octo-tools` checkout at the workspace root (`$rootPath` = the workspace root - the setup feature environments need), pass `-branch branches/main` to build main; without `-branch` the cmdlets build `$rootPath` itself. Only a profile loaded from inside the main checkout may omit it. The `Invoke-BuildAll` examples below omit it.
+
 ## 1. First-Time Setup
 
 For a brand new development environment:
@@ -75,8 +77,9 @@ Invoke-Build -repositoryPath ./octo-asset-repo-services -configuration DebugL
 New-OctoEnvironment -env ab1234-my-change -repos octo-construction-kit-engine -workItem AB#1234
 Get-OctoAffectedRepos -env ab1234-my-change                     # repos the change reaches
 Add-OctoEnvironmentRepo -env ab1234-my-change -repo octo-asset-repo-services -role consumer -addAffected
-Invoke-BuildEnvironment -env ab1234-my-change -verifyTests      # incremental, own feed and cache
-Remove-OctoEnvironment -env ab1234-my-change                    # after the PR is merged
+Invoke-BuildEnvironment -env ab1234-my-change -verifyTests      # incremental, own feed and cache (Windows: stops the env's dotnet processes first, -skipKill opts out)
+# after the PR is merged: stop the environment's services first (octo-devstack env_remove does that and releases the lease)
+Remove-OctoEnvironment -env ab1234-my-change
 ```
 Never publish feature work into `branches/main/nuget`. An existing worktree is adopted with `Add-OctoEnvironmentRepo -env <env> -path <worktree>` (`-inPlace`: not isolated for plain `dotnet build`/Rider, never deleted by `Remove-OctoEnvironment`).
 

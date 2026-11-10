@@ -141,8 +141,10 @@ dotnet test -c DebugL --filter "FullyQualifiedName!~SystemTests"
 
 **Fix approaches:**
 ```powershell
-# Clear stale 999.0.0 packages from the lane's cache (default path: ~/.nuget/packages)
-Remove-GlobalNuGetPackages -path <lane>/.nuget-packages
+# Clear stale 999.0.0 packages from the cache step 2 found:
+Remove-GlobalNuGetPackages -path <lane>/.nuget-packages   # isolated lane (RestorePackagesPath)
+Remove-GlobalNuGetPackages                                 # lane without it: the shared ~/.nuget/packages
+Remove-GlobalNuGetPackages -path $env:NUGET_PACKAGES       # when NUGET_PACKAGES is set in your session
 
 # Rebuild from the root of the dependency chain
 Invoke-BuildAll -configuration DebugL -excludeFrontend $true
