@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.28.0] — 2026-11-10
+
+### Added
+
+- **`octo`** — operations of asynchronous CK methods (AB#8446, octo-cli + octo-sdk): new commands `GetOperation` (`-id`, `-w`, `-j`) and `ListOperations` (`-m`, `-s`, `-since`, `-a`, `-sk`, `-t`, `-j`) in `SKILL.md` and `references/command-reference.md`. `Dump` now documents `-iad`, the method path for the context's tenant (operation id, progress, `retryAfterSeconds`), the fallback to the job API and the failure codes.
+
 ## [0.27.2] — 2026-11-10
 
 ### Changed
