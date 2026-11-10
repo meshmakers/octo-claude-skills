@@ -70,7 +70,17 @@ If frontend dependencies changed:
 Invoke-Build -repositoryPath ./octo-asset-repo-services -configuration DebugL
 ```
 
-**Changes affect NuGet packages — use Invoke-BuildAll:**
+**Feature work on a work item — use a feature environment instead of building in `branches/main`:**
+```
+New-OctoEnvironment -env ab1234-my-change -repos octo-construction-kit-engine -workItem AB#1234
+Get-OctoAffectedRepos -env ab1234-my-change                     # repos the change reaches
+Add-OctoEnvironmentRepo -env ab1234-my-change -repo octo-asset-repo-services -role consumer -addAffected
+Invoke-BuildEnvironment -env ab1234-my-change -verifyTests      # incremental, own feed and cache
+Remove-OctoEnvironment -env ab1234-my-change                    # after the PR is merged
+```
+Never publish feature work into `branches/main/nuget`. An existing worktree is adopted with `Add-OctoEnvironmentRepo -env <env> -path <worktree>` (`-inPlace`: not isolated for plain `dotnet build`/Rider, never deleted by `Remove-OctoEnvironment`).
+
+**Changes affect NuGet packages in main — use Invoke-BuildAll:**
 ```
 # Build base libraries + services (no frontend) — handles NuGet propagation automatically
 Invoke-BuildAll -configuration DebugL -excludeFrontend $true
@@ -106,7 +116,7 @@ When builds are broken or stale:
 ```
 1. Invoke-KillDotnet                               # Kill stale dotnet processes (Windows)
 2. Remove-BinAndObjFolders                         # Delete all bin/ and obj/ folders
-3. Remove-GlobalNuGetPackages                      # Clear NuGet cache
+3. Remove-GlobalNuGetPackages -path <lane>/.nuget-packages   # Clear the lane's 999.0.0 packages (default path: ~/.nuget/packages for a lane without RestorePackagesPath)
 4. Invoke-BuildAll -configuration DebugL           # Full rebuild from scratch
 ```
 

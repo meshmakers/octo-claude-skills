@@ -1,6 +1,6 @@
 ---
 name: octo-devtools
-description: "Drives OctoMesh local development through the octo-tools PowerShell cmdlets — building repos in dependency order, starting and stopping services (always non-interactively for agents via Start-Octo -nonInteractive $true / Stop-Octo), managing Docker or local kind Kubernetes infrastructure, syncing and branching git repos, NuGet package propagation, certificates, and octo-cli context/auth setup. Use it for any OctoMesh dev-environment or DevOps task. Trigger on build, compile, dotnet build, start services, stop services, Start-Octo, Stop-Octo, Invoke-BuildAll, Invoke-Build, infrastructure, docker compose, kind, Kubernetes, Install-OctoKubernetes, Deploy-OctoOperator, git sync, pull repos, push repos, Get-AllGitRepStatus, branch management, test branch, NuGet packages, clean build, kill dotnet, certificates, clone repos, register context, login local/staging/production, infrastructure backup, or any OctoMesh PowerShell cmdlet name."
+description: "Drives OctoMesh local development through the octo-tools PowerShell cmdlets — building repos in dependency order, starting and stopping services (always non-interactively for agents via Start-Octo -nonInteractive $true / Stop-Octo), managing Docker or local kind Kubernetes infrastructure, syncing and branching git repos, NuGet package propagation, certificates, and octo-cli context/auth setup. Use it for any OctoMesh dev-environment or DevOps task. Trigger on build, compile, feature environment, New-OctoEnvironment, Invoke-BuildEnvironment, lane isolation, dotnet build, start services, stop services, Start-Octo, Stop-Octo, Invoke-BuildAll, Invoke-Build, infrastructure, docker compose, kind, Kubernetes, Install-OctoKubernetes, Deploy-OctoOperator, git sync, pull repos, push repos, Get-AllGitRepStatus, branch management, test branch, NuGet packages, clean build, kill dotnet, certificates, clone repos, register context, login local/staging/production, infrastructure backup, or any OctoMesh PowerShell cmdlet name."
 allowed-tools:
   - "Read(${CLAUDE_PLUGIN_ROOT}/skills/octo-devtools/references/*)"
   - "Bash(bash ${CLAUDE_PLUGIN_ROOT}/skills/octo-devtools/scripts/run_pwsh.sh:*)"
@@ -100,6 +100,23 @@ For common multi-step workflows, read `references/workflows.md` in this skill di
 | `Invoke-BuildAndStartOcto` | Build all + start services — chains into **interactive** `Start-Octo`. **Do NOT use from an agent session** (see safety rules) | **Interactive** |
 | `Invoke-BuildZenonPlug` | Build Zenon plug-in | Mutating (local) |
 
+### Feature environments (one work item, isolated lane)
+
+A feature environment is the lane folder `<rootPath>/wt-<env>` of the octo-claude-pm lane `<env>`: worktrees of the changed repos, its own `nuget/` feed, `.nuget-packages/` cache, CK/blueprint catalogs and `.octo/environment.json`. **Do feature work here, never publish it into `branches/main/nuget`.** Through octo-devstack the same is `env_create` / `build_start kind=env`. Details: octo-tools `readme.md`, "Feature environments".
+
+| Cmdlet | Description | Safety |
+|---|---|---|
+| `New-OctoEnvironment -env <slug> -repos <names> [-workItem AB#..]` | Create `wt-<env>` with feature worktrees, feed and catalogs copied from `branches/main` | Mutating (local) |
+| `Get-OctoEnvironment [-env <slug>]` | List environments; with `-env` the worktree state (dirty, unpushed) | Read-only |
+| `Add-OctoEnvironmentRepo -env <slug> -repo <name> [-role feature\|consumer] [-addAffected]` | Add a worktree; `consumer` = detached at main's commit, `-addAffected` adds the repos between library and service | Mutating (local) |
+| `Add-OctoEnvironmentRepo -env <slug> -path <worktree> [-inPlace]` | Adopt an existing worktree (`wt-<lane>-<repo>` or `<repo>/.claude/worktrees/<name>`): moved into `wt-<env>/<repo>`; with `-inPlace` only recorded | Mutating (local) |
+| `Get-OctoAffectedRepos -env <slug> [-target <repos>]` | Repos a library change reaches (must be rebuilt, else `MissingMethodException` at runtime) | Read-only |
+| `Invoke-BuildEnvironment -env <slug> [-syncMain] [-verifyTests\|-includeTests] [-DryRun]` | Incremental build of the environment's repos into its own feed and cache | Mutating (local) |
+| `Sync-OctoEnvironment -env <slug>` | Take main's new packages and catalog entries (packages built in the environment keep winning) | Mutating (local) |
+| `Remove-OctoEnvironment -env <slug>` | Remove the environment; refuses dirty or unpushed worktrees, keeps branches, no `-force` | **Destructive** |
+
+**In-place caveat:** an `-inPlace` worktree stays where it is. `Invoke-BuildEnvironment` builds it with the environment's feed, cache and catalog, but a plain `dotnet build` or Rider there is **not** isolated, and `Remove-OctoEnvironment` only unregisters it - it is never deleted.
+
 ### Service Management
 
 | Cmdlet | Description | Safety |
@@ -166,7 +183,8 @@ An alternative to the docker-compose infra: MongoDB / RabbitMQ / CrateDB, the CR
 | `Copy-AllNuGetPackages` | Copy NuGet packages to shared folder | Mutating (local) |
 | `Copy-NuGetPackages` | Copy packages from specific directory | Mutating (local) |
 | `Sync-NuGetPackages` | Synchronize NuGet cache | Mutating (local) |
-| `Remove-GlobalNuGetPackages` | Clear global NuGet cache | **Destructive** |
+| `Remove-GlobalNuGetPackages [-path <cache>]` | Clear the `meshmakers.*/999.0.0` packages from a package cache (default `~/.nuget/packages`; a lane's own cache is `<lane>/.nuget-packages`) | **Destructive** |
+| `Initialize-OctoLaneUserProps -branch <lane> [-AddRestorePackagesPath]` | Create or check `<lane>/Octo.User.props`; `-AddRestorePackagesPath` gives an existing lane its own package cache (once for main: `-branch branches/main`) | Mutating (local) |
 
 ### Cleanup & Maintenance
 
@@ -288,13 +306,17 @@ Interactive blocking applies to `Start-Octo` (without `-nonInteractive $true`) a
 - "switch to local" / "login local" → `Invoke-OctoCliLoginLocal` (or `Register-OctoCliContext -Installation local -TenantId <tenant>`)
 - "register context for staging" / "add context for production" → `Register-OctoCliContext -Installation staging-1|prod-1|prod-2 -TenantId <tenant>`
 - "compare CK versions" / "diff ck models between branches" → `Compare-CkVersions <otherBranch>`
+- "start work on AB#1234" / "feature worktree" / "work on a library change" → `New-OctoEnvironment -env ab1234-<desc> -repos <repo> -workItem AB#1234`, then `Invoke-BuildEnvironment -env ab1234-<desc> -verifyTests` (or octo-devstack `env_create` / `build_start kind=env`); never publish feature work into `branches/main/nuget`
+- "which repos does my change affect" → `Get-OctoAffectedRepos -env <env>`
+- "use my existing worktree" → `Add-OctoEnvironmentRepo -env <env> -path <worktree>` (`-inPlace`: see the in-place caveat)
+- "done with the feature" → `Remove-OctoEnvironment -env <env>` after the PR is merged
 - "create test branch" → `New-TestBranch` with user-provided version + description
 
 ### Default configuration
 Always use `-configuration DebugL` for build commands unless the user explicitly specifies a different configuration. This is the standard local development configuration.
 
 ### Build order awareness
-When the user asks to build, default to `Invoke-BuildAll`, narrowing it at most with `-excludeFrontend $true` — do NOT attempt to manually orchestrate `Invoke-Build` calls in dependency order or manually copy NuGet packages. The `Invoke-BuildAll` script already handles the correct build order and NuGet propagation. Only use `Invoke-Build` for a single service repo where no NuGet packages are affected.
+Feature work on a work item is built in its feature environment (`Invoke-BuildEnvironment`), not in `branches/main`. For main itself: when the user asks to build, default to `Invoke-BuildAll`, narrowing it at most with `-excludeFrontend $true` — do NOT attempt to manually orchestrate `Invoke-Build` calls in dependency order or manually copy NuGet packages. The `Invoke-BuildAll` script already handles the correct build order and NuGet propagation. Only use `Invoke-Build` for a single service repo where no NuGet packages are affected.
 
 ### Workflow suggestions
 When the user describes a high-level goal (e.g., "set up a fresh dev environment"), suggest the appropriate multi-step workflow from `references/workflows.md` and offer to execute it step by step.
