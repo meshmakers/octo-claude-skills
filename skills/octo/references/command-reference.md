@@ -1363,6 +1363,36 @@ octo-cli -c RewindRollupWatermark -id <rtId> -t <toBucketEnd>
 | `-id` | `identifier` | Runtime id of the `CkRollupArchive` entity to rewind | Yes |
 | `-t` | `toBucketEnd` | Target bucket-end (exclusive), ISO-8601; truncated down to the bucket boundary | Yes |
 
+### Operations of Asynchronous CK Methods
+
+A CK method declared `execution.mode: async` (e.g. `System.Bot/TenantRepository.Dump-1`, started by `Dump`) returns an operation handle; its state, progress and result are read through `runtime.operations` of the tenant of the context. Both commands write only the answer to standard output (banner and logs, incl. the `-w` progress, go to standard error), so `-j` can be piped to `jq`. The caller who started an operation and tenant administrators can read it; operations are kept 7 days after they ended by default (configurable on the platform). An unknown, expired or foreign id is `OPERATION_NOT_FOUND` (exit -3). Operations cannot be cancelled.
+
+#### GetOperation
+Shows one operation: state, stage, percent, stage parameters (e.g. `jobId`), result (JSON) or error (code + parameters), timestamps. Read only.
+```
+octo-cli -c GetOperation -id <operationId> [-w] [-j]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `operationId` | Id of the operation (printed by the command that started it, e.g. `Dump`) | Yes |
+| `-w` | `wait` | Wait until the operation has succeeded or failed, printing its progress; exit -3 when it failed (Ctrl+C only stops waiting) | No |
+| `-j` | `json` | Output the operation as JSON | No |
+
+#### ListOperations
+Lists operations of asynchronous CK methods, newest first: the caller's own, or every caller's with `-a`. Read only.
+```
+octo-cli -c ListOperations [-m <methodId>] [-s <state>] [-since <time>] [-a] [-sk <n>] [-t <n>] [-j]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-m` | `methodId` | Only operations of this method, e.g. `System.Bot/TenantRepository.Dump-1` | No |
+| `-s` | `state` | `Accepted`, `Running`, `Succeeded` or `Failed` | No |
+| `-since` | `since` | Only operations accepted at or after this time (ISO 8601, UTC without offset) | No |
+| `-a` | `allOwners` | Every caller's operations (tenant administrators; otherwise `OPERATION_QUERY_REFUSED`) | No |
+| `-sk` | `skip` | Number of operations to skip (default 0) | No |
+| `-t` | `take` | Page size 1–200 (default 50) | No |
+| `-j` | `json` | Output the page as JSON | No |
+
 ### Fixup Scripts
 
 #### CreateFixupScript
@@ -1384,14 +1414,19 @@ octo-cli -c CreateFixupScript -e <enabled> -n <name> -f <file> -o <orderNumber> 
 ### Tenant Backup
 
 #### Dump
-Dumps a tenant to a tar.gz file.
+Dumps a tenant to a file and downloads it; always waits for the dump.
 ```
-octo-cli -c Dump -tid <tenantId> -f <file>
+octo-cli -c Dump -tid <tenantId> -f <file> [-iad]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-tid` | `tenantId` | Tenant ID | Yes |
-| `-f` | `file` | Backup file (*.tar.gz) | Yes |
+| `-f` | `file` | Backup file (`*.tar.gz`, or `*.octobak.zip` with `-iad`) | Yes |
+| `-iad` | `include-archive-data` | Also bundle the CrateDB archive rows (larger `*.octobak.zip`) | No |
+
+- **Tenant of the context** (`-tid` = the context's tenant): runs the asynchronous CK method `System.Bot/TenantRepository.Dump-1` — prints `Dump operation '<operationId>' accepted`, then one progress line per change (state, stage `QUEUED` / `DUMPING_DATABASE` / `EXPORTING_ARCHIVES` / `STORING_ARTIFACT`, percent, `jobId`), waits `retryAfterSeconds` between reads, then downloads the result's job. Re-read later with `GetOperation -id <operationId>`.
+- **Fallback to the job API** (as older versions): when the asset repository rejects the method document (no System.Bot 3.7.0 / no operation handles) or no handler is live (`METHOD_HANDLER_NOT_AVAILABLE`), and always for another tenant (e.g. a child tenant from the parent's context — the method runs only with a token of its own tenant).
+- **Failures** (exit -3, nothing downloaded): `DUMP_FAILED` (`jobId`, maybe `reason=another-dump-running`), `DUMP_INTERRUPTED`, `METHOD_OUTCOME_UNKNOWN` (`reason=handler-lost`: the bot service stopped; start a new dump), `METHOD_FORBIDDEN` (needs `TenantManagement`).
 
 #### Restore
 Restores a tenant from a dump file. To wait for the job to complete, use `-w`.
