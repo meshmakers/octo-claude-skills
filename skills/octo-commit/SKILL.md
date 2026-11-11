@@ -369,7 +369,8 @@ Without `octo-claude-pm` (GitHub repos; `$repo_slug` as for `gh pr create`):
 - CodeRabbit (`coderabbitai[bot]`) reviews every non-draft PR automatically; if no review starts, comment `@coderabbitai review`.
 - If the *Title check* in the pre-merge checks of CodeRabbit's PR comment failed, correct the title with `gh pr edit <n> --repo "$repo_slug" --title "AB#<id> <Type>: …"` — the `CodeRabbit` status can stay green while the title check fails.
 - Check every finding against the code and the work item instead of applying it blindly; fix the valid ones, decline the rest with a reason, and answer each thread.
-- **Do not merge the PR yourself** (no `gh pr merge`, no `--admin`, no `--auto`, no approving): report the PR as ready and leave testing and merging to the developer or a maintainer of the repository.
+- Report the PR as ready only once CodeRabbit's review of the current head commit is complete (no pending `CodeRabbit` check, `gh pr checks <n> --repo "$repo_slug"`), the title check passed and every finding is answered.
+- **Do not merge the PR yourself** (no `gh pr merge`, no `--admin`, no `--auto`, no approving): leave testing and merging to the developer or a maintainer of the repository.
 
 ---
 
