@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.28.2] — 2026-11-11
+
+### Changed
+
+- **`pipeline-expert`** — `McpToolCall@1` documents the new optional `executionIdArgument` (AB#8703, octo-mesh-adapter): it writes the id of the current pipeline execution into the named tool argument (e.g. `runRef` of `knowledge_upsert_page`), replacing a value from `argumentsPath`; in a pipeline started by `ToPipelineDataEvent@1` it is the called pipeline's id. Table, example and behaviour in `references/node-reference-mesh.md`, one line in `SKILL.md`.
+
 ## [0.28.1] — 2026-11-11
 
 ### Fixed
