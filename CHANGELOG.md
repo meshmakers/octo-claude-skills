@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.28.3] — 2026-11-11
+
+### Added
+
+- **`CLAUDE.md`** — section "Skills shipped as knowledge pages" (AB#8490): `octo-app-builder` and `pipeline-expert` are cut into knowledge pages of the opt-in blueprint System.Ai.Builder by the generator `tools/SkillPages` of octo-ai-services. Documents what that means for skill authors (headings are page boundaries, a section must fit one page of 12,000 characters, relative links become page links, no machine-local paths or internal host names) and the sync procedure after a skill change. No skill content changed.
+
 ## [0.28.2] — 2026-11-11
 
 ### Changed

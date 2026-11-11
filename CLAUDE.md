@@ -95,6 +95,17 @@ bash skills/octo/scripts/run_python.sh scripts/validate_skill_frontmatter.py  # 
 - **Progressive drill-down**: exploration workflows go broad-to-narrow: models → types in model → type detail → instances → instance detail.
 - **Accuracy**: every command, flag, parameter, node property, port, and version documented in a skill must be verified against the OctoMesh source repos or read-only `octo-cli <Command> --help` output before writing. Never document from memory.
 
+## Skills shipped as knowledge pages (AB#8490)
+
+`octo-app-builder` and `pipeline-expert` (SKILL.md and `references/`) are also shipped to tenants as knowledge pages of the opt-in OctoMesh blueprint **System.Ai.Builder**. A generator in the OctoMesh AI services repository (`octo-ai-services`, `tools/SkillPages`, docs `docs/skill-pages.md`) cuts them at level-2 headings (large sections at level-3 headings) into at most 25 pages of at most 12,000 characters each, following a curated page plan. This repository stays the source; the pages are never edited by hand.
+
+What this means when you change these two skills:
+
+- **Headings are page boundaries.** A new or renamed `##` heading (or `###` heading inside a section the plan splits) makes the generator fail until the page plan places or excludes it. Prefer editing inside existing sections; when you restructure, say so in the PR so the page plan is updated in the same sync.
+- **Size.** A section that grows past one page (12,000 characters with title and summary) cannot be placed; give long node descriptions `###`/`####` subheadings. `AnthropicAiQuery@1` (about 13,000 characters, no subheadings) is excluded for that reason today.
+- **Links.** Link reference files relatively (`[text](references/x.md)` or `` `references/x.md` ``); the generator turns such links into page links. Absolute paths and machine-local paths (`/Users/<name>/...`) do not belong in a skill; home paths are replaced, internal host names and credential-like text make the generator refuse the page.
+- **Sync.** After the skill PR is merged, run the generator in `octo-ai-services` against `origin/main` of this repository and open a PR there (procedure in its `docs/skill-pages.md`). Unchanged pages stay byte-identical, changed pages get a new version that cites this repository's file and commit.
+
 ## Hooks
 
 `hooks/hooks.json` defines `SessionStart` hooks that pre-create the Python venv (so the first real script invocation is fast) and probe the PowerShell version. Hooks are silent on failure (`|| true`).
