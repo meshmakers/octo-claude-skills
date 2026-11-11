@@ -79,16 +79,21 @@ Invoke-BuildAll -configuration DebugL -excludeFrontend $true
 
 1. Each repo builds with `dotnet build -c DebugL`
 2. Build outputs `.nupkg` files to `bin/DebugL/` directories
-3. `Copy-NuGetPackages` copies `.nupkg` files from a repo's output to `./nuget/`
-4. Downstream repos' `NuGet.Config` resolves from `../nuget/` (relative to the repo)
-5. The global NuGet cache at `~/.nuget/packages/` caches resolved packages
+3. `Copy-NuGetPackages` copies `.nupkg` files from a repo's output to the lane feed `<lane>/nuget/`
+4. In DebugL each repo's `Directory.Build.props` adds `$(OctoRepoRootPath)../nuget` - the lane feed next to the repo in the plain `<lane>/<repo>` layout that lanes and feature environments use - to `<RestoreSources>`; repos that declare their own `RestoreSources` keep their other feeds too (e.g. Telerik in octo-report-services). Requirement: no `Directory.Build.props` in any folder above the lane (`branches/main`, `wt-<env>`, the workspace root or higher). Each repo looks for one in every ancestor (`GetPathOfFileAbove`); if it finds one, `OctoRepoRootPath` becomes that folder, `../nuget` points next to it and the lane's `Octo.User.props` is not imported
+5. Packages are extracted into the lane's package cache. A lane is isolated when `<lane>/Octo.User.props` declares `RestorePackagesPath` with the standard value `$(MSBuildThisFileDirectory).nuget-packages` - the cache is then `<lane>/.nuget-packages`, also for Rider and plain `dotnet build`. A lane without it (main before the switch below) still uses the shared `~/.nuget/packages`. A custom `RestorePackagesPath` value is kept by `Initialize-OctoLaneUserProps` (reported as `custom-restore-packages-path`), but the octo-tools builds set and clean only `<lane>/.nuget-packages`, so a custom cache is never cleaned
+
+Every lane builds the same `999.0.0` packages, so a shared cache lets one lane pick up another lane's build. Give main its own cache once:
+```powershell
+Initialize-OctoLaneUserProps -branch branches/main -AddRestorePackagesPath   # adds the line, keeps the rest, writes a .bak
+```
+The first restore afterwards extracts every package into `branches/main/.nuget-packages`. Feature environments (`New-OctoEnvironment`) always have the line.
 
 ### Stale NuGet Cache Issues
-If builds behave unexpectedly after changes, the global NuGet cache may be stale:
+If builds behave unexpectedly after changes, the lane's package cache may be stale. `Invoke-BuildAll` (DebugL) clears the `meshmakers.*/999.0.0` folders of every cache the lane restores into at the start: an isolated lane only `<lane>/.nuget-packages`, a legacy lane the global cache. `Invoke-BuildRange` purges only the packages it rebuilt. By hand:
 ```powershell
-Remove-GlobalNuGetPackages  # Clears Meshmakers packages from global cache
+Remove-GlobalNuGetPackages -path <lane>/.nuget-packages   # default path: ~/.nuget/packages
 ```
-`Invoke-BuildAll` does this automatically at the start.
 
 ## Building with dotnet Directly
 

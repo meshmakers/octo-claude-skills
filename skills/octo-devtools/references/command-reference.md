@@ -309,20 +309,63 @@ Synchronize NuGet package cache.
 - **Safety:** Mutating (local)
 
 ### `Remove-GlobalNuGetPackages`
-Remove the locally-built `999.0.0` OctoMesh packages (`meshmakers.*`) from the global NuGet cache (`~/.nuget/packages/`). Forces a clean restore of local packages on the next build.
-- No parameters — operates on the fixed global cache path; there is no branch filter
-- **Safety:** Destructive — clears local `999.0.0` packages from the global NuGet cache
+Remove the locally-built `999.0.0` OctoMesh packages (`meshmakers.*`) from a NuGet package cache. Forces a clean restore of local packages on the next build.
+- `-path` (string): the cache, default `~/.nuget/packages`. A lane whose `<lane>/Octo.User.props` declares `RestorePackagesPath` (every feature environment; main after the switch below) restores into `<lane>/.nuget-packages` - pass that path
+- `Invoke-BuildAll` (DebugL) cleans the right caches itself: an isolated lane only its own cache, never the global one
+- **Safety:** Destructive — clears local `999.0.0` packages from the given cache
+
+### `Initialize-OctoLaneUserProps`
+Create or check the per-checkout, uncommitted `<lane>/Octo.User.props` (imported by every repo's `Directory.Build.props`). Its `RestorePackagesPath=<lane>/.nuget-packages` gives the lane its own package cache and makes it isolated.
+- `-branch` (string): the lane, relative to `$rootPath` (e.g. `branches/main`)
+- `-AddRestorePackagesPath` (switch): add the line to an existing file that lacks it; keeps the rest of the file, writes `Octo.User.props.bak`; idempotent. Once for main: `Initialize-OctoLaneUserProps -branch branches/main -AddRestorePackagesPath` - the first restore afterwards extracts every package into `branches/main/.nuget-packages`
+- `-WhatIf`, `-Json`
+- **Safety:** Mutating (local)
+
+## Feature Environments
+
+One environment per work item at `<rootPath>/wt-<env>` (the octo-claude-pm lane folder): feature worktrees, own feed, cache, catalogs and `.octo/environment.json`. All cmdlets take `-env` and `-Json`. Full description: octo-tools `readme.md`, "Feature environments".
+
+### `New-OctoEnvironment`
+- `-env` (string): slug or lane name (lower case, digits, `-`), e.g. `ab8625-enum-null`
+- `-repos` (string[]): repos to change (feature worktrees on `<user>/AB#<id>_<desc>`)
+- `-workItem`, `-branchName`, `-owner`, `-addAffected` (adds every transitive consumer), `-Detailed`, `-WhatIf`
+- **Safety:** Mutating (local); refuses a name whose `wt-<name>` exists without a manifest and a folder inside `branches/main`
+
+### `Add-OctoEnvironmentRepo`
+- `-repo <name> [-role feature|consumer] [-addAffected]`: new worktree; consumers are detached at `branches/main/<repo>`'s commit (read-only by convention); `-addAffected` adds the repos on the path from the feature repos to `-repo`
+- `-path <worktree> [-inPlace]`: adopt an existing worktree. Default `git worktree move` into `wt-<env>/<repo>` (uncommitted work moves along; refused when locked or a process runs from it). `-inPlace` only records it: built with the environment's feed, cache and catalog by `Invoke-BuildEnvironment`, but a plain `dotnet build`/Rider there is not isolated and `Remove-OctoEnvironment` never deletes it
+- **Safety:** Mutating (local)
+
+### `Get-OctoEnvironment` / `Get-OctoAffectedRepos`
+- `Get-OctoEnvironment [-env]`: list; with `-env` the state of every worktree
+- `Get-OctoAffectedRepos -env [-target <repos>]`: transitive consumers of the feature repos from the csproj package graph
+- **Safety:** Read-only
+
+### `Invoke-BuildEnvironment`
+Optional sync, then an incremental `Invoke-BuildRange` over the environment's repos into `<env>/nuget` and `<env>/.nuget-packages`.
+- `-syncMain`, `-verifyTests` | `-includeTests` (use one before every hand-off), `-EventsFile`, `-skipKill`, `-DryRun`, `-Detailed`
+- **Safety:** Mutating (local)
+
+### `Sync-OctoEnvironment`
+Refresh the environment's snapshot of main's feed and catalogs; packages built in the environment keep winning. `-WhatIf`, `-Detailed`.
+- **Safety:** Mutating (local)
+
+### `Remove-OctoEnvironment`
+Remove the worktrees and what the environment owns. Refuses when a worktree is dirty or has unpushed commits (no `-force`); feature branches are kept; in-place worktrees are only unregistered. `-WhatIf`.
+- **Safety:** Destructive
 
 ## Cleanup & Maintenance
 
 ### `Invoke-KillDotnet`
-Kill all running dotnet processes.
-- No parameters
-- **Safety:** Mutating — Windows only, kills running processes
+Stop dotnet processes that would lock build output.
+- `-branchRootPath` (string): lane mode - only dotnet processes whose working directory, entry assembly or (Windows) loaded module lies under the lane folder; refused unless the folder holds `Octo.User.props` or an `octo-*`/`mm-*` folder. Windows stops them, macOS/Linux only lists them. `-additionalRoots` adds further worktrees to the same scope (used by `Invoke-BuildEnvironment`)
+- Without `-branchRootPath`: `dotnet build-server shutdown` and every dotnet process (Windows only, no-op elsewhere) - this also hits other lanes and feature environments, so pass the lane
+- `-Json`
+- **Safety:** Mutating — stops running processes on Windows
 
 ### `Remove-BinAndObjFolders`
 Delete all `bin/` and `obj/` folders recursively.
-- `-path` (string): Root path to clean (defaults to workspace root)
+- `-path` (string): Root path to clean (default `.` - the current folder). Pass the lane: `(Join-Path $rootPath 'branches/main')` with a workspace-root profile, `$rootPath` with a profile loaded from inside the main checkout; never the workspace root, which holds every lane and feature environment
 - **Safety:** Destructive — removes all build output folders
 
 ## Authentication / Context (octo-cli)

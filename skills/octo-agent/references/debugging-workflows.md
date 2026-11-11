@@ -134,14 +134,20 @@ dotnet test -c DebugL --filter "FullyQualifiedName!~SystemTests"
 **Symptom:** `dotnet build` fails with "unable to find package" or version mismatch errors.
 
 **Diagnosis:**
-1. Check `./nuget/` folder for expected packages
-2. Check `~/.nuget/packages/` global cache for stale versions
+1. Check the lane feed `<lane>/nuget/` for expected packages
+2. Check the lane's package cache for stale `999.0.0` versions: `<lane>/.nuget-packages/` when `<lane>/Octo.User.props` declares `RestorePackagesPath` (every feature environment), otherwise the shared `~/.nuget/packages/`
 3. Verify upstream repos were built and packages copied
+4. A repo whose `Directory.Build.props` declares its own `RestoreSources` restores from `<repo>/../nuget` plus its own feeds - check that `../nuget` is the lane you expect
 
 **Fix approaches:**
 ```powershell
-# Clear stale cache
-Remove-GlobalNuGetPackages
+# Clear stale 999.0.0 packages from the cache step 2 found:
+Remove-GlobalNuGetPackages -path <lane>/.nuget-packages   # isolated lane (RestorePackagesPath)
+Remove-GlobalNuGetPackages                                 # lane without it: the shared ~/.nuget/packages
+Remove-GlobalNuGetPackages -path $env:NUGET_PACKAGES       # when NUGET_PACKAGES is set in your session
+# Custom RestorePackagesPath in <lane>/Octo.User.props: pass that folder ($(MSBuildThisFileDirectory) = the lane folder);
+# octo-tools never cleans a custom cache itself
+Remove-GlobalNuGetPackages -path <value of RestorePackagesPath>
 
 # Rebuild from the root of the dependency chain
 Invoke-BuildAll -configuration DebugL -excludeFrontend $true
