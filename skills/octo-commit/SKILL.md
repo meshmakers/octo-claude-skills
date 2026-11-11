@@ -1,6 +1,6 @@
 ---
 name: octo-commit
-description: "Structured workflow for committing finished work across OctoMesh repositories: scans repos for changes, resolves or creates the Azure DevOps work item, builds the AB# commit message and PR title (AB#<id> <Fix|New|Chore|Refactor|Test|Docs>: …), verifies the build/tests, and optionally opens a PR, sees it through the CodeRabbit review (validity check of every finding, answered threads) and merges it after CodeRabbit's approval and green checks or requests a CoreDev review. Enforces the review checkpoint — never pushes or opens a PR without explicit user approval in the current session. Trigger on: commit, push, PR, pull request, PR title, merge, finish work, done, ship it, wrap up, AB#, work item, CodeRabbit, title check, ready to commit, close task, create branch, feature branch, feat/, dev/, Azure DevOps."
+description: "Structured workflow for committing finished work across OctoMesh repositories: scans repos for changes, resolves or creates the Azure DevOps work item, builds the AB# commit message and PR title (AB#<id> <Fix|New|Chore|Refactor|Test|Docs>: …), verifies the build/tests, and optionally opens a PR and hands it over for review: with octo-claude-pm installed its agent-operating-rules decide the CodeRabbit review rounds and the merge queue; the developer merges, never the agent. Enforces the review checkpoint — never pushes or opens a PR without explicit user approval in the current session. Trigger on: commit, push, PR, pull request, PR title, merge, finish work, done, ship it, wrap up, AB#, work item, CodeRabbit, title check, ready to commit, close task, create branch, feature branch, feat/, dev/, Azure DevOps."
 allowed-tools:
   - "Bash(git status:*)"
   - "Bash(git diff:*)"
@@ -92,9 +92,11 @@ digraph commit_flow {
     approve [label="7. REVIEW CHECKPOINT: get explicit approval"];
     execute [label="8. Commit and push"];
     pr [label="9. Create PR"];
+    review [label="10. Review; developer merges"];
 
     scan -> context -> claudemd -> workitem -> strategy -> verify -> approve -> execute;
     execute -> pr [label="if feature branch"];
+    pr -> review;
 }
 ```
 
@@ -360,23 +362,14 @@ az repos pr create \
 
 Report the PR URL(s) to the user when done.
 
-**See the PR through the CodeRabbit review** (GitHub repos; `$repo_slug` as for `gh pr create`). CodeRabbit (`coderabbitai[bot]`) reviews every non-draft PR automatically; if no review starts, comment `@coderabbitai review`. If the plugin `octo-claude-pm` is installed, its `agent-operating-rules` §2 apply in full.
+**After the PR is open: review and merge.** If the plugin `octo-claude-pm` is installed, its `agent-operating-rules` §2.3 apply and this skill does not restate them: the CodeRabbit review rounds, which findings to collect and how to answer them, when a PR is ready, queuing it with `request_merge`, asking the developer to test it, and the CoreDev review for larger changes. The developer merges, never the agent.
 
-1. Read CodeRabbit's PR comment (`gh pr view <n> --repo "$repo_slug" --comments`). Its **pre-merge checks** table contains the *Title check*. If it failed, correct the title with `gh pr edit <n> --repo "$repo_slug" --title "…"` — the GitHub status check `CodeRabbit` can stay green while the title check fails, so do not rely on the status alone.
-2. Go through every review finding (inline comments, all pages: `gh api --paginate "repos/$repo_slug/pulls/<n>/comments"`). **Check each finding for validity instead of applying it blindly**: read the code it points at and the work item's acceptance criteria — is the problem real, is it in scope, does the suggested change keep the tests, security checks and conventions intact? CodeRabbit is often right and sometimes wrong (outdated API knowledge, a rule it does not know, a suggestion that weakens a test).
-   - **Valid** → fix it on the branch with a test where it applies, run the checks, commit and push (push approval as in Step 7).
-   - **Not valid or out of scope** → leave the code as it is.
-3. **Answer every thread** — never before the fix is on the PR: `Fixed in <commit>: <what changed>` or `Declined: <reason>` (reply with `gh api "repos/$repo_slug/pulls/<n>/comments/<comment-id>/replies" -f body="…"`). A finding that needs a product or design decision goes to the developer, not into code. Then comment `@coderabbitai resolve` on the PR so CodeRabbit resolves its answered threads and re-evaluates; it approves once its findings are resolved and its pre-merge checks pass. Allow at most three review rounds, then stop and report.
-4. **Merge after CodeRabbit's approval and green checks.** The PR may be merged when CodeRabbit's approval is the current review decision and everything is green:
-   ```bash
-   gh pr view <n> --repo "$repo_slug" --json reviewDecision,mergeStateStatus   # APPROVED, CLEAN
-   gh pr checks <n> --repo "$repo_slug"                                          # every check pass
-   gh pr merge <n> --repo "$repo_slug" --squash                                  # or --rebase, as the repo allows
-   ```
-   Also required: every finding was answered (step 3), and for a change across repositories the upstream repos are merged and their packages published first. Never `--admin` (ruleset bypass) and never `--auto`; never merge another person's PR, never approve a PR yourself. Azure DevOps PRs are completed by a maintainer.
-5. **Request a CoreDev review for larger changes or when unsure** — new architecture, many files or repositories, a shared contract, security, data migrations, an open design question, or any doubt: do not merge; ask a maintainer of the repository for a review (`gh pr edit <n> --repo "$repo_slug" --add-reviewer <login>`) and leave the merge to them. A developer can ask for that review on any PR.
+Without `octo-claude-pm` (GitHub repos; `$repo_slug` as for `gh pr create`):
 
-If the plugin `octo-claude-pm` is installed, its merge guard checks steps 4 and 5 on GitHub before `gh pr merge` runs, and its `agent-operating-rules` §2.3 decide who merges.
+- CodeRabbit (`coderabbitai[bot]`) reviews every non-draft PR automatically; if no review starts, comment `@coderabbitai review`.
+- If the *Title check* in the pre-merge checks of CodeRabbit's PR comment failed, correct the title with `gh pr edit <n> --repo "$repo_slug" --title "AB#<id> <Type>: …"` — the `CodeRabbit` status can stay green while the title check fails.
+- Check every finding against the code and the work item instead of applying it blindly; fix the valid ones, decline the rest with a reason, and answer each thread.
+- **Do not merge the PR yourself** (no `gh pr merge`, no `--admin`, no `--auto`, no approving): report the PR as ready and leave testing and merging to the developer or a maintainer of the repository.
 
 ---
 
@@ -409,8 +402,7 @@ See `${CLAUDE_PLUGIN_ROOT}/skills/octo-commit/references/repo-remotes.md` for th
 | Wrong WIQL command | Use `az boards query --wiql`, NOT `az boards work-item query` |
 | Wrong or missing type (`Change`, `Feat`, `AB#123: …`) | Exactly one of `Fix`, `New`, `Chore`, `Refactor`, `Test`, `Docs` — CodeRabbit's title check flags anything else |
 | Applying CodeRabbit findings blindly | Check each against the code and the work item; fix the valid ones, decline the rest with a reason |
-| Merging before CodeRabbit approved or with a check pending | `reviewDecision` `APPROVED`, `mergeStateStatus` `CLEAN`, `gh pr checks` all pass — otherwise wait, fix, or request a CoreDev review |
-| Merging with `--admin` | Never; the ruleset approval is the gate |
+| Merging the PR yourself (`gh pr merge`, `--admin`, `--auto`) | Never; the developer tests and merges — with `octo-claude-pm` installed, follow its `agent-operating-rules` §2.3 |
 | Trusting the green `CodeRabbit` status | Read the pre-merge checks in CodeRabbit's PR comment; a failed title check can leave the status green |
 | Creating a new Issue | Issue is legacy — create a User Story under a Feature |
 | Committing against an Epic or Feature | Reference a User Story / Bug / Task; create one under the Feature if needed |
