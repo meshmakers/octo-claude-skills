@@ -910,6 +910,7 @@ Calls **one allowlisted tool** on the tenant's OctoMesh MCP service, determinist
 | `toolName` | string | one of | The tool to call. Exactly one of `toolName` / `toolNamePath` |
 | `toolNamePath` | string | one of | JSONPath to a string naming the tool (e.g. chosen earlier). Still checked against `allowedTools` |
 | `argumentsPath` | string | optional | JSONPath to a JSON **object** sent as the tool arguments. Unset = `{}` |
+| `executionIdArgument` | string | optional | Name of a top-level tool argument that receives the **id of the current pipeline execution** (GUID string), e.g. `runRef` for `knowledge_upsert_page`, so the page version references the exact run. Replaces an argument of the same name from `argumentsPath`. An empty name or one with leading/trailing spaces is a configuration error |
 | `aiConfigurationName` | string | optional | `AiConfiguration` whose `mcpServerUrl` is used (recommended; needs a `Uses` association) |
 | `mcpServerUrl` | string | optional | Fallback URL, e.g. `https://localhost:5017` locally. The tenant is appended: `{url}/{tenantId}/mcp` |
 | `mcpServiceAccountConfigName` | string | **required** | `ServiceAccountConfiguration` the call runs as (e.g. `knowledge-curator`) |
@@ -933,10 +934,12 @@ Calls **one allowlisted tool** on the tenant's OctoMesh MCP service, determinist
   argumentsPath: $.page               # passed unchanged: keys must match the tool's parameters (slug, title, sections)
   aiConfigurationName: AiConfig       # supplies McpServerUrl (Uses association)
   mcpServiceAccountConfigName: knowledge-curator
+  executionIdArgument: runRef         # the page version records this execution's id
   targetPath: $.write
 ```
 
 Behaviour:
+- **Execution id:** `executionIdArgument` writes the id of the execution that runs the node. Every pipeline start has its own id, so in a pipeline started by `ToPipelineDataEvent@1` (e.g. a dedicated write pipeline) it is the called pipeline's id, not the caller's. Without an execution id the argument is sent unchanged and a warning is logged.
 - **Before any network call** the node checks the configuration, the tool name against `allowedTools` (exact, case-sensitive), that the arguments are an object and that a URL resolves. A tool outside the list fails with *"MCP tool 'x' is not in this node's allowedTools [...]. The tool was not called."*
 - **Fail-closed identity:** without a token for `mcpServiceAccountConfigName` the tool is never called — MCP is never called unauthenticated. The missing token counts as a call failure: with `continueOnError: false` the node fails; with `continueOnError: true` the pipeline continues **without the write**, so later nodes run although nothing was written. Credentials stay in the `ServiceAccountConfiguration` — never put a token or secret into the pipeline YAML. What the account may write is decided by its roles and the MCP service, not by the pipeline.
 - **Errors:** a protocol error fails with *"MCP error {code} on tool 'x': {message}"* (e.g. `-32602` for unknown tool or invalid parameters); a tool that returns an error result fails with *"MCP tool 'x' returned an error: {text}"* (e.g. a content-guard refusal). Error messages never contain the token.
