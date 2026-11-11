@@ -357,9 +357,11 @@ Remove the worktrees and what the environment owns. Refuses when a worktree is d
 ## Cleanup & Maintenance
 
 ### `Invoke-KillDotnet`
-Kill all running dotnet processes.
-- No parameters
-- **Safety:** Mutating — Windows only, kills running processes
+Stop dotnet processes that would lock build output.
+- `-branchRootPath` (string): lane mode - only dotnet processes whose working directory, entry assembly or (Windows) loaded module lies under the lane folder; refused unless the folder holds `Octo.User.props` or an `octo-*`/`mm-*` folder. Windows stops them, macOS/Linux only lists them. `-additionalRoots` adds further worktrees to the same scope (used by `Invoke-BuildEnvironment`)
+- Without `-branchRootPath`: `dotnet build-server shutdown` and every dotnet process (Windows only, no-op elsewhere) - this also hits other lanes and feature environments, so pass the lane
+- `-Json`
+- **Safety:** Mutating — stops running processes on Windows
 
 ### `Remove-BinAndObjFolders`
 Delete all `bin/` and `obj/` folders recursively.

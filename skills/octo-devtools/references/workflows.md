@@ -117,7 +117,7 @@ Invoke-BuildAll -configuration DebugL -excludeFrontend $true
 When builds are broken or stale:
 
 ```
-1. Invoke-KillDotnet                               # Kill stale dotnet processes (Windows)
+1. Invoke-KillDotnet -branchRootPath (Join-Path $rootPath 'branches/main')   # this lane's dotnet processes only (Windows stops them; main-checkout profile: $rootPath)
 2. Remove-BinAndObjFolders -path (Join-Path $rootPath 'branches/main')   # bin/ and obj/ of this lane only (default: current folder; main-checkout profile: -path $rootPath)
 3. Remove-GlobalNuGetPackages -path <lane>/.nuget-packages   # Clear the lane's 999.0.0 packages (default path: ~/.nuget/packages for a lane without RestorePackagesPath)
 4. Invoke-BuildAll -configuration DebugL           # Full rebuild from scratch

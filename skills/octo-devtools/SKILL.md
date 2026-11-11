@@ -194,7 +194,7 @@ An alternative to the docker-compose infra: MongoDB / RabbitMQ / CrateDB, the CR
 
 | Cmdlet | Description | Safety |
 |---|---|---|
-| `Invoke-KillDotnet` | Kill all dotnet processes | Mutating |
+| `Invoke-KillDotnet [-branchRootPath <lane>]` | With `-branchRootPath`: only the lane's dotnet processes (Windows stops them, macOS/Linux lists them). Without it: every dotnet process (Windows only) - also feature environments' services and builds, so always pass the lane | Mutating |
 | `Remove-BinAndObjFolders [-path <folder>]` | Delete all bin/ and obj/ folders below `-path` (default: the current folder) - pass the lane | **Destructive** |
 
 ### Authentication / Context (octo-cli)
