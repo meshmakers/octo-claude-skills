@@ -6,7 +6,7 @@ All notable changes to the octo-claude-skills plugin. Format loosely follows [Ke
 
 ### Fixed
 
-- **`octo-commit`** — no longer merges a PR (AB#8768). The CodeRabbit loop of Step 9 (agent merge with `gh pr merge --squash`, one push per finding, inline comments only, re-review with `@coderabbitai resolve`) is replaced by a pointer: with `octo-claude-pm` installed its `agent-operating-rules` §2.3 decide the review rounds, the merge queue (`request_merge`) and the developer's test and merge. Without it a short fallback remains (title check, judge every finding, answer every thread, report ready only after the review of the head commit) that leaves the merge to the developer or a maintainer. Frontmatter description, Common Mistakes and the `README.md` skill table updated accordingly.
+- **`octo-commit`** — no longer merges a PR (AB#8768). The CodeRabbit loop of Step 9 (agent merge with `gh pr merge --squash`, one push per finding, inline comments only, re-review with `@coderabbitai resolve`) is replaced by a pointer: with `octo-claude-pm` installed its `agent-operating-rules` §2.3 decide the review rounds, the merge queue (`request_merge`) and the developer's test and merge. Without it a short fallback remains (title check, judge every finding, answer every thread, upstream PRs of a cross-repo change merged and their packages published first with the merge order reported, report ready only after the review of the head commit) that leaves the merge to the developer or a maintainer. Frontmatter description, Common Mistakes and the `README.md` skill table updated accordingly.
 
 ## [0.28.0] — 2026-11-10
 
