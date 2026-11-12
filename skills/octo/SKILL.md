@@ -201,11 +201,18 @@ Archive lifecycle mutations require the **StreamDataAdminRole**.
 | `UnfreezeRollupArchive` | Clear FrozenUntil (`-id`, `-ag` accept gaps) | Mutating |
 | `RewindRollupWatermark` | Rewind a rollup's watermark to re-aggregate (`-id`, `-t`) | Destructive |
 
+### Operations of Asynchronous CK Methods
+
+| Command | Purpose | Type |
+|---|---|---|
+| `GetOperation` | Show an operation (e.g. a dump): state, progress, result or error (`-id`, `-w` wait until final, `-j` JSON) | Read-only |
+| `ListOperations` | List the caller's operations, newest first (`-m` method, `-s` state, `--since`, `-a` all callers for tenant admins, `-sk`/`-t` paging, `-j`) | Read-only |
+
 ### Bot Services
 
 | Command | Purpose | Type |
 |---|---|---|
-| `Dump` | Dump a tenant to a `.tar.gz` file (`-tid`, `-f`) | Read-only |
+| `Dump` | Dump a tenant to a `.tar.gz` file (`-tid`, `-f`, `-iad` archive data → `.octobak.zip`); for the context's tenant it runs the async method `System.Bot/TenantRepository.Dump-1` and prints operation id + progress, else (or without the method) the job API | Read-only |
 | `Restore` | Restore a tenant from a dump (`-tid`, `-db`, `-f`, `-w` to wait) | Mutating |
 | `RunFixupScripts` | Run fixup scripts for the current tenant (`-w` to wait) | Mutating |
 

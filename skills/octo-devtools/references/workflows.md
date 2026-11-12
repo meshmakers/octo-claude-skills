@@ -4,6 +4,8 @@ Multi-step workflows for typical development scenarios.
 
 > **Agent note:** Whenever Claude or a CI job starts services, ALWAYS use `Start-Octo -nonInteractive $true` and stop them with `Stop-Octo` from a separate invocation. Never use `Invoke-BuildAndStartOcto` from an agent session — it chains into the interactive `Start-Octo` and blocks indefinitely. The interactive `Start-Octo` (no `-nonInteractive`) is only for a human running it directly in a terminal.
 
+> **Which lane:** `-branch` is a lane folder relative to `$rootPath`. With the profile loaded from the `octo-tools` checkout at the workspace root (`$rootPath` = the workspace root - the setup feature environments need), pass `-branch branches/main` to build main; without `-branch` the cmdlets build `$rootPath` itself. With a profile loaded from inside the main checkout (`$rootPath` = `branches/main`) omit `-branch` and use `-path $rootPath` for `Remove-BinAndObjFolders` - `branches/main` would point at a nested folder there. The same applies to `Sync-AllGitRepos -branch`. The `Invoke-BuildAll` / `Sync-AllGitRepos` examples below omit it.
+
 ## 1. First-Time Setup
 
 For a brand new development environment:
@@ -70,7 +72,18 @@ If frontend dependencies changed:
 Invoke-Build -repositoryPath ./octo-asset-repo-services -configuration DebugL
 ```
 
-**Changes affect NuGet packages — use Invoke-BuildAll:**
+**Feature work on a work item — use a feature environment instead of building in `branches/main`:**
+```
+New-OctoEnvironment -env ab1234-my-change -repos octo-construction-kit-engine -workItem AB#1234
+Get-OctoAffectedRepos -env ab1234-my-change                     # repos the change reaches
+Add-OctoEnvironmentRepo -env ab1234-my-change -repo octo-asset-repo-services -role consumer -addAffected
+Invoke-BuildEnvironment -env ab1234-my-change -verifyTests      # incremental, own feed and cache (Windows: stops the env's dotnet processes first, -skipKill opts out)
+# after the PR is merged: stop the environment's services first (octo-devstack env_remove does that and releases the lease)
+Remove-OctoEnvironment -env ab1234-my-change
+```
+Never publish feature work into `branches/main/nuget`. An existing worktree is adopted with `Add-OctoEnvironmentRepo -env <env> -path <worktree>` (`-inPlace`: not isolated for plain `dotnet build`/Rider, never deleted by `Remove-OctoEnvironment`).
+
+**Changes affect NuGet packages in main — use Invoke-BuildAll:**
 ```
 # Build base libraries + services (no frontend) — handles NuGet propagation automatically
 Invoke-BuildAll -configuration DebugL -excludeFrontend $true
@@ -104,9 +117,9 @@ Invoke-BuildAll -configuration DebugL -excludeFrontend $true
 When builds are broken or stale:
 
 ```
-1. Invoke-KillDotnet                               # Kill stale dotnet processes (Windows)
-2. Remove-BinAndObjFolders                         # Delete all bin/ and obj/ folders
-3. Remove-GlobalNuGetPackages                      # Clear NuGet cache
+1. Invoke-KillDotnet -branchRootPath (Join-Path $rootPath 'branches/main')   # this lane's dotnet processes only (Windows stops them; main-checkout profile: $rootPath)
+2. Remove-BinAndObjFolders -path (Join-Path $rootPath 'branches/main')   # bin/ and obj/ of this lane only (default: current folder; main-checkout profile: -path $rootPath)
+3. Remove-GlobalNuGetPackages -path <lane>/.nuget-packages   # Clear the lane's 999.0.0 packages (default path: ~/.nuget/packages for a lane without RestorePackagesPath)
 4. Invoke-BuildAll -configuration DebugL           # Full rebuild from scratch
 ```
 

@@ -2,11 +2,35 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
-## [0.28.0] — 2026-11-10
+## [0.29.0] — 2026-11-12
 
 ### Changed
 
 - **`pipeline-expert`, `octo-app-builder`, `octo-operator`** — secret defaults of an Application (AB#7252, Feature AB#7219; System.Communication 4.15.0, value Hidden since 4.16.0; controller AB#7244/AB#7245, mesh adapter AB#7246/AB#7251). `pipeline-expert`: `VerifyCaptcha@1` in `node-reference-mesh.md` (settings, output `{ valid, source, reason }`, tenant secret else the default, an override encrypted with an unknown key id falls back to the default, any other undecryptable override does not; two entities with the same well-known name are refused and count as not set; check `valid` before `reason`) and `RevealSecret@1` with why it refuses `System.Communication/SecretDefault` (platform-only: no tenant identity may obtain it); `GetPipelineConfigByCkTypeId@1` refuses the type; `MakeHttpRequest@1` is not for CAPTCHA checks; one line each in the `SKILL.md` node tables. `octo-app-builder`: `references/app-workload.md` §Secrets — secret-flagged `ValueOverride` only for secrets the pod needs, `SecretDefaults` for secrets only platform nodes need; the seed declares no `SecretDefaults` entry (an entry without a value makes the deploy refuse the Application; the secret seed lint refuses values, placeholders and `${...}` variables, and blueprints have no install-time parameters); the operator adds key and value after the install (Studio *Further attributes*, GraphQL with the secret as a variable, or a CD from Vault as EC on test-2) and deploys, re-apply keeps the entry; `AllowedTenantIds` absent or empty = own tenant and whole subtree, a non-empty list only narrows it (a later tenant must be added to it); projection on deploy, on tenant load and on `POST {tenant}/v1/secretDefaults/reconcile`, only deployed Applications are sources, undeploy and a refused redeploy withdraw; best effort per tenant with events linked to the Application (read them and the controller's per-deploy summary log line before revoking an old secret); the projected entity is the "set" signal because the value is Hidden; keys are one namespace per target tenant, so overlapping Applications need distinct keys; pointer in `SKILL.md`. `octo-operator`: secret defaults are not a Helm tier — they never reach the operator, a values file or the release Secret. Worked sample: `octo-communication-controller-services/samples/Blueprints/SecretDefaultDemo/` (controller PR #96).
+
+## [0.28.3] — 2026-11-11
+
+### Added
+
+- **`CLAUDE.md`** — section "Skills shipped as knowledge pages" (AB#8490): `octo-app-builder` and `pipeline-expert` are cut into knowledge pages of the opt-in blueprint System.Ai.Builder by the generator `tools/SkillPages` of octo-ai-services. Documents what that means for skill authors (headings are page boundaries, a section must fit one page of 12,000 characters, relative links become page links, no machine-local paths or internal host names) and the sync procedure after a skill change. No skill content changed.
+
+## [0.28.2] — 2026-11-11
+
+### Changed
+
+- **`pipeline-expert`** — `McpToolCall@1` documents the new optional `executionIdArgument` (AB#8703, octo-mesh-adapter): it writes the id of the current pipeline execution into the named tool argument (e.g. `runRef` of `knowledge_upsert_page`), replacing a value from `argumentsPath`; in a pipeline started by `ToPipelineDataEvent@1` it is the called pipeline's id. Table, example and behaviour in `references/node-reference-mesh.md`, one line in `SKILL.md`.
+
+## [0.28.1] — 2026-11-11
+
+### Fixed
+
+- **`octo-commit`** — no longer merges a PR (AB#8768). The CodeRabbit loop of Step 9 (agent merge with `gh pr merge --squash`, one push per finding, inline comments only, re-review with `@coderabbitai resolve`) is replaced by a pointer: with `octo-claude-pm` installed its `agent-operating-rules` §2.3 decide the review rounds, the merge queue (`request_merge`) and the developer's test and merge. Without it a short fallback remains (title check, judge every finding, answer every thread, upstream PRs of a cross-repo change merged and their packages published first with the merge order reported, report ready only after the review of the head commit) that leaves the merge to the developer or a maintainer. Frontmatter description, Common Mistakes and the `README.md` skill table updated accordingly.
+
+## [0.28.0] — 2026-11-10
+
+### Added
+
+- **`octo`** — operations of asynchronous CK methods (AB#8446, octo-cli + octo-sdk): new commands `GetOperation` (`-id`, `-w`, `-j`) and `ListOperations` (`-m`, `-s`, `-since`, `-a`, `-sk`, `-t`, `-j`) in `SKILL.md` and `references/command-reference.md`. `Dump` now documents `-iad`, the method path for the context's tenant (operation id, progress, `retryAfterSeconds`), the fallback to the job API and the failure codes.
 
 ## [0.27.2] — 2026-11-10
 
