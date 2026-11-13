@@ -147,12 +147,14 @@ Secret attribute in a seed is only ever empty or omitted; blueprints have no ins
   means exactly that set; a non-empty list narrows it to the listed tenants and never widens it (a listed tenant
   outside the subtree is ignored). A tenant added below the Application later is covered automatically only while
   the list is empty; with a non-empty list add its id to the list and deploy again.
-- **Projection.** Only a **deployed** Application (`DeploymentState` Pending or Deployed) is a source. The controller
+- **Projection.** A Pending or Deployed Application is a source. The controller
   projects on `DeployWorkload`, on every tenant load (service start, Enable, tenant update — so a tenant created or
   loaded after the deploy receives the default without a redeploy) and on `POST {tenant}/v1/secretDefaults/reconcile`
   (that tenant and its subtree; use it e.g. after deleting an Application, which no hook sees). **Undeploying the
-  Application withdraws its defaults** from every tenant, and so does a redeploy the deploy guard refuses (state
-  Error), even after an earlier successful deploy. The projection is best effort per tenant: a skipped tenant (no
+  Application withdraws its defaults** from every tenant. A redeploy the deploy guard refuses (state Error) does not:
+  the previous release keeps running, so the Application holds the defaults it already projected and offers nothing
+  to a tenant it did not serve before. Revocation wins: removing the entry or narrowing `AllowedTenantIds` removes
+  the default from every tenant it no longer reaches. The projection is best effort per tenant: a skipped tenant (no
   System.Communication 4.15.0, not resolvable) or a failed write is a Warning/Error event, and the deploy still
   succeeds. Events about an Application's defaults are **linked to the Application** (`relatesFrom` of
   `System.Notification/Event`) when stored in its own tenant. After every deploy read those events; for a skipped or

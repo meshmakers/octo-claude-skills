@@ -784,9 +784,10 @@ secret that cannot be decrypted).
   `defaultKey`; Studio *Further attributes* or GraphQL with the secret as a variable — a blueprint seed declares no
   entry) and deploys, or a CD writes it from a secret store. The Communication Controller projects it into the
   Application's tenant and its whole subtree; `AllowedTenantIds` absent or empty = that whole set, a non-empty list
-  only narrows it. Only a deployed Application is a source: the projection runs on deploy, on every tenant load (a
+  only narrows it. A Pending or Deployed Application is a source: the projection runs on deploy, on every tenant load (a
   tenant created later receives it without a redeploy) and on `POST {tenant}/v1/secretDefaults/reconcile`;
-  undeploying the Application, or a redeploy the deploy guard refuses, withdraws it. The projection is best effort
+  undeploying the Application withdraws it, a redeploy the deploy guard refuses keeps the defaults already projected,
+  and removing the entry or narrowing `AllowedTenantIds` removes it from every tenant it no longer reaches. The projection is best effort
   per tenant: a tenant without System.Communication 4.15.0, an unresolvable tenant or a failed write is a
   Warning/Error event linked to the Application while the deploy succeeds, so a successful deploy does not prove that
   every tenant has the value: check the Application's events after the deploy, fix the cause and deploy again for a
