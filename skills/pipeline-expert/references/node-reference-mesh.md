@@ -787,7 +787,8 @@ secret that cannot be decrypted).
   only narrows it. A Pending or Deployed Application is a source: the projection runs on deploy, on every tenant load (a
   tenant created later receives it without a redeploy) and on `POST {tenant}/v1/secretDefaults/reconcile`;
   undeploying the Application withdraws it, a redeploy the deploy guard refuses keeps the defaults already projected,
-  and removing the entry or narrowing `AllowedTenantIds` removes it from every tenant it no longer reaches. The projection is best effort
+  and removing the entry or narrowing `AllowedTenantIds` removes it from every tenant it no longer reaches at the next
+  projection, but not while the Application is in Error (until a redeploy succeeds; undeploy to withdraw). The projection is best effort
   per tenant: a tenant without System.Communication 4.15.0, an unresolvable tenant or a failed write is a
   Warning/Error event linked to the Application while the deploy succeeds, so a successful deploy does not prove that
   every tenant has the value: check the Application's events after the deploy, fix the cause and deploy again for a

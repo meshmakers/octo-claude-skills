@@ -153,8 +153,9 @@ Secret attribute in a seed is only ever empty or omitted; blueprints have no ins
   (that tenant and its subtree; use it e.g. after deleting an Application, which no hook sees). **Undeploying the
   Application withdraws its defaults** from every tenant. A redeploy the deploy guard refuses (state Error) does not:
   the previous release keeps running, so the Application holds the defaults it already projected and offers nothing
-  to a tenant it did not serve before. Revocation wins: removing the entry or narrowing `AllowedTenantIds` removes
-  the default from every tenant it no longer reaches. The projection is best effort per tenant: a skipped tenant (no
+  to a tenant it did not serve before. Removing the entry or narrowing `AllowedTenantIds` removes the default from
+  every tenant it no longer reaches at the next projection, but not while the Application is in Error: it keeps them
+  until a redeploy succeeds (undeploy to withdraw). The projection is best effort per tenant: a skipped tenant (no
   System.Communication 4.15.0, not resolvable) or a failed write is a Warning/Error event, and the deploy still
   succeeds. Events about an Application's defaults are **linked to the Application** (`relatesFrom` of
   `System.Notification/Event`) when stored in its own tenant. After every deploy read those events; for a skipped or
