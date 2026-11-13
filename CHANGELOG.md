@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.28.4] — 2026-11-13
+
+### Changed
+
+- **`octo-mcp`** — new section "Entity Query Paging" (AB#8904, octo-mcp-service): `query_entities`, `query_entities_simple`, `navigate_associations`, `get_association_tree` (roots) and `execute_runtime_query` page with a default of 100 and refuse a page size above 1000 (never capped); the paging arguments per tool, the `Paging` result block, the config rule (`MaxQueryResultLimit` can be lowered, not raised) and how a new entity-returning tool uses `QueryPaging`. One new "Things NOT to Do" line.
+
 ## [0.28.3] — 2026-11-11
 
 ### Added
