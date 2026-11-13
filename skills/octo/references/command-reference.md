@@ -141,6 +141,7 @@ octo-cli -c GetUsers
 ```
 
 #### CreateUser
+Runs the CK method `System.Identity/User.CreateUser-1` (GraphQL). Needs identity services 3.5.57+ with `Methods:Identity:EnablePasswordMethods` on; an older service gets a message naming that version — there is no REST fallback. Refusals (`USER_ALREADY_EXISTS`, `USER_NAME_RESERVED`, `PASSWORD_POLICY_VIOLATION` with the policy text) come from the server as `CODE: message`, exit -3.
 ```
 octo-cli -c CreateUser -un <userName> -e <eMail> [--password-stdin]
 ```
@@ -171,6 +172,7 @@ octo-cli -c DeleteUser -un <userName> [-y]
 | `-y` | `yes` | Skip confirmation prompt | No |
 
 #### ResetPassword
+Runs the CK method `System.Identity/User.ResetPassword-1` (GraphQL) for the user looked up by name. Needs identity services 3.5.52+ with `Methods:Identity:EnablePasswordMethods` on; no REST fallback. Refusals (`PASSWORD_POLICY_VIOLATION`, `SHADOW_USER_PASSWORD_NOT_ALLOWED`, `METHOD_FORBIDDEN`) come from the server as `CODE: message`, exit -3.
 ```
 octo-cli -c ResetPassword -un <userName> [--password-stdin] [-y]
 # e.g. octo-cli -c ResetPassword -un <userName> --password-stdin -y < ~/.octo-cli/<user>.password
