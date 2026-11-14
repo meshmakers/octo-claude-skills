@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.28.4] — 2026-11-13
+
+### Changed
+
+- **`octo`** — `references/command-reference.md`: `CreateUser` and `ResetPassword` run the CK methods `System.Identity/User.CreateUser-1` / `User.ResetPassword-1` (AB#8418, octo-cli): needed identity versions (3.5.57 / 3.5.52 with `Methods:Identity:EnablePasswordMethods`), no REST fallback, server-side refusals as `CODE: message`. The password examples already use `--password-stdin` only.
+
 ## [0.28.3] — 2026-11-11
 
 ### Added
