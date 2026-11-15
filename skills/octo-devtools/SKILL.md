@@ -104,14 +104,16 @@ For common multi-step workflows, read `references/workflows.md` in this skill di
 
 ### Feature environments (one work item, isolated lane)
 
-A feature environment is the lane folder `<rootPath>/wt-<env>` of the octo-claude-pm lane `<env>`: worktrees of the changed repos, its own `nuget/` feed, `.nuget-packages/` cache, CK/blueprint catalogs and `.octo/environment.json`. **Do feature work here, never publish it into `branches/main/nuget`.** Through octo-devstack the same is `env_create` / `build_start kind=env`. Details: octo-tools `readme.md`, "Feature environments".
+A feature environment is the lane folder `<rootPath>/wt-<env>` of the octo-claude-pm lane `<env>`: worktrees of the changed repos, its own `nuget/` feed, `.nuget-packages/` cache, CK/blueprint catalogs and `.octo/environment.json`. **Do feature work here, never publish it into the base lane's `nuget/`.** Through octo-devstack the same is `env_create` / `build_start kind=env`. Details: octo-tools `readme.md`, "Feature environments".
+
+**Base lane** (the folder holding the repositories, `nuget/` and `.octo/`): without `-base`, `New-OctoEnvironment` takes `$env:OCTO_ENVIRONMENT_BASE` if set, else `<rootPath>/branches/main` (lanes layout, profile loaded from the `octo-tools` next to `branches/`), else `$rootPath` itself (flat layout: repositories directly below `$rootPath`, profile loaded from `$rootPath/octo-tools`; the manifest records `base: "."` and `wt-<env>` lies next to the repositories). Neither fits: the error names both layouts, `-base` and `OCTO_ENVIRONMENT_BASE`. Claims live in the base lane's `.octo/claims/`.
 
 | Cmdlet | Description | Safety |
 |---|---|---|
-| `New-OctoEnvironment -env <slug> -repos <names> [-workItem AB#..]` | Create `wt-<env>` with feature worktrees, feed and catalogs copied from `branches/main` | Mutating (local) |
+| `New-OctoEnvironment -env <slug> [-repos <names>] [-workItem AB#..] [-base <lane>]` | Create `wt-<env>` with feature worktrees, feed and catalogs copied from the base lane; without `-repos` an empty environment (to adopt worktrees) | Mutating (local) |
 | `Get-OctoEnvironment [-env <slug>]` | List environments; with `-env` the worktree state (dirty, unpushed) | Read-only |
 | `Add-OctoEnvironmentRepo -env <slug> -repo <name> [-role feature\|consumer] [-addAffected]` | Add a worktree; `consumer` = detached at main's commit, `-addAffected` adds the repos between library and service | Mutating (local) |
-| `Add-OctoEnvironmentRepo -env <slug> -path <worktree> [-inPlace]` | Adopt an existing worktree (`wt-<lane>-<repo>` or `<repo>/.claude/worktrees/<name>`): moved into `wt-<env>/<repo>`; with `-inPlace` only recorded | Mutating (local) |
+| `Add-OctoEnvironmentRepo -env <slug> -path <worktree> [-inPlace]` | Adopt an existing linked worktree (`wt-<lane>-<repo>`, `wt-<lane>/<repo>` of a hand-made environment, or `<repo>/.claude/worktrees/<name>`): moved into `wt-<env>/<repo>`; with `-inPlace` only recorded | Mutating (local) |
 | `Get-OctoAffectedRepos -env <slug> [-target <repos>]` | Repos a library change reaches (must be rebuilt, else `MissingMethodException` at runtime) | Read-only |
 | `Invoke-BuildEnvironment -env <slug> [-syncMain] [-verifyTests\|-includeTests] [-DryRun]` | Incremental build of the environment's repos into its own feed and cache | Mutating (local) |
 | `Sync-OctoEnvironment -env <slug>` | Take main's new packages and catalog entries (packages built in the environment keep winning) | Mutating (local) |
@@ -313,6 +315,7 @@ Interactive blocking applies to `Start-Octo` (without `-nonInteractive $true`) a
 - "start work on AB#1234" / "feature worktree" / "work on a library change" → `New-OctoEnvironment -env ab1234-<desc> -repos <repo> -workItem AB#1234`, then `Invoke-BuildEnvironment -env ab1234-<desc> -verifyTests` (or octo-devstack `env_create` / `build_start kind=env`); never publish feature work into `branches/main/nuget`
 - "which repos does my change affect" → `Get-OctoAffectedRepos -env <env>`
 - "use my existing worktree" → `Add-OctoEnvironmentRepo -env <env> -path <worktree>` (`-inPlace`: see the in-place caveat)
+- "adopt a hand-made environment" (`wt-<lane>` with worktrees but no `.octo/environment.json`; its own name is refused) → `New-OctoEnvironment -env <new name> -workItem AB#..` (no `-repos`: empty), then `Add-OctoEnvironmentRepo -env <new name> -path <worktree> -inPlace` per worktree - only when no session works there
 - "done with the feature" → `Remove-OctoEnvironment -env <env>` after the PR is merged
 - "create test branch" → `New-TestBranch` with user-provided version + description
 
