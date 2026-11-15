@@ -320,6 +320,8 @@ git -C <repo> push
 
 ### Step 9: Create PR (if feature branch)
 
+**With `octo-claude-pm` 0.46.0 or later installed**, its verify gate refuses PR creation, `gh pr ready`, pushes to a branch with an open non-draft PR and `@coderabbitai review` until the commit has a local verification record, and PR creation and review requests also a recorded local code review. Order: review the diff locally (`/code-review` or a review sub-agent), commit the fixes, then on that commit run the plugin's `verify_record.py … run -- "<build>" "<test>" "<lint>"` and `verify_record.py … review …`; record again after every new commit. A refusal prints the full command. The rules (clean tree, shared-environment escape, two CodeRabbit rounds, one PR per repository per Feature slice) are in its `agent-operating-rules` §2.1–§2.3.
+
 **For GitHub repos** (majority of OctoMesh repos). Derive the `owner/repo` slug from the origin URL (mostly `meshmakers/<repo>`; some are under `reikla/`, see Repo Remotes). The `sed` keeps the last two path parts, so HTTPS URLs, `git@github.com:` and SSH host aliases such as `git@github-company:` all work:
 
 ```bash
@@ -363,8 +365,6 @@ az repos pr create \
 Report the PR URL(s) to the user when done.
 
 **After the PR is open: review and merge.** If the plugin `octo-claude-pm` is installed, its `agent-operating-rules` §2.3 apply and this skill does not restate them: the CodeRabbit review rounds, which findings to collect and how to answer them, when a PR is ready, queuing it with `request_merge`, asking the developer to test it, and the CoreDev review for larger changes. The developer merges, never the agent.
-
-**Before the PR, with `octo-claude-pm` installed:** its verify gate refuses `gh pr create`, `az repos pr create`, `gh pr ready`, a `git push` to a branch with an open PR and every `@coderabbitai review` until the commit has a local verification record. Record it with the plugin's script `skills/agent-operating-rules/scripts/verify_record.py` (in the `octo-claude-pm` plugin): `verify_record.py --repo <worktree> run -- "<build>" "<test>" "<lint>"` runs the commands itself; after a local code review of the diff (`/code-review` or a review sub-agent) and the fixes, `verify_record.py --repo <worktree> review --tool code-review --findings <n> --fixed <m>`. At most two CodeRabbit rounds per PR, and stories of one Feature that touch the same repository share one branch and one PR; `agent-operating-rules` §2.1–§2.3 hold the details. Drafts and pushes to branches without an open PR are not gated.
 
 Without `octo-claude-pm` (GitHub repos; `$repo_slug` as for `gh pr create`):
 
