@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.28.5] — 2026-11-15
+
+### Changed
+
+- **`octo-commit`** — Step 9 points to the `octo-claude-pm` verify gate (0.46.0, AB#8988, AB#8989, AB#8990): what it refuses, the order local review → fix commit → `verify_record.py run` and `review` on that commit, and where the rules are (`agent-operating-rules` §2.1–§2.3). The rules themselves are not restated.
+
 ## [0.28.4] — 2026-11-13
 
 ### Changed

@@ -320,6 +320,8 @@ git -C <repo> push
 
 ### Step 9: Create PR (if feature branch)
 
+**With `octo-claude-pm` 0.46.0 or later installed**, its verify gate refuses PR creation, `gh pr ready`, pushes to a branch with an open non-draft PR and `@coderabbitai review` until the commit has a local verification record, and PR creation and review requests also a recorded local code review. Order: review the diff locally (`/code-review` or a review sub-agent), commit the fixes, then on that commit run the plugin's `verify_record.py … run -- "<build>" "<test>" "<lint>"` and `verify_record.py … review …`; record again after every new commit. A refusal prints the full command. The rules (clean tree, shared-environment escape, two CodeRabbit rounds, one PR per repository per Feature slice) are in its `agent-operating-rules` §2.1–§2.3.
+
 **For GitHub repos** (majority of OctoMesh repos). Derive the `owner/repo` slug from the origin URL (mostly `meshmakers/<repo>`; some are under `reikla/`, see Repo Remotes). The `sed` keeps the last two path parts, so HTTPS URLs, `git@github.com:` and SSH host aliases such as `git@github-company:` all work:
 
 ```bash
