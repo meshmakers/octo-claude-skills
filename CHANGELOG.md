@@ -2,6 +2,13 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.28.7] — 2026-11-15
+
+### Changed
+
+- **`octo`** — `SKILL.md` (Secrets Rule) and `references/command-reference.md` name `-p`/`--password` as deprecated with the removal date to be announced (AB#9010, AB#8861). No example in the skills passes a password as an argument; check: `git grep -nE 'octo-cli.*-c +(ResetPassword|CreateUser|Setup)( |$).*( -p( |$)|--password( |=|$))' -- skills` finds nothing.
+- **`octo`** — `SKILL.md` body back under the 500-line budget (504 → 499 lines, `validate_skill_frontmatter.py` failed on `main`): the `pipeline_validate.py` usage is written more compactly, no content removed.
+
 ## [0.28.6] — 2026-11-15
 
 ### Changed
