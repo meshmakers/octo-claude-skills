@@ -112,11 +112,17 @@ What this means when you change these two skills:
 
 ## Versioning
 
-The `version` field in `.claude-plugin/plugin.json` is the release gate: users on a pinned version only receive updates when the version increases. **Do not bump it on every commit during ongoing work, but every pull request that lands on `main` bumps the version (semver) and records its changes under that new version in `CHANGELOG.md`.** There is no `Unreleased` section.
+The `version` field in `.claude-plugin/plugin.json` is the release gate: users on a pinned version only receive updates when the version increases.
+
+**Changes reach `main` through the daily docs batch** (octo-claude-pm `agent-operating-rules` §2.1, AB#9020):
+
+- **Story branches do not bump the version.** Leave `version` in `plugin.json` and `marketplace.json` as it is on `main`, and add your CHANGELOG lines under a `## [Unreleased]` section at the top of `CHANGELOG.md` (create it if it is missing; keep the `### Added` / `### Changed` / `### Fixed` subsections). Push the story branch `<user>/AB#<id>_<desc>` **without opening a pull request**, and name repository and branch in a comment on the story.
+- **The batch sets the version.** The docs batch (`/docs-batch` in octo-claude-pm) merges the pushed story branches into `docs/batch-<date>`, sets the version once (the next patch after `main`) in both manifests, and turns `## [Unreleased]` into that version's header. A bump on a story branch is dropped by the batch. A minor or major release is set in the batch PR by hand.
+- **The batch PR is the one pull request per day.** A single PR outside the batch needs the developer's go (octo-claude-pm verify gate, `override-docs-batch`).
 
 Keep `marketplace.json`'s plugin entry version in sync for clarity — but note that when both files declare a version, **`plugin.json` wins** per the Claude Code plugin spec.
 
-Run both `claude plugin validate . --strict` and `scripts/validate_skill_frontmatter.py` before pushing the version bump.
+Run both `claude plugin validate . --strict` and `scripts/validate_skill_frontmatter.py` before pushing a story branch; the batch runs them again on the merged result.
 
 ## Naming Conventions
 
