@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.28.8] — 2026-11-15
+
+### Fixed
+
+- **`octo`** — the SKILL.md body has headroom under the release gate again (499 → 477 lines, limit 500, target ≤ 480; AB#8991). The `gql_introspect.py` and `pipeline_validate.py` reference, the `::` association meta columns and the stream-data / blueprint CK types moved verbatim into the new `references/data-model-scripts.md`; the body keeps a short summary of each with a pointer. The duplicated ImportRt ID-format list now points to `references/command-reference.md` (ImportRt), which already holds the full rules. Description, triggers and the routing table are unchanged.
+
 ## [0.28.7] — 2026-11-15
 
 ### Changed
