@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.28.6] — 2026-11-15
+
+### Changed
+
+- **`pipeline-expert`** — `ExecuteCSharp@1` documents the new argument fields `optional` and `defaultValue` (AB#9006, octo-communication-sdk): an optional argument whose `valuePath` is missing is silent, `defaultValue` replaces null for a missing or null path and must be convertible to `dataType`, and a missing path of a non-optional argument is reported once per pipeline execution with a record count instead of one warning per record. Table, example and behaviour in `references/node-reference-sdk.md`, one line in `SKILL.md`.
+
 ## [0.28.5] — 2026-11-15
 
 ### Changed
