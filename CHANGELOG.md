@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.28.9] — 2026-11-15
+
+### Changed
+
+- **`octo-devtools`** — Feature environments in both workspace layouts (octo-tools AB#9007): `New-OctoEnvironment` detects the base lane (`$env:OCTO_ENVIRONMENT_BASE`, `branches/main`, or `$rootPath` itself in the flat layout, manifest `base: "."`) and takes `-base`; without `-repos` it creates an empty environment, so a hand-made environment is adopted with `Add-OctoEnvironmentRepo -path <worktree> -inPlace`. `SKILL.md`, `references/command-reference.md`, `references/workflows.md`.
+
 ## [0.28.8] — 2026-11-15
 
 ### Fixed

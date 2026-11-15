@@ -327,12 +327,13 @@ One environment per work item at `<rootPath>/wt-<env>` (the octo-claude-pm lane 
 
 ### `New-OctoEnvironment`
 - `-env` (string): slug or lane name (lower case, digits, `-`), e.g. `ab8625-enum-null`
-- `-repos` (string[]): repos to change (feature worktrees on `<user>/AB#<id>_<desc>`)
-- `-workItem`, `-branchName`, `-owner`, `-addAffected` (adds every transitive consumer), `-Detailed`, `-WhatIf`
-- **Safety:** Mutating (local); refuses a name whose `wt-<name>` exists without a manifest and a folder inside `branches/main`
+- `-repos` (string[]): repos to change (feature worktrees on `<user>/AB#<id>_<desc>`); omitted = an empty environment (feed, cache, catalogs, manifest), filled with `Add-OctoEnvironmentRepo`
+- `-base` (string): base lane, relative to `$rootPath` or absolute. Omitted: `$env:OCTO_ENVIRONMENT_BASE`, else `branches/main` when it holds a lane, else `$rootPath` (flat layout, manifest `base: "."`); a lane = `.octo/`, `Octo.User.props` or an `mm-*`/`octo-*` git checkout
+- `-workItem`, `-branchName`, `-owner`, `-addAffected` (adds every transitive consumer; needs `-repos`), `-Detailed`, `-WhatIf`
+- **Safety:** Mutating (local); refuses a name whose `wt-<name>` exists without a manifest and a base lane above `$rootPath`; no base lane found = error with a setup hint
 
 ### `Add-OctoEnvironmentRepo`
-- `-repo <name> [-role feature|consumer] [-addAffected]`: new worktree; consumers are detached at `branches/main/<repo>`'s commit (read-only by convention); `-addAffected` adds the repos on the path from the feature repos to `-repo`
+- `-repo <name> [-role feature|consumer] [-addAffected]`: new worktree; consumers are detached at the base lane checkout's upstream commit (read-only by convention); `-addAffected` adds the repos on the path from the feature repos to `-repo`
 - `-path <worktree> [-inPlace]`: adopt an existing worktree. Default `git worktree move` into `wt-<env>/<repo>` (uncommitted work moves along; refused when locked or a process runs from it). `-inPlace` only records it: built with the environment's feed, cache and catalog by `Invoke-BuildEnvironment`, but a plain `dotnet build`/Rider there is not isolated and `Remove-OctoEnvironment` never deletes it
 - **Safety:** Mutating (local)
 
