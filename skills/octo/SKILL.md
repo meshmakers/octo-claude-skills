@@ -303,7 +303,7 @@ A command addresses **one tenant: the tenant of its context**. octo-cli 3.5.27+ 
 
 ## Secrets Rule
 
-**Never put a secret in a command-line argument and never echo it.** No `-p`, `-s`, `-cs` (deprecated), no secret in a `printf`/`echo` literal, no `cat`/print of secret files, no secrets in comments, work items or reports. Use the prompt (human), `--password-stdin` / `--secret-stdin` / `--client-secret-stdin` piped from a mode-600 file (`octo-cli -c ResetPassword -un <u> --password-stdin -y < <file>` — redirect the file, no command substitution) or the `OCTO_CLI_*` environment variables listed in `references/command-reference.md`. When you generate a password or secret, write it to a new file under `umask 077` (a temp file in the same directory, then `mv` over the target, so an existing file never keeps a looser mode) and tell the user the path, not the value.
+**Never put a secret in a command-line argument and never echo it.** No `-p`/`--password`, `-s`, `-cs` (deprecated; removal date to be announced, AB#8861), no secret in a `printf`/`echo` literal, no `cat`/print of secret files, no secrets in comments, work items or reports. Use the prompt (human), `--password-stdin` / `--secret-stdin` / `--client-secret-stdin` piped from a mode-600 file (`octo-cli -c ResetPassword -un <u> --password-stdin -y < <file>` — redirect the file, no command substitution) or the `OCTO_CLI_*` environment variables listed in `references/command-reference.md`. When you generate a password or secret, write it to a new file under `umask 077` (a temp file in the same directory, then `mv` over the target, so an existing file never keeps a looser mode) and tell the user the path, not the value.
 
 ## Smart Behaviors
 
@@ -425,17 +425,12 @@ Safety valve for when field names change between server versions. `<RUN> gql_int
 
 #### `pipeline_validate.py` — Pipeline YAML Validator
 
-Validates a pipeline YAML file against an adapter's JSON Schema **before** deploying: checks that `triggers` and `transformations` sections exist and that every node `type` is known to the schema, recursing into nested container nodes (`ForEach@1`, `For@1`, `If@1`, `Switch@1`, `BufferData@1`). Use it as a pre-deploy gate so a typo'd node type fails fast locally instead of at `DeployPipeline`. Supply the schema one of two ways (mutually exclusive):
+Validates a pipeline YAML file against an adapter's JSON Schema **before** deploying: checks that `triggers` and `transformations` sections exist and that every node `type` is known to the schema, recursing into nested container nodes (`ForEach@1`, `For@1`, `If@1`, `Switch@1`, `BufferData@1`). Use it as a pre-deploy gate so a typo'd node type fails fast locally instead of at `DeployPipeline`. Exits 0 with `PASS` when valid, non-zero with a list of `FAIL` errors (each carrying a JSONPath-like location) otherwise. Supply the schema one of two ways (mutually exclusive):
 
 ```
-# Against a local schema file (e.g. one saved via GetPipelineSchema -o):
-<RUN> pipeline_validate.py my-pipeline.yaml --schema schema.json
-
-# Fetch the schema live from an adapter via octo-cli (add --insecure for localhost self-signed certs):
-<RUN> pipeline_validate.py my-pipeline.yaml --adapter-id <adapterRtId> --insecure
+<RUN> pipeline_validate.py my-pipeline.yaml --schema schema.json   # local schema file (e.g. saved via GetPipelineSchema -o)
+<RUN> pipeline_validate.py my-pipeline.yaml --adapter-id <adapterRtId> --insecure   # live from an adapter via octo-cli (--insecure: localhost self-signed certs)
 ```
-
-Exits 0 with `PASS` when valid, non-zero with a list of `FAIL` errors (each carrying a JSONPath-like location) otherwise.
 
 #### `rt_explorer.py` — Runtime Instance Explorer
 
