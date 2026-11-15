@@ -364,6 +364,8 @@ Report the PR URL(s) to the user when done.
 
 **After the PR is open: review and merge.** If the plugin `octo-claude-pm` is installed, its `agent-operating-rules` §2.3 apply and this skill does not restate them: the CodeRabbit review rounds, which findings to collect and how to answer them, when a PR is ready, queuing it with `request_merge`, asking the developer to test it, and the CoreDev review for larger changes. The developer merges, never the agent.
 
+**Before the PR, with `octo-claude-pm` installed:** its verify gate refuses `gh pr create`, `az repos pr create`, `gh pr ready`, a `git push` to a branch with an open PR and every `@coderabbitai review` until the commit has a local verification record. Record it with the plugin's script `skills/agent-operating-rules/scripts/verify_record.py` (in the `octo-claude-pm` plugin): `verify_record.py --repo <worktree> run -- "<build>" "<test>" "<lint>"` runs the commands itself; after a local code review of the diff (`/code-review` or a review sub-agent) and the fixes, `verify_record.py --repo <worktree> review --tool code-review --findings <n> --fixed <m>`. At most two CodeRabbit rounds per PR, and stories of one Feature that touch the same repository share one branch and one PR; `agent-operating-rules` §2.1–§2.3 hold the details. Drafts and pushes to branches without an open PR are not gated.
+
 Without `octo-claude-pm` (GitHub repos; `$repo_slug` as for `gh pr create`):
 
 - CodeRabbit (`coderabbitai[bot]`) reviews every non-draft PR automatically; if no review starts, comment `@coderabbitai review`.

@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.28.5] — 2026-11-15
+
+### Changed
+
+- **`octo-commit`** — the pointer to `octo-claude-pm` names its verify gate (AB#8988, AB#8989, AB#8990): the recording command `verify_record.py … run`, the local code review recorded with `verify_record.py … review`, at most two CodeRabbit rounds, and one branch and one PR per repository per Feature slice. The rules themselves stay in `octo-claude-pm`'s `agent-operating-rules`.
+
 ## [0.28.4] — 2026-11-13
 
 ### Changed
