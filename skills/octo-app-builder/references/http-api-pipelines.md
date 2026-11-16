@@ -106,7 +106,7 @@ transformations:
     path: $.error
     operator: Equal
     valueType: String
-    transformations:                     # the write of Pattern 1, now only for valid bodies
+    transformations:                     # abridged write of Pattern 1, only for valid bodies
       - type: CreateUpdateInfo@1
         updateKind: Insert
         ckTypeId: Demo.Tickets/Ticket
@@ -134,8 +134,11 @@ transformations:
         inclusion: true
 ```
 
-Format checks use the same shape with `operator: RegexMatch` (it never matches a
-missing value, so keep the null check in front).
+Format checks: `If@1` with `operator: RegexMatch` runs its children only on a match
+(never for a missing value) and has no negated form, so set a string flag on a match
+(`SetPrimitiveValue@1`, `value: ok`, `valueType: String`, `targetPath: $.nameValid`)
+and then set the error with an `If@1` on `$.nameValid` with `valueType: String` and
+no `value` (= flag not set).
 
 ### Where a route is reachable
 

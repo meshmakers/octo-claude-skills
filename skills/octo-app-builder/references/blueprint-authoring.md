@@ -173,7 +173,7 @@ carries it, so administrators grant the role by group membership:
       - id: System/Name
         value: TicketIssuer
       - id: System.Identity/NormalizedName
-        value: TICKETISSUER                # the name in upper case
+        value: TICKETISSUER                # the name in upper case; form as in production seeds
   - rtId: '077100000000000000000102'
     ckTypeId: System.Identity/Group
     rtWellKnownName: TicketIssuers
@@ -222,13 +222,14 @@ blueprints/v1/<Name>/<version>/
 └── seed-data/entities.yaml
 ```
 
-**Cache pitfall:** the catalog cache at
-`~/.octo/blueprint-catalog/cache/local-blueprint-catalog-cache.json` is only
-rebuilt when the file is **missing** — `ListBlueprints` serves stale content
-otherwise. Always delete it after adding/changing a blueprint in the catalog.
-(This applies to read paths that do not auto-refresh; `octo-bpm`'s own
-`list`/`get` and the `unpublish` dry-run force a catalog refresh before
-reading, so they do **not** need this manual delete.)
+**Cache pitfall:** the catalog index is cached — `ListBlueprints` serves stale
+content until it is refreshed. After adding or changing a blueprint in the catalog run
+`octo-cli -c RefreshBlueprintCatalogs -cn LocalFileSystemBlueprintCatalog` (forced, no
+restart, role `DataModelManagement`). `octo-bpm`'s own `list`/`get` and the
+`unpublish` dry-run refresh by themselves.<!-- developer-machine --> Older local builds
+without the refresh command rebuild the cache only when
+`~/.octo/blueprint-catalog/cache/local-blueprint-catalog-cache.json` is missing —
+delete it there.<!-- /developer-machine -->
 
 GitHub catalogs (e.g. `meshmakers/blueprint-libraries-build`, layout
 `blueprints/v1/<letter>/<Name>/<major>/<Name>-<version>/`) are where shared
