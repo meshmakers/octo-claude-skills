@@ -122,7 +122,7 @@ The `version` field in `.claude-plugin/plugin.json` is the release gate: users o
 
 Keep `marketplace.json`'s plugin entry version in sync for clarity — but note that when both files declare a version, **`plugin.json` wins** per the Claude Code plugin spec.
 
-Run both `claude plugin validate . --strict` and `scripts/validate_skill_frontmatter.py` before pushing a story branch; the batch runs them again on the merged result.
+Run both `claude plugin validate .` and `scripts/validate_skill_frontmatter.py` before pushing a story branch; the batch runs the same two checks again on the merged result. (`--strict` currently fails on `main` itself because of validator warnings about the plugin name and this CLAUDE.md, so neither you nor the batch can require it; fix those warnings before making `--strict` the rule again.)
 
 ## Naming Conventions
 
