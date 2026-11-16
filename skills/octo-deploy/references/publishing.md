@@ -8,8 +8,8 @@ octo-ckc/octo-bpm help + engine source (`GitHubCatalog.cs`,
 `GitHubBlueprintCatalog.cs`), the `blueprint-libraries-build` commit history,
 and a live registry probe.
 
-Tooling: `octo-ckc` and `octo-bpm` are build outputs of
-`octo-construction-kit-engine` (`bin/DebugL/net10.0/`), not on PATH.
+Tooling: `octo-ckc` and `octo-bpm` are the CK and blueprint CLIs of
+`octo-construction-kit-engine`, not on PATH by default.
 octo-cli has NO publish commands — publishing always goes through these tools.
 
 ## CK model → shared CK catalog

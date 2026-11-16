@@ -29,7 +29,7 @@ the seed itself needs NO changes for test-2:
 | Seed element | Why it ports |
 |---|---|
 | `${octo.tenantId}` in hostname/upstreamUrl | resolved at blueprint apply, per tenant |
-| `{{domain.default}}` in hostname | resolved at DeployWorkload time: `127.0.0.1.nip.io` on kind, `<test-2-domain>` on test-2 |
+| `{{domain.default}}` in hostname | resolved at DeployWorkload time to the cluster's default domain<!-- developer-machine -->: `127.0.0.1.nip.io` on kind<!-- /developer-machine -->, `<test-2-domain>` on test-2 |
 | Pool/Adapter/HelmRepo rtIds `670…001/002/003` | seeded by System.Communication on every comm-enabled tenant |
 | `ChartName` + empty `ChartVersion` | same dev-channel Helm repo on both clusters |
 | Pipeline YAML | standard nodes, available on any Mesh Adapter |
@@ -74,8 +74,8 @@ octo-bpm -c publish -p .\blueprint\<Name>\<version> -c PrivateGitHubBlueprintCat
 docker push <registry>/meshmakers/<app>:<tag>
 ```
 
-`octo-ckc`/`octo-bpm` are build outputs of `octo-construction-kit-engine`
-(`bin/DebugL/net10.0/`), not on PATH. The pushed image tag must equal the tag
+`octo-ckc`/`octo-bpm` are the CK and blueprint CLIs of `octo-construction-kit-engine`,
+not on PATH by default. The pushed image tag must equal the tag
 pinned in the seed's ValuesYaml — verify before pushing.
 
 **CK catalog shortcut:** if publishing the CK model to the shared catalog is not
@@ -102,10 +102,10 @@ context and only with a token for that tenant. In a child tenant, authority come
 only from explicit provisioning: after creating a tenant run `octo-cli -c
 ProvisionCurrentUser -ttid <tenantId> --context test-2_octosystem` once (new tenants
 included). A missing provisioning stops the command with exit `-4` and a message that
-names the tenant and `ProvisionCurrentUser -ttid <tenantId>`. For a rollout over several
+names the tenant and `ProvisionCurrentUser -ttid <tenantId>`.<!-- developer-machine --> For a rollout over several
 tenants use `Invoke-OctoTenantSweep` (dry run `-WhatIf`, one result row per tenant, continues
 after a denial, never touches a token) instead of a script that copies a token out of the
-context file; details in the `octo` skill, `references/tenant-tokens.md`.
+context file; details in the `octo` skill, `references/tenant-tokens.md`.<!-- /developer-machine -->
 
 **Parallel-safe targeting:** rather than relying on the active context (which
 the cmdlet switched, and which a concurrent session could flip), pass

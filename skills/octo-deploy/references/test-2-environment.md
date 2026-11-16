@@ -90,8 +90,8 @@ Notes:
 
 ## Creating a tenant on test-2
 
-1. Ensure an **octosystem** context on test-2 exists (`Register-OctoCliContext
-   -Installation test-2 -TenantId octosystem`); target it below with `--context
+1. Ensure an **octosystem** context on test-2 exists<!-- developer-machine --> (`Register-OctoCliContext
+   -Installation test-2 -TenantId octosystem`)<!-- /developer-machine -->; target it below with `--context
    test-2_octosystem`.
 2. `octo-cli -c Create -tid <tenantId> -db <tenantId> --context test-2_octosystem`
    — interactive sessions provision the current user as tenant admin. Headless
