@@ -1051,7 +1051,7 @@ entities:
 
 Import failures return a generic error: `Stream contains invalid runtime model so that the schema validation failed.` This message does not indicate which entity or field caused the failure. Common causes:
 
-- **Wrong ID format:** Using fully versioned IDs (`System.Communication-3.0.0/Pipeline-1`) or fully unversioned IDs (`System.Communication/Pipeline`) instead of the import format (`System.Communication/Pipeline-1`). Use `ck_explorer.py preflight <type> --for-import` to generate the correct format.
+- **Wrong ID format:** Using fully versioned IDs (`System.Communication-3.0.0/Pipeline-1`) or fully unversioned IDs (`System.Communication/Pipeline`) instead of the import format (`System.Communication/Pipeline-1`).<!-- developer-machine --> Use `ck_explorer.py preflight <type> --for-import` to generate the correct format.<!-- /developer-machine -->
 - **Wrong CK type name:** Using old/renamed types (e.g., `System.Communication/MeshPipeline` instead of `System.Communication/Pipeline`). Verify type names with the MCP tool `search_types`<!-- developer-machine --> or `ck_explorer.py types --model <model>`<!-- /developer-machine -->.
 - **Wrong attribute ID format:** Using camelCase property names (`pipelineDefinition`) instead of CK attribute IDs (`System.Communication/PipelineDefinition-1`). Look up the correct IDs with the MCP tool `get_type_schema`<!-- developer-machine --> (or `ck_explorer.py preflight <type> --for-import`)<!-- /developer-machine -->.
 - **Invalid rtId format:** Must be exactly 24 hex characters matching `^[0-9a-fA-F]{24}$`. Letters g-z are NOT hex. The error message gives no indication of which field failed — always validate rtIds before importing.
