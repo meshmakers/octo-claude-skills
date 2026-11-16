@@ -38,11 +38,18 @@ export OCTO_CLI_CLIENT_ID=$CLIENT
 IFS= read -r OCTO_CLI_CLIENT_SECRET < ~/.octo-cli/$CLIENT.secret || [ -n "$OCTO_CLI_CLIENT_SECRET" ]   # no command substitution: `set -x` would trace the value; `||` keeps `set -e` alive for a file without trailing newline
 export OCTO_CLI_CLIENT_SECRET
 
-# 1. Authenticate against the system tenant (token stored in local_octosystem)
-octo-cli -c LogInClientCredentials --context local_octosystem
+# 1. A context of the agent's own for the system tenant, then authenticate (token stored in that context).
+#    Never log the client into the human's context (local_octosystem): its interactive login would be replaced.
+AGENT_CTX=agent_<lane>_octosystem   # unique per lane/session
+octo-cli -c AddContext -n $AGENT_CTX \
+  -isu https://localhost:5003/ -asu https://localhost:5001/ \
+  -bsu https://localhost:5009/ -csu https://localhost:5015/ \
+  -rsu https://localhost:5007/ -aisu https://localhost:5019/ \
+  -tid octosystem
+octo-cli -c LogInClientCredentials --context $AGENT_CTX
 
 # 2. Create the scratch tenant — the client becomes its administrator (no -np needed: --scratch provisions no user)
-octo-cli -c Create -tid tmp-<purpose> -db tmp-<purpose> --scratch --context local_octosystem
+octo-cli -c Create -tid tmp-<purpose> -db tmp-<purpose> --scratch --context $AGENT_CTX
 #    wait until GetTenantLifecycle -tid tmp-<purpose> reports Active (about a minute)
 
 # 3. Context for the scratch tenant + login as the mirror (same credentials)
@@ -58,8 +65,9 @@ octo-cli -c LogInClientCredentials --context local_tmp-<purpose>
 #    For the ck_explorer/rt_explorer scripts: export OCTO_CLI_CONTEXT=local_tmp-<purpose>
 
 # 5. Tear down: disables whatever is still enabled, then deletes
-octo-cli -c Delete -tid tmp-<purpose> --disable-features -y --context local_octosystem
+octo-cli -c Delete -tid tmp-<purpose> --disable-features -y --context $AGENT_CTX
 octo-cli -c RemoveContext -n local_tmp-<purpose>
+octo-cli -c RemoveContext -n $AGENT_CTX   # when the lane is done
 ```
 
 For non-local environments substitute the service URLs from `references/environments.md`.
@@ -73,6 +81,7 @@ For non-local environments substitute the service URLs from `references/environm
 - **Activated archives are never deleted.** If Stream Data stays enabled because archives are activated, `Delete --disable-features` lists them, does **not** delete the tenant and fails: `DisableArchive` (data kept) or `DeleteArchive`, then repeat.
 - **Restore into a scratch tenant:** there is no `Restore --scratch`. Create the tenant with `Create --scratch`, then restore into it with the child (mirror) token (`--context local_tmp-<purpose>`); the scratch record survives the restore, so the creator stays administrator.
 - **Tenant IDs are lowercased** by the CLI; prefix temp tenants with `tmp-` so they are recognizable and safe to clean up.
+- **Never log the client into a human's context.** `LogInClientCredentials` writes its token into the context it runs against. Context names are matched case-insensitively, so `--context local_octosystem` also selects a stored `local_OctoSystem`. Since octo-cli AB#9063 the command refuses (exit `-5`, nothing changed, the matched context named) when that context holds an interactive login or the name matched only by case; do not pass `--replace-login` to get past it, create a context of the agent's own instead (`agent_<lane>_octosystem`, step 1).
 - **The client is per-tenant.** A token is only valid for the tenant of the context it was acquired in — run `LogInClientCredentials --context <ctx>` once per context.
 - **No refresh token** is issued. Keep `OCTO_CLI_CLIENT_ID`/`OCTO_CLI_CLIENT_SECRET` exported; octo-cli then re-acquires expired tokens automatically.
 - **Roles, not scope.** The token has no user, but the mirror's `TenantOwners` membership gives it every built-in platform role, `SecretManagement` included (identity AB#8161; kept on purpose, AB#9065), but not the app roles a blueprint seeds (see the next item); a client without `TenantManagement` in the parent gets 403 on create and delete.

@@ -110,6 +110,9 @@ octo-cli -c LogInClientCredentials [-id <clientId>] [--secret-stdin]
 | `-id` | `clientId` | Client ID. Falls back to env var `OCTO_CLI_CLIENT_ID`. | No |
 | `-ss` | `secret-stdin` | Read the client secret from standard input. Without it: env var `OCTO_CLI_CLIENT_SECRET`, then a hidden prompt (terminal only). | No |
 | `-s` | `secret` | **Deprecated** — secret on the command line. Do not use. | No |
+| `-rl` | `replace-login` | Replace the context's login although it holds an interactive login or the `--context` name matched the stored one only by case (AB#9063). Without it the command refuses and changes nothing. | No |
+
+Refuses (exit `-5`, names the matched context) when the target context holds an interactive login (`LogIn`) or when the name given with `--context` / `OCTO_CLI_CONTEXT` matched the stored context only by case (names are matched case-insensitively). Agents use a context of their own for the client (e.g. `agent_<lane>_octosystem`), never a human's context such as `local_octosystem`.
 
 ### AuthStatus
 Gets authentication status. No arguments. For client_credentials tokens, the output shows an "Auth Method" line and omits the User Info section (there is no userinfo for these tokens).

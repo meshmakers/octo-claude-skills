@@ -65,7 +65,10 @@ Notes:
 - **Headless (agent/CI):** `octo-cli -c LogInClientCredentials` with
   `OCTO_CLI_CLIENT_ID`/`OCTO_CLI_CLIENT_SECRET` (or `-id` plus `--secret-stdin`; never the deprecated `-s`). Requires a
   client-credentials client provisioned for the target tenant (the octo skill's
-  `references/temp-tenants.md` documents the pattern for local).
+  `references/temp-tenants.md` documents the pattern for local). Log the client
+  into a context of the agent's own (e.g. `agent_<lane>_test-2_octosystem`), never
+  into a human's `test-2_*` context: octo-cli refuses to replace an interactive
+  login there (AB#9063).
 - **Agent client per workstation (test-2):** every workstation that runs agents
   against test-2 has its own client in `octosystem`, so one machine can be
   revoked on its own: id `claude-agent-<user>-<workstation>` (e.g.
