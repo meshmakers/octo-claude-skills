@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.28.10] — 2026-11-16
+
+### Changed
+
+- **CLAUDE.md** — Versioning: story branches no longer bump the version; they add CHANGELOG lines under `## [Unreleased]` and are pushed without a pull request. The daily docs batch of octo-claude-pm sets the version once (next patch after `main`) and turns Unreleased into that version's header (AB#9020).
+
 ## [0.28.9] — 2026-11-15
 
 ### Changed
