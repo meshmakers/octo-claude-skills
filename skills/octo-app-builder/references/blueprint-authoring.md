@@ -65,7 +65,7 @@ with `isRuntimeState: true` so blueprint re-applies never trample them.
 
 ### Compile + publish
 
-`octo-ckc` is the CK compiler CLI of `octo-construction-kit-engine`, not on PATH by default.
+`octo-ckc` is the CK compiler CLI of `octo-construction-kit-engine`, not on PATH by default. <!-- developer-machine -->(on a developer machine: the build output `bin/DebugL/net10.0/` of that repository)<!-- /developer-machine -->
 
 ```powershell
 octo-ckc -c Compile -p .\ck\ConstructionKit -o .\ck\out      # → ck-<modelid>.yaml

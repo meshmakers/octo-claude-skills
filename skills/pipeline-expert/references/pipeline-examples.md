@@ -982,4 +982,6 @@ printf 'Authorization: Bearer %s\n' "$OCTO_TOKEN" | curl -X POST "https://<mesh-
 - Build the natural key with `Concat@1` on every row (`path: $.rows[*]`, `concatSubPath`), then let `GetRtEntitiesByWellKnownName@1` find existing entities by that key: it writes `rtId`, `ckTypeId` and `modOperation` on each row (all three target paths are **required** properties), and `generateInsertOperation: true` turns a missing entity into an Insert with a new rtId.
 - In `ForEach@1`, `CreateUpdateInfo@1` takes the kind from `updateKindPath` (Insert or Update per row) and sets `rtWellKnownNamePath` to the key, so the next import finds the same entity.
 - `Flatten@1` collects the per-row updates into one array for a single `ApplyChanges@2` call (one transaction).
+- `attributeName` is the name as the model declares it; this example model declares PascalCase names, most models use camelCase (see the casing warning of `CreateUpdateInfo@1`), so look them up with `get_type_schema`.
+- One meter and month per file: two rows with the same key are both looked up as missing and both become Inserts with the same `rtWellKnownName`. Reject or merge such rows before the lookup when a file can contain them.
 - The HTTP answer is the data root minus the request envelope, so shape it: `Project@1` with `clear: true` keeps only `$.imported`.

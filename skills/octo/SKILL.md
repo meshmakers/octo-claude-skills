@@ -342,13 +342,13 @@ When the user expresses one of these intents, resolve IDs, run the commands, and
 ### "Set up a new data flow end-to-end"
 Full lifecycle — combines `pipeline-expert` (YAML) with `octo` operations:
 1. Clarify the data flow (trigger, transformations).
-2. **Pre-flight:** for each CK type the pipeline touches, <!-- developer-machine -->`ck_explorer.py preflight <type> --for-import --insecure` or <!-- /developer-machine -->the MCP tool `get_type_schema` to discover exact attribute IDs + mandatory associations.
+2. **Pre-flight:** for each CK type the pipeline touches, run<!-- developer-machine --> `ck_explorer.py preflight <type> --for-import --insecure` or<!-- /developer-machine --> the MCP tool `get_type_schema` to discover exact attribute IDs + mandatory associations.
 3. Route to `pipeline-expert` via `Skill("pipeline-expert", ...)` for the YAML.
 4. Discover the adapter: `GetAdapters --json` → adapter rtId.
 5. Create the runtime entities: `ImportRt -f <file> -w` (template below).
 6. `DeployPipeline --adapterId <id> --pipelineId <id> --file <yaml>` → verify `GetPipelineStatus --identifier <pipelineId> --json` = Deployed → test `ExecutePipeline --identifier <rtId>`. For cron triggers, `DeployTriggers`.
 
-**Step 5 — ImportRt YAML for DataFlow + Pipeline:** use the full DataFlow+Pipeline template in [ImportRt](references/command-reference.md#models)<!-- developer-machine -->, or generate one for any CK type automatically:
+**Step 5 — ImportRt YAML for DataFlow + Pipeline:** use the full DataFlow+Pipeline template in [ImportRt](references/command-reference.md#models).<!-- developer-machine --> Or generate one for any CK type automatically:
 ```
 ck_explorer.py preflight System.Communication/Pipeline --for-import --insecure
 ```

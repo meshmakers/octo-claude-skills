@@ -1343,7 +1343,7 @@ Post a message, embed, and/or single file attachment to a Discord channel via th
 
 ### FromHttpRequest@2
 
-Trigger pipeline on HTTP requests. **Use `@2`; `FromHttpRequest@1` is deprecated** (same `method` and `path`, no security properties).
+Trigger pipeline on HTTP requests. **Use `@2`; `FromHttpRequest@1` is deprecated** (same `method` and `path`, no security properties). Pipelines and examples that still use `@1` keep working; the DataContext paths below are the same for both versions.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|

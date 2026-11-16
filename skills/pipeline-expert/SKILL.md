@@ -76,7 +76,7 @@ transformations:
 ```
 
 **Triggers** define how the pipeline starts: polling interval, HTTP request, entity change watch, event hub message, explicit command, or email. Each trigger type populates the DataContext with different initial paths — see `references/data-context-guide.md` "Trigger DataContext Placement" for the full table. Key examples:
-- `FromHttpRequest@1`: body at `$.body`, query params at `$.query`, files at `$.files`
+- `FromHttpRequest@2` (and the deprecated `@1`): body at `$.body`, query params at `$.query`, files at `$.files`
 - `FromWatchRtEntity@1`: changed entity at `$.Document`
 - `FromExecutePipelineCommand@1` / `FromPipelineTriggerEvent@1`: empty context. `FromExecutePipelineCommand@1` now lives in `Sdk.Common` and is available on **all** adapters (Edge and Mesh), not Mesh-only — the pipeline must still belong to a DataFlow.
 
@@ -150,7 +150,7 @@ This is an operational overview of the **most-used** nodes. The full property ta
 | Node | Purpose |
 |------|---------|
 | `FromPolling@1` | Poll at interval (e.g., `00:05:00`) |
-| `FromHttpRequest@1` | HTTP endpoint (method + path) |
+| `FromHttpRequest@2` | HTTP endpoint (method + path, `allowAnonymous`, `requiredRoles`); `@1` is deprecated |
 | `FromWatchRtEntity@1` | Entity change stream (Insert/Update/Delete) |
 | `FromPipelineDataEvent@1` | Receive data from another pipeline in the same DataFlow |
 | `FromExecutePipelineCommand@1` | Manual execution command (SDK node — all adapters); pipeline must be in a DataFlow |

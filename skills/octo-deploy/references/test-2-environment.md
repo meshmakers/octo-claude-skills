@@ -145,7 +145,7 @@ no-op with `WasSkipped: true` means the gate didn't match the actual value.
 - `*.<test-2-domain>` services: publicly reachable (TLS).
 - `<registry>` (image registry): internal network only — office WiFi
   direct, otherwise Tailscale first. Reachability probe:
-  `curl -sI https://<registry>/v2/` (registry CA trusted) → `HTTP/1.1 200 OK` with
+  `curl -sI https://<registry>/v2/` (registry CA trusted) → `HTTP/1.1 200 OK` (or `401` when the registry requires a login; both mean reachable) with
   `Docker-Distribution-Api-Version: registry/2.0`.
 - kubectl access to test-2 EXISTS via a Rancher kubeconfig download
   (`<rancher-url>`, publicly reachable — no VPN). Caveats:

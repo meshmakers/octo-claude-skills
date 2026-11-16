@@ -70,12 +70,12 @@ octo-ckc -c Publish -f .\ck\out\ck-<name>.yaml -c PrivateGitHubCatalog -r
 # Blueprint -> shared blueprint catalog (one-time: octo-bpm -c config -gt <github-token>)
 octo-bpm -c publish -p .\blueprint\<Name>\<version> -c PrivateGitHubBlueprintCatalog -f
 
-# App image -> the registry
+# App image -> the registry (must be reachable from your network, see pitfall 4)
 docker push <registry>/meshmakers/<app>:<tag>
 ```
 
 `octo-ckc`/`octo-bpm` are the CK and blueprint CLIs of `octo-construction-kit-engine`,
-not on PATH by default. The pushed image tag must equal the tag
+not on PATH by default. <!-- developer-machine -->(on a developer machine: the build output `bin/DebugL/net10.0/` of that repository)<!-- /developer-machine --> The pushed image tag must equal the tag
 pinned in the seed's ValuesYaml — verify before pushing.
 
 **CK catalog shortcut:** if publishing the CK model to the shared catalog is not

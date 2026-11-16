@@ -107,7 +107,7 @@ Each trigger type populates the DataContext differently. Know what paths your tr
 
 | Trigger | Populated Paths | Notes |
 |---------|-----------------|-------|
-| `FromHttpRequest@1` | `$.body` (JSON/text/base64), `$.query` (params), `$.files` (uploads), `$.formData` (form fields), `$.path`, `$.method`, `$.contentType` | `$.bodyEncoding: "base64"` added for binary content |
+| `FromHttpRequest@2` (and the deprecated `@1`) | `$.body` (JSON/text/base64), `$.query` (params), `$.files` (uploads), `$.formData` (form fields), `$.path`, `$.method`, `$.contentType` | `$.bodyEncoding: "base64"` added for binary content |
 | `FromWatchRtEntity@1` | `$.Document` (changed entity with `RtId`, `CkTypeId`, `Attributes`) | Entity state after the change |
 | `FromPipelineDataEvent@1` | Whatever the sender placed via `ToPipelineDataEvent@1`'s `targetPath` | Depends on sending pipeline |
 | `FromPolling@1` | `$.input` (if `input` property is configured) | Empty context if no input |

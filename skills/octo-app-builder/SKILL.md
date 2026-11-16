@@ -75,7 +75,7 @@ Author a minimal model (one folder, three files — full syntax in
 attributes as `${this}/<AttrId>-1`).
 
 ```powershell
-# octo-ckc = the CK compiler CLI of octo-construction-kit-engine, not on PATH by default
+# octo-ckc = the CK compiler CLI of octo-construction-kit-engine, not on PATH by default (developer machine: bin/DebugL/net10.0/)
 octo-ckc -c Compile -p .\ck\ConstructionKit -o .\ck\out
 octo-ckc -c Publish -f .\ck\out\ck-<name>.yaml -r     # → ~/.octo/local-catalog (LocalFileSystemCatalog)
 ```
