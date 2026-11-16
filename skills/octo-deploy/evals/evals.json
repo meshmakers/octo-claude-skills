@@ -12,8 +12,8 @@
         "CK model path is one of the two valid ones: octo-ckc Publish -c PrivateGitHubCatalog (with token config) OR direct octo-cli ImportCk on the test-2 tenant",
         "Blueprint published via octo-bpm -c publish ... -c PrivateGitHubBlueprintCatalog; no ImportCk-style shortcut claimed for the blueprint",
         "Image step pushes <registry>/meshmakers/inventory-lite-app:0.1.0 AND mentions connecting Tailscale first",
-        "Refreshes the SERVER-side catalog cache via octo-cli RefreshCatalogs before InstallBlueprint; no local cache-file deletion for test-2",
-        "Overall order: publish artifacts, context/tenant setup, RefreshCatalogs, InstallBlueprint, DeployDataFlow, DeployWorkload",
+        "Refreshes the SERVER-side catalog caches before InstallBlueprint: RefreshCatalogs for the CK model and RefreshBlueprintCatalogs for the blueprint; no local cache-file deletion for test-2",
+        "Overall order: publish artifacts, context/tenant setup, RefreshCatalogs + RefreshBlueprintCatalogs, InstallBlueprint, DeployDataFlow, DeployWorkload",
         "Does NOT instruct DeployWorkload on the system Mesh Adapter 670000000000000000000002",
         "Verification uses kubectl-free signals (GetAdapters/GetDataFlowStatus/GetWorkloadsByChart/lastDeploymentError) plus the app URL on <test-2-domain>",
         "Mentions the requires: octo.environment gate ([dev, test]) or checking for WasSkipped: true on install"

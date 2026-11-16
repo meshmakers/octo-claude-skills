@@ -1180,7 +1180,7 @@ octo-cli -c ImportFromCatalog -cn PublicGitHubCatalog -m Basic-2.5.0,Industry.Ba
 The CLI sends one `ResolveDependenciesBatch` and one `ImportFromCatalogBatch` (one job) and orders the set by dependency itself, whatever the order of the list. A blocked single import prints a ready-to-run joint command (requested models + the `suggestedDependentUpdate` of the blockers) — run that instead of `-f`; `-f` is not a safe workaround (a failing forced job can leave models `ResolveFailed`).
 
 #### RefreshCatalogs
-Refreshes CK model catalog caches.
+Refreshes CK model catalog caches (blueprint catalogs: `RefreshBlueprintCatalogs`).
 ```
 octo-cli -c RefreshCatalogs [-cn <catalogName>]
 ```
@@ -1207,6 +1207,15 @@ Lists blueprints available across configured catalogs. No arguments.
 ```
 octo-cli -c ListBlueprints
 ```
+
+#### RefreshBlueprintCatalogs
+Refreshes the blueprint catalog caches at the asset repository (always forced, no service restart). `RefreshCatalogs` covers CK model catalogs only. Needs the tenant role `DataModelManagement`. A catalog that fails is reported as Failed without aborting the others; the command then exits non-zero.
+```
+octo-cli -c RefreshBlueprintCatalogs [-cn <catalogName>]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-cn` | `catalogName` | Blueprint catalog to refresh, e.g. `LocalFileSystemBlueprintCatalog` (refreshes all if omitted) | No |
 
 #### ListBlueprintInstallations
 Lists blueprints currently installed on the active tenant (distinct from the catalog list above). No arguments.

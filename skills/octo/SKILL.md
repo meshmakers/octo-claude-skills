@@ -165,7 +165,7 @@ Changing the data model requires scope `octo_api` **and** the tenant role **Data
 | `CheckUpgrade` | Pre-flight an upgrade/migration (`-cn`, `-m`) | Read-only |
 | `LibraryStatus` | Installed models + catalog availability (`-na`, `-io`) | Read-only |
 | `ImportFromCatalog` | Import catalog model(s) + deps (`-cn`, `-m A,B,C` = one guarded set in dependency order, `-w`) | Mutating |
-| `RefreshCatalogs` | Refresh catalog caches (`-cn` optional) | Mutating |
+| `RefreshCatalogs` | Refresh CK model catalog caches (`-cn` optional; blueprints: `RefreshBlueprintCatalogs`) | Mutating |
 | `FixAll` | Import all models needing update/fix, blocked-by-each-other groups together, never forces (`-w`, `-y`) | Mutating |
 
 > After a release bumped `System` and catalog models went `ResolveFailed`: `FixAll -w -y` repairs every model that has a range-retaining catalog successor; for all tenants of an installation use one `Invoke-OctoTenantSweep`. Runbook: `references/repair-after-system-bump.md`.
@@ -176,6 +176,7 @@ Changing the data model requires scope `octo_api` **and** the tenant role **Data
 |---|---|---|
 | `ListBlueprints` | List blueprints across catalogs | Read-only |
 | `ListBlueprintInstallations` | List blueprints installed on the active tenant | Read-only |
+| `RefreshBlueprintCatalogs` | Refresh blueprint catalog caches, forced (`-cn` optional) | Mutating |
 | `ListBlueprintBackups` | List pre-update tenant backups | Read-only |
 | `GetBlueprintHistory` | Blueprint application history for the tenant | Read-only |
 | `PreviewBlueprintUpdate` | Preview an update without applying (`-tv`, `-m`) | Read-only |
