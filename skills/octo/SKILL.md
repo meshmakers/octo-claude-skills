@@ -351,7 +351,8 @@ Full lifecycle — combines `pipeline-expert` (YAML) with `octo` operations:
 **Step 5 — ImportRt YAML for DataFlow + Pipeline:** use the full DataFlow+Pipeline template in [ImportRt](references/command-reference.md#models)<!-- developer-machine -->, or generate one for any CK type automatically:
 ```
 ck_explorer.py preflight System.Communication/Pipeline --for-import --insecure
-```<!-- /developer-machine -->
+```
+<!-- /developer-machine -->
 The DataFlow holds `System/Name-1`; the Pipeline links to it via `System/ParentChild-1` and to the adapter via `System.Communication/Executes-1`, and carries `System.Communication/DeploymentState-1`, `System/Name-1`, `System/Enabled-1`, and the YAML in `System.Communication/PipelineDefinition-1`.
 
 **ImportRt ID format** is `ModelName/TypeName-TypeVersion` (e.g. `System.Communication/Pipeline-1`, `System/Name-1`); rtIds are exactly 24 hex characters. Full rules and the YAML format: [ImportRt](references/command-reference.md#models), and *CK Type ID Format Differences* below.
