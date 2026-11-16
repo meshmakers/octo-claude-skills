@@ -6,6 +6,7 @@ All notable changes to the octo-claude-skills plugin. Format loosely follows [Ke
 
 ### Changed
 
+- **`octo`, `octo-deploy`** — `LogInClientCredentials` runs in a context of the agent's own (`agent_<lane>_octosystem`), never in a human's context such as `local_octosystem` (octo-cli AB#9063): the old temp-tenant workflow logged the client into `local_octosystem` and replaced the human's interactive login, and context names match case-insensitively. `temp-tenants.md` (workflow step 1, teardown, new pitfall), `command-reference.md` (`--replace-login` / `-rl` and the refusal), `test-2-environment.md`.
 - **`octo`** — `temp-tenants.md`: `TenantOwners` carries every built-in platform role **including** `SecretManagement` (identity AB#8161), so a `--scratch` creator client holds it in its scratch tenant and can create clients with a secret there; the earlier "except `SecretManagement`" was wrong (AB#9065).
 - **`octo-mcp`** — new section "Entity Query Paging" (AB#8904, octo-mcp-service): `query_entities`, `query_entities_simple`, `navigate_associations`, `get_association_tree` (roots) and `execute_runtime_query` (`RtSimpleRtQuery`) page with a default of 100 and refuse a page size above the maximum of 1000 (never capped; an installation may configure both lower); the paging arguments per tool, the `Paging` result block, the config rule (`MaxQueryResultLimit` can be lowered, not raised) and how a new entity-returning tool uses `QueryPaging`. One new "Things NOT to Do" line.
 
