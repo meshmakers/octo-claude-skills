@@ -31,8 +31,10 @@ complete implementation):
 
 - `server/server.js` — node:http server. `GET /` → serve `client/index.html`;
   `/api/<rest>` (any method) → proxy to `UPSTREAM_URL/<rest>` preserving query +
-  JSON body **and the caller's `Authorization` header**, TLS verification off for
-  https upstreams; answer `/favicon.ico` with 204; 502
+  JSON body **and the caller's `Authorization` header**; for an https upstream keep
+  certificate verification on (trust the cluster CA, e.g. with
+  `NODE_EXTRA_CA_CERTS`) — never forward a token over an unverified TLS
+  connection; answer `/favicon.ico` with 204; 502
   `{"error":"upstream_unreachable"}` on connect failure.
 - `client/index.html` — single self-contained SPA calling `api/...` (same origin
   → no CORS, no cert issues in the browser). The API routes are authenticated by
