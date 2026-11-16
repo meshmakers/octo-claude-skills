@@ -327,7 +327,7 @@ Understanding how Communication entities relate allows intelligent resolution of
 - **Pipeline** holds its YAML in the `PipelineDefinition` attribute; parented to a DataFlow, executed by an Adapter.
 - **PipelineTrigger** *triggers* Pipelines (`System.Communication/Triggers-1`); has `cronExpression` and `enabled`; parented to a DataFlow.
 
-CK types for `rt_explorer.py`: `System.Communication/Adapter`, `/Pipeline`, `/DataFlow`, `/PipelineTrigger`, `/PipelineExecution`, `/PipelineStatistics`.
+CK types to query (Studio, GraphQL<!-- developer-machine -->, `rt_explorer.py`<!-- /developer-machine -->): `System.Communication/Adapter`, `/Pipeline`, `/DataFlow`, `/PipelineTrigger`, `/PipelineExecution`, `/PipelineStatistics`.
 
 ## Communication Workflows
 
@@ -335,28 +335,28 @@ When the user expresses one of these intents, resolve IDs, run the commands, and
 
 - **"What adapters are available?"** — `GetAdapters --json`, then summarize name, rtId, online/offline, config state.
 - **"What pipeline nodes can I use?"** — `GetAdapters --json` to find the adapter; `GetAdapterNodes` for the node list (grouped Trigger vs Transform); `GetPipelineSchema --adapterId <rtId>` for the full per-node config schema. With multiple adapters, ask which one.
-- **"Deploy this pipeline"** — find the adapter (`GetAdapters --json`) and the pipeline (`rt_explorer.py list System.Communication/Pipeline`); write inline YAML to a temp file; `DeployPipeline --adapterId <id> --pipelineId <id> --file <path>`; verify with `GetPipelineStatus --identifier <pipelineId> --json` = Deployed.
-- **"Run this pipeline"** — resolve the pipeline (`rt_explorer.py search System.Communication/Pipeline <name>`); `ExecutePipeline --identifier <rtId>` (capture the execution ID); after a brief wait, `GetLatestPipelineExecution --identifier <rtId> --json`; report status/duration/error; if failed, check debug points.
+- **"Deploy this pipeline"** — find the adapter (`GetAdapters --json`) and the pipeline (GraphQL/Studio<!-- developer-machine -->, or `rt_explorer.py list System.Communication/Pipeline`<!-- /developer-machine -->); write inline YAML to a temp file; `DeployPipeline --adapterId <id> --pipelineId <id> --file <path>`; verify with `GetPipelineStatus --identifier <pipelineId> --json` = Deployed.
+- **"Run this pipeline"** — resolve the pipeline (GraphQL/Studio<!-- developer-machine -->, or `rt_explorer.py search System.Communication/Pipeline <name>`<!-- /developer-machine -->); `ExecutePipeline --identifier <rtId>` (capture the execution ID); after a brief wait, `GetLatestPipelineExecution --identifier <rtId> --json`; report status/duration/error; if failed, check debug points.
 - **"Show me what happened" / "Debug the last execution"** — `GetLatestPipelineExecution --identifier <pipelineId> --json` for the execution ID + status; if it has debug data, `GetPipelineDebugPoints --identifier <pipelineId> --executionId <guid> --json` and present the node tree. (Toggle capture beforehand with `SetPipelineDebug --identifier <id> --enabled true`.)
 
 ### "Set up a new data flow end-to-end"
 Full lifecycle — combines `pipeline-expert` (YAML) with `octo` operations:
 1. Clarify the data flow (trigger, transformations).
-2. **Pre-flight:** for each CK type the pipeline touches, `ck_explorer.py preflight <type> --for-import --insecure` to discover exact attribute IDs + mandatory associations.
+2. **Pre-flight:** for each CK type the pipeline touches, <!-- developer-machine -->`ck_explorer.py preflight <type> --for-import --insecure` or <!-- /developer-machine -->the MCP tool `get_type_schema` to discover exact attribute IDs + mandatory associations.
 3. Route to `pipeline-expert` via `Skill("pipeline-expert", ...)` for the YAML.
 4. Discover the adapter: `GetAdapters --json` → adapter rtId.
 5. Create the runtime entities: `ImportRt -f <file> -w` (template below).
 6. `DeployPipeline --adapterId <id> --pipelineId <id> --file <yaml>` → verify `GetPipelineStatus --identifier <pipelineId> --json` = Deployed → test `ExecutePipeline --identifier <rtId>`. For cron triggers, `DeployTriggers`.
 
-**Step 5 — ImportRt YAML for DataFlow + Pipeline:** use the full DataFlow+Pipeline template in `references/command-reference.md` (ImportRt section), or generate one for any CK type automatically:
+**Step 5 — ImportRt YAML for DataFlow + Pipeline:** use the full DataFlow+Pipeline template in [ImportRt](references/command-reference.md#models)<!-- developer-machine -->, or generate one for any CK type automatically:
 ```
 ck_explorer.py preflight System.Communication/Pipeline --for-import --insecure
-```
+```<!-- /developer-machine -->
 The DataFlow holds `System/Name-1`; the Pipeline links to it via `System/ParentChild-1` and to the adapter via `System.Communication/Executes-1`, and carries `System.Communication/DeploymentState-1`, `System/Name-1`, `System/Enabled-1`, and the YAML in `System.Communication/PipelineDefinition-1`.
 
-**ImportRt ID format** is `ModelName/TypeName-TypeVersion` (e.g. `System.Communication/Pipeline-1`, `System/Name-1`); rtIds are exactly 24 hex characters. Full rules and the YAML format: `references/command-reference.md` (ImportRt), and *CK Type ID Format Differences* below.
+**ImportRt ID format** is `ModelName/TypeName-TypeVersion` (e.g. `System.Communication/Pipeline-1`, `System/Name-1`); rtIds are exactly 24 hex characters. Full rules and the YAML format: [ImportRt](references/command-reference.md#models), and *CK Type ID Format Differences* below.
 
-- **"What's the status of my data flows?"** — `rt_explorer.py list System.Communication/DataFlow`, then `GetDataFlowStatus --identifier <rtId> --json` for each; summarize name, state, pipeline states, last execution, statistics.
+- **"What's the status of my data flows?"** — list the data flows (GraphQL/Studio<!-- developer-machine -->, or `rt_explorer.py list System.Communication/DataFlow`<!-- /developer-machine -->), then `GetDataFlowStatus --identifier <rtId> --json` for each; summarize name, state, pipeline states, last execution, statistics.
 
 ### Pipeline Schema as Node Discovery
 

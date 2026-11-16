@@ -970,8 +970,9 @@ transformations:
 **Call it** with a multipart upload; the file becomes `$.files[0]` and its content `$.files[0].data` (base64), which `ImportFromCsv@1` reads by `fileIndex`:
 
 ```bash
-curl -X POST "https://<mesh-adapter-host>/<tenantId>/meter-readings/import" \
-  -H "Authorization: Bearer <token>" -F "file=@readings.csv"
+# the header is read from stdin, so the token stays out of the process arguments and the shell history
+printf 'Authorization: Bearer %s\n' "$OCTO_TOKEN" | curl -X POST "https://<mesh-adapter-host>/<tenantId>/meter-readings/import" \
+  -H @- -F "file=@readings.csv"
 # -> { "imported": [ "AT0012345_2026-10", "AT0012346_2026-10" ] }
 ```
 

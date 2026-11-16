@@ -123,5 +123,5 @@ Failure triage:
   make sure exactly that name was kind-loaded/pushed.
 - Pod restarts / not Ready → probes failing: `GET /` must return 200 on `PORT`.
 - Helm install error → `kubectl logs -n octo-operator-system deploy/communication-operator`
-  and the workload's `lastDeploymentError` attribute (rt_explorer/Studio).
+  and the workload's `lastDeploymentError` attribute (Studio<!-- developer-machine -->, rt_explorer<!-- /developer-machine -->).
 - Uninstalling the blueprint? `UndeployWorkload` FIRST, then `UninstallBlueprint`.

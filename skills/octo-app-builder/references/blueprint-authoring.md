@@ -89,8 +89,8 @@ development; shared environments need the model in a shared catalog.
 | Pipeline YAML (`ckTypeId` in nodes) | unversioned `Model/Type` | `Demo.Tickets/Ticket` |
 | GraphQL delete mutations | unversioned `Model/Type` | `Demo.Tickets/Ticket` |
 
-After ImportCk, generate the exact seed template with the octo skill's
-`ck_explorer.py preflight <Model>/<Type> --for-import`.
+After ImportCk, check the exact attribute IDs with the MCP tool `get_type_schema`<!-- developer-machine --> (or generate the seed template
+with the octo skill's `ck_explorer.py preflight <Model>/<Type> --for-import`)<!-- /developer-machine -->.
 
 ## Blueprint manifest (`blueprint.yaml`)
 

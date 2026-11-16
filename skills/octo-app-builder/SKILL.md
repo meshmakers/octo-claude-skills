@@ -83,8 +83,8 @@ octo-ckc -c Publish -f .\ck\out\ck-<name>.yaml -r     # → ~/.octo/local-catalo
 Publishing to the catalog is what lets the blueprint auto-import the model via
 `ckModelDependencies`. For pipeline iteration also import it into the tenant now:
 `octo-cli -c ImportCk -f .\ck\out\ck-<name>.yaml -w`, then verify the exact
-attribute IDs with the octo skill's
-`ck_explorer.py preflight <Model>/<Type> --for-import`.
+attribute IDs with the MCP tool `get_type_schema`<!-- developer-machine --> (or the octo skill's
+`ck_explorer.py preflight <Model>/<Type> --for-import`)<!-- /developer-machine -->.
 
 ### 2. HTTP-API pipelines (iterate on a scratch dataflow)
 

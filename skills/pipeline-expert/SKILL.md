@@ -94,7 +94,7 @@ These errors cause deployment failures. Check your YAML against this table befor
 | `valueType: Int32` | `Not in enum` | Use the short enum name: `Int`, `Boolean`, `String`, `Double`, `DateTime`, etc. |
 | `ckTypeId: Model-Version/Type` | Deployment error | Use unversioned: `Model/Type` (pipeline YAML ckTypeId refs are unversioned, unlike ImportRt YAML) |
 
-**Prevention:** before deploying, fetch the schema (`octo-cli -c GetPipelineSchema --adapterId <rtId> --outputFile schema.json`) and confirm each node's property names and enum values in `$defs`, or use `pipeline_validate.py`.
+**Prevention:** before deploying, fetch the schema (`octo-cli -c GetPipelineSchema --adapterId <rtId> --outputFile schema.json`) and confirm each node's property names and enum values in `$defs`, or use the MCP tool `validate_pipeline_definition`<!-- developer-machine --> (developer machine: `pipeline_validate.py`)<!-- /developer-machine -->.
 
 ## DataContext Essentials
 
@@ -258,7 +258,7 @@ This is **different** from the PascalCase you see in GraphQL query results (wher
 | Field filters (`attributePath` in fieldFilters) | PascalCase (matches DB field names) | `attributePath: SerialNumber` |
 | System properties in fieldFilters | PascalCase | `attributePath: RtWellKnownName` |
 
-**Always run `ck_explorer.py preflight <type>` before writing CreateUpdateInfo to get the exact attribute names.**
+**Always look up the exact attribute names before writing CreateUpdateInfo** (the MCP tool `get_type_schema`<!-- developer-machine -->, or `ck_explorer.py preflight <type>`<!-- /developer-machine -->).
 
 ## EntityUpdateInfo JSON Structure
 
@@ -274,7 +274,7 @@ The top-level `RtId` is populated only when a static `rtId` is given or an upstr
 
 Some CK types have **mandatory outbound associations** (multiplicity = ONE). Creating an entity of such a type WITHOUT the required association will fail at `ApplyChanges` time with: `"Inbound association 'X' has minimum multiplicity of 'One'"`.
 
-**Pre-flight check:** Always run `ck_explorer.py preflight <type>` before writing CreateUpdateInfo for a new entity type. If the output shows mandatory associations, you MUST include `CreateAssociationUpdate@1` nodes in the same `ApplyChanges@2` call.
+**Pre-flight check:** Always look up the type (the MCP tool `get_type_schema`<!-- developer-machine -->, or `ck_explorer.py preflight <type>`<!-- /developer-machine -->) before writing CreateUpdateInfo for a new entity type. If the output shows mandatory associations, you MUST include `CreateAssociationUpdate@1` nodes in the same `ApplyChanges@2` call.
 
 **Common mandatory association:** `System/ParentChild` — types like Machine, TreeNode, and many domain entities require a parent.
 
@@ -477,9 +477,9 @@ logFiles/MeshAdapter.log
 
 | Error message | Cause | Fix |
 |---------------|-------|-----|
-| "Inbound association 'X' has minimum multiplicity of 'One'" | Entity type requires a mandatory association | Run `ck_explorer.py preflight <type>`, add `CreateAssociationUpdate` |
+| "Inbound association 'X' has minimum multiplicity of 'One'" | Entity type requires a mandatory association | Look up the type (the MCP tool `get_type_schema`<!-- developer-machine -->, or `ck_explorer.py preflight <type>`<!-- /developer-machine -->), add `CreateAssociationUpdate` |
 | "Value of origin RtId is null" | Path-based RtId reference resolves to null | Ensure upstream `GetOrCreateRtEntitiesByType@1` or `GetRtEntitiesByWellKnownName@1` writes RtId via `rtIdTargetPath` before this node reads it |
-| "Attribute 'X' does not exist at type 'Y'" | Wrong attribute name or casing | Run `ck_explorer.py preflight <type>` for exact names |
+| "Attribute 'X' does not exist at type 'Y'" | Wrong attribute name or casing | Look up the type (the MCP tool `get_type_schema`<!-- developer-machine -->, or `ck_explorer.py preflight <type>`<!-- /developer-machine -->) for exact names |
 
 ### Debugging workflow
 

@@ -971,7 +971,7 @@ octo-cli -c ImportRt -f <file> [-r] [-w]
 
 ##### ImportRt YAML Format
 
-The import file uses a specific YAML structure. Use `ck_explorer.py preflight <type> --for-import` to generate a template for any CK type with the correct ID format.
+The import file uses a specific YAML structure.<!-- developer-machine --> Use `ck_explorer.py preflight <type> --for-import` to generate a template for any CK type with the correct ID format.<!-- /developer-machine -->
 
 ```yaml
 $schema: https://schemas.meshmakers.cloud/runtime-model.schema.json
@@ -1045,7 +1045,7 @@ entities:
               targetPath: $.items
 ```
 
-**Discovering attribute IDs:** Use `ck_explorer.py preflight <type> --for-import` to generate a ready-to-fill YAML template with the correct CK attribute IDs in import format. The standard preflight output (without `--for-import`) also shows the CK attribute ID alongside each property name.
+**Discovering attribute IDs:** the MCP tool `get_type_schema` shows the attributes and associations of a type.<!-- developer-machine --> On a developer machine, `ck_explorer.py preflight <type> --for-import` generates a ready-to-fill YAML template with the correct CK attribute IDs in import format; the standard preflight output (without `--for-import`) also shows the CK attribute ID alongside each property name.<!-- /developer-machine -->
 
 ##### ImportRt Troubleshooting
 

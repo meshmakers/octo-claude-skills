@@ -81,7 +81,7 @@ from local development does not apply to test-2.
 ## App image → <registry>
 
 ```powershell
-# Tailscale first when off-site! Probe: curl -skI https://<registry>/v2/  -> 200
+# Registry reachable? Probe (registry CA trusted): curl -sI https://<registry>/v2/  -> 200 or 401
 docker build -t <registry>/meshmakers/<app>:<tag> .\app
 docker push <registry>/meshmakers/<app>:<tag>
 ```

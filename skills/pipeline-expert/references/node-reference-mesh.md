@@ -254,7 +254,7 @@ Backfill missing attributes on a list of `EntityUpdateInfo<RtEntity>` items from
 
 Create `EntityUpdateInfo` objects for database operations (Insert/Update/Delete).
 
-> **WARNING: Attribute Name Casing** — `attributeName` must match the CK model's exact casing (typically camelCase: `name`, `machineState`, `operatingHours`). Do NOT assume PascalCase. Use `ck_explorer.py preflight <type>` to discover correct names.
+> **WARNING: Attribute Name Casing** — `attributeName` must match the CK model's exact casing (typically camelCase: `name`, `machineState`, `operatingHours`). Do NOT assume PascalCase. Look up the correct names with the MCP tool `get_type_schema`<!-- developer-machine --> (or `ck_explorer.py preflight <type>`)<!-- /developer-machine -->.
 
 > **Intended workflow:** Use `GetOrCreateRtEntitiesByType@1` or `GetRtEntitiesByWellKnownName@1` upstream to resolve/generate RtIds (via `rtIdTargetPath`), then pass the ID here via `rtIdPath`. This makes the RtId available for `CreateAssociationUpdate` path references downstream. Avoid `generateRtId: true` when you need to reference the ID in associations.
 
