@@ -751,7 +751,7 @@ Execute dynamic C# code.
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `code` | string | required | C# expression or statement |
-| `arguments` | array | optional | Script arguments: `{name, valuePath, value, dataType}` |
+| `arguments` | array | optional | Script arguments: `{name, valuePath, value, dataType, optional, defaultValue}` |
 | `returnType` | enum | required | String, Int, Int64, Boolean, Double, DateTime |
 | `timeoutMs` | int | 5000 | Execution timeout |
 | `usings` | array | optional | Additional using statements |
@@ -771,6 +771,26 @@ Execute dynamic C# code.
   targetPath: $.key.sum
   usings:
     - System.Linq
+```
+
+**Missing argument paths (AB#9006).** When an argument's `valuePath` does not exist on a record, the script receives `defaultValue`; without one the script variable gets its type's default — null for `String` and the array types, `0`/`false`/`DateTime.MinValue` for `Int`, `Int64`, `Double`, `Boolean`, `DateTime` (the variables are declared non-nullable, so check `dueDate == DateTime.MinValue`, not `dueDate == null`).
+
+- `optional: true` — the path may be absent: no warning, only a debug line per record. Mark every argument whose field legitimately is missing on some records (inside `ForEach@1` especially).
+- `defaultValue` — passed when the path is missing **or** holds null. It must be convertible to `dataType`; an inconvertible default fails the node on every execution, also when the path exists.
+- Non-optional argument with a missing path — one aggregated **warning per pipeline execution and argument** with the record count (`ExecuteCSharp argument 'dueDate': path '$.key.dueDate' was not found in 1234 record(s) of this execution, null was used ...`), per-record detail at debug level. Older SDK versions logged one warning per record.
+- A path that exists with value null is silent, as before; the script gets `defaultValue` or the type's default, as for a missing path.
+
+```yaml
+  arguments:
+    - name: dueDate
+      valuePath: $.key.Attributes.DueDate
+      dataType: DateTime
+      optional: true          # absent on many records: no warning
+    - name: comment
+      valuePath: $.key.Attributes.Comment
+      dataType: String
+      optional: true
+      defaultValue: ""        # script gets "" instead of null
 ```
 
 ---

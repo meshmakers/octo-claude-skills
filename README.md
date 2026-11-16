@@ -42,7 +42,7 @@ claude plugin install octo-claude-skills
 See [CLAUDE.md](CLAUDE.md) for authoring conventions (description budgets, the 500-line SKILL.md rule, the accuracy mandate) and the versioning/release process. Validate after structural changes:
 
 ```bash
-claude plugin validate . --strict
+claude plugin validate .
 ```
 
 Release history lives in [CHANGELOG.md](CHANGELOG.md).

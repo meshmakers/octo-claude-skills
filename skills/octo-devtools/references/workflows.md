@@ -81,7 +81,7 @@ Invoke-BuildEnvironment -env ab1234-my-change -verifyTests      # incremental, o
 # after the PR is merged: stop the environment's services first (octo-devstack env_remove does that and releases the lease)
 Remove-OctoEnvironment -env ab1234-my-change
 ```
-Never publish feature work into `branches/main/nuget`. An existing worktree is adopted with `Add-OctoEnvironmentRepo -env <env> -path <worktree>` (`-inPlace`: not isolated for plain `dotnet build`/Rider, never deleted by `Remove-OctoEnvironment`).
+Never publish feature work into the base lane's `nuget/`. The base lane is detected (`branches/main`, or `$rootPath` itself in the flat layout; `-base` / `$env:OCTO_ENVIRONMENT_BASE` override). An existing worktree is adopted with `Add-OctoEnvironmentRepo -env <env> -path <worktree>` (`-inPlace`: not isolated for plain `dotnet build`/Rider, never deleted by `Remove-OctoEnvironment`); a hand-made environment without manifest is adopted into an empty one: `New-OctoEnvironment -env <new name> -workItem AB#..` (no `-repos`), then `Add-OctoEnvironmentRepo -env <new name> -path <worktree> -inPlace`. Adopt a worktree only when no other session works in it: the next `Invoke-BuildEnvironment` clears the environment's kill scope, which includes every in-place worktree, and on Windows stops a dotnet process another session runs there.
 
 **Changes affect NuGet packages in main — use Invoke-BuildAll:**
 ```

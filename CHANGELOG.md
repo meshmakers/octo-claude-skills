@@ -2,11 +2,54 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
-## [0.29.0] — 2026-11-12
+## [Unreleased]
 
 ### Changed
 
 - **`pipeline-expert`, `octo-app-builder`, `octo-operator`** — secret defaults of an Application (AB#7252, Feature AB#7219; System.Communication 4.15.0, value Hidden since 4.16.0; controller AB#7244/AB#7245, mesh adapter AB#7246/AB#7251). `pipeline-expert`: `VerifyCaptcha@1` in `node-reference-mesh.md` (settings, output `{ valid, source, reason }`, tenant secret else the default, an override encrypted with an unknown key id falls back to the default, any other undecryptable override does not; two entities with the same well-known name are refused and count as not set; check `valid` before `reason`) and `RevealSecret@1` with why it refuses `System.Communication/SecretDefault` (platform-only: no tenant identity may obtain it); `GetPipelineConfigByCkTypeId@1` refuses the type; `MakeHttpRequest@1` is not for CAPTCHA checks; one line each in the `SKILL.md` node tables. `octo-app-builder`: `references/app-workload.md` §Secrets — secret-flagged `ValueOverride` only for secrets the pod needs, `SecretDefaults` for secrets only platform nodes need; the seed declares no `SecretDefaults` entry (an entry without a value makes the deploy refuse the Application; the secret seed lint refuses values, placeholders and `${...}` variables, and blueprints have no install-time parameters); the operator adds key and value after the install (Studio *Further attributes*, GraphQL with the secret as a variable, or a CD from Vault as EC on test-2) and deploys, re-apply keeps the entry; `AllowedTenantIds` absent or empty = own tenant and whole subtree, a non-empty list only narrows it (a later tenant must be added to it); projection on deploy, on tenant load and on `POST {tenant}/v1/secretDefaults/reconcile`, Pending and Deployed Applications are sources, undeploy withdraws, a refused redeploy (state Error) keeps the defaults already projected, removing the entry or narrowing `AllowedTenantIds` revokes at the next projection, not while the Application is in Error (controller PR #100); best effort per tenant with events linked to the Application (read them and the controller's per-deploy summary log line before revoking an old secret); the projected entity is the "set" signal because the value is Hidden; keys are one namespace per target tenant, so overlapping Applications need distinct keys; pointer in `SKILL.md`. `octo-operator`: secret defaults are not a Helm tier — they never reach the operator, a values file or the release Secret. Worked sample: `octo-communication-controller-services/samples/Blueprints/SecretDefaultDemo/` (controller PR #96).
+
+## [0.28.10] — 2026-11-16
+
+### Changed
+
+- **CLAUDE.md** — Versioning: story branches no longer bump the version; they add CHANGELOG lines under `## [Unreleased]` and are pushed without a pull request. The daily docs batch of octo-claude-pm sets the version once (next patch after `main`) and turns Unreleased into that version's header (AB#9020).
+
+## [0.28.9] — 2026-11-15
+
+### Changed
+
+- **`octo-devtools`** — Feature environments in both workspace layouts (octo-tools AB#9007): `New-OctoEnvironment` detects the base lane (`$env:OCTO_ENVIRONMENT_BASE`, `branches/main`, or `$rootPath` itself in the flat layout, manifest `base: "."`) and takes `-base`; without `-repos` it creates an empty environment, so a hand-made environment is adopted with `Add-OctoEnvironmentRepo -path <worktree> -inPlace`. `SKILL.md`, `references/command-reference.md`, `references/workflows.md`.
+
+## [0.28.8] — 2026-11-15
+
+### Fixed
+
+- **`octo`** — the SKILL.md body has headroom under the release gate again (499 → 477 lines, limit 500, target ≤ 480; AB#8991). The `gql_introspect.py` and `pipeline_validate.py` reference, the `::` association meta columns and the stream-data / blueprint CK types moved verbatim into the new `references/data-model-scripts.md`; the body keeps a short summary of each with a pointer. The duplicated ImportRt ID-format list now points to `references/command-reference.md` (ImportRt), which already holds the full rules. Description, triggers and the routing table are unchanged.
+
+## [0.28.7] — 2026-11-15
+
+### Changed
+
+- **`octo`** — `SKILL.md` (Secrets Rule) and `references/command-reference.md` name `-p`/`--password` as deprecated with the removal date to be announced (AB#9010, AB#8861). No example in the skills passes a password as an argument; check: `git grep -nE 'octo-cli.*-c +(ResetPassword|CreateUser|Setup)( |$).*( -p( |$)|--password( |=|$))' -- skills` finds nothing.
+- **`octo`** — `SKILL.md` body back under the 500-line budget (504 → 499 lines, `validate_skill_frontmatter.py` failed on `main`): the `pipeline_validate.py` usage is written more compactly, no content removed.
+
+## [0.28.6] — 2026-11-15
+
+### Changed
+
+- **`pipeline-expert`** — `ExecuteCSharp@1` documents the new argument fields `optional` and `defaultValue` (AB#9006, octo-communication-sdk): an optional argument whose `valuePath` is missing is silent, `defaultValue` replaces null for a missing or null path and must be convertible to `dataType`, and a missing path of a non-optional argument is reported once per pipeline execution with a record count instead of one warning per record. Table, example and behaviour in `references/node-reference-sdk.md`, one line in `SKILL.md`.
+
+## [0.28.5] — 2026-11-15
+
+### Changed
+
+- **`octo-commit`** — Step 9 points to the `octo-claude-pm` verify gate (0.46.0, AB#8988, AB#8989, AB#8990): what it refuses, the order local review → fix commit → `verify_record.py run` and `review` on that commit, and where the rules are (`agent-operating-rules` §2.1–§2.3). The rules themselves are not restated.
+
+## [0.28.4] — 2026-11-13
+
+### Changed
+
+- **`octo`** — `references/command-reference.md`: `CreateUser` and `ResetPassword` run the CK methods `System.Identity/User.CreateUser-1` / `User.ResetPassword-1` (AB#8418, octo-cli): needed identity versions (3.5.57 / 3.5.52 with `Methods:Identity:EnablePasswordMethods`), no REST fallback, server-side refusals as `CODE: message`. The password examples already use `--password-stdin` only.
 
 ## [0.28.3] — 2026-11-11
 

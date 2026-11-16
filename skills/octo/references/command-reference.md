@@ -2,7 +2,7 @@
 
 All flags use short form with `-` prefix. Required flags are marked with **(R)**.
 
-> **Secrets never on the command line (octo-cli, AB#8044).** Passwords and client secrets are read from a hidden prompt, from standard input (`--password-stdin` / `-ps`, `--secret-stdin` / `-ss`, `--client-secret-stdin` / `-css`) or from an environment variable. The old arguments `-p`, `-s` and `-cs` still work but are **deprecated** (warning, removed in a later release): the value lands in the shell history, the process list and transcripts. **Never use them and never echo a secret.** A deprecated argument and its stdin flag together are refused (`Use either … not both`). Order: deprecated argument or stdin flag > environment variable > hidden prompt (terminal only; a new secret is asked twice). Exceptions without a prompt: `CreateUser` without a source creates the user without a password; `UpdateIdentityProvider` without a source keeps the stored client secret. Pipe the value from a mode-600 file or a secret store: `octo-cli -c <Command> --password-stdin … < <file>` — never type the literal value into a command. Not affected: `Update/DeleteApiSecret*` `-s` is the stored secret **hash** (an identifier, as `GetApiSecrets*` lists it), not the secret.
+> **Secrets never on the command line (octo-cli, AB#8044).** Passwords and client secrets are read from a hidden prompt, from standard input (`--password-stdin` / `-ps`, `--secret-stdin` / `-ss`, `--client-secret-stdin` / `-css`) or from an environment variable. The old arguments `-p`/`--password`, `-s` and `-cs` still work but are **deprecated** (warning; removal date to be announced, AB#8861): the value lands in the shell history, the process list and transcripts. **Never use them and never echo a secret.** A deprecated argument and its stdin flag together are refused (`Use either … not both`). Order: deprecated argument or stdin flag > environment variable > hidden prompt (terminal only; a new secret is asked twice). Exceptions without a prompt: `CreateUser` without a source creates the user without a password; `UpdateIdentityProvider` without a source keeps the stored client secret. Pipe the value from a mode-600 file or a secret store: `octo-cli -c <Command> --password-stdin … < <file>` — never type the literal value into a command. Not affected: `Update/DeleteApiSecret*` `-s` is the stored secret **hash** (an identifier, as `GetApiSecrets*` lists it), not the secret.
 >
 > | Command | Stdin flag | Environment variable |
 > |---|---|---|
@@ -141,6 +141,7 @@ octo-cli -c GetUsers
 ```
 
 #### CreateUser
+Runs the CK method `System.Identity/User.CreateUser-1` (GraphQL). Needs identity services 3.5.57+ with `Methods:Identity:EnablePasswordMethods` on; an older service gets a message naming that version — there is no REST fallback. Refusals (`USER_ALREADY_EXISTS`, `USER_NAME_RESERVED`, `PASSWORD_POLICY_VIOLATION` with the failed rules in brackets, e.g. `[PasswordRequiresUpper]`) come from the server as `CODE: message`, exit code -3 (`$?` = 253 in POSIX shells).
 ```
 octo-cli -c CreateUser -un <userName> -e <eMail> [--password-stdin]
 ```
@@ -171,6 +172,7 @@ octo-cli -c DeleteUser -un <userName> [-y]
 | `-y` | `yes` | Skip confirmation prompt | No |
 
 #### ResetPassword
+Runs the CK method `System.Identity/User.ResetPassword-1` (GraphQL) for the user looked up by name. Needs identity services 3.5.52+ with `Methods:Identity:EnablePasswordMethods` on; no REST fallback. Refusals (`PASSWORD_POLICY_VIOLATION`, `SHADOW_USER_PASSWORD_NOT_ALLOWED`, `METHOD_FORBIDDEN`) come from the server as `CODE: message`, exit code -3 (`$?` = 253 in POSIX shells).
 ```
 octo-cli -c ResetPassword -un <userName> [--password-stdin] [-y]
 # e.g. octo-cli -c ResetPassword -un <userName> --password-stdin -y < ~/.octo-cli/<user>.password
