@@ -152,7 +152,7 @@ entities:
       - id: System.Communication/PipelineDefinition-1
         value: |
           triggers:
-            - type: FromHttpRequest@1
+            - type: FromHttpRequest@2       # authenticated by default (http-api-pipelines.md §Route security)
               ...
 ```
 

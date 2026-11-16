@@ -31,10 +31,21 @@ complete implementation):
 
 - `server/server.js` — node:http server. `GET /` → serve `client/index.html`;
   `/api/<rest>` (any method) → proxy to `UPSTREAM_URL/<rest>` preserving query +
-  JSON body, TLS verification off for https upstreams; answer `/favicon.ico`
-  with 204; 502 `{"error":"upstream_unreachable"}` on connect failure.
+  JSON body **and the caller's `Authorization` header**; for an https upstream keep
+  certificate verification on (trust the cluster CA, e.g. with
+  `NODE_EXTRA_CA_CERTS`) — never forward a token over an unverified TLS
+  connection; answer `/favicon.ico` with 204; 502
+  `{"error":"upstream_unreachable"}` on connect failure.
 - `client/index.html` — single self-contained SPA calling `api/...` (same origin
-  → no CORS, no cert issues in the browser).
+  → no CORS, no cert issues in the browser). The API routes are authenticated by
+  default (`FromHttpRequest@2`, see [http-api-pipelines.md](http-api-pipelines.md)
+  §Route security), so the SPA signs the user in with the tenant's identity
+  service (an OIDC client of the tenant, authorization code with PKCE) and sends
+  `Authorization: Bearer <access token>` with every `api/...` call; the proxy
+  passes it through. Never let the proxy add one fixed token for every caller:
+  that turns every route into a public one. A route that must work without a
+  sign-in is a public route on purpose (`allowAnonymous: true`, with the warning
+  of §Public routes).
 - `Dockerfile`: `FROM node:22-alpine`, copy server+client, `ENV PORT=5055`,
   `EXPOSE 5055`, `CMD ["node","server/server.js"]`.
 

@@ -521,7 +521,9 @@ Complex billing calculation pipeline: loads config, queries data with joins, ite
 
 ```yaml
 triggers:
-  - type: FromHttpRequest@1
+  # The deployment used the deprecated FromHttpRequest@1, which is always public; @2 keeps the route
+  # authenticated (any valid token of the tenant; requiredRoles narrows it).
+  - type: FromHttpRequest@2
     path: /createBillingItems
     method: POST
 

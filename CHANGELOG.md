@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Changed
+
+- **`octo-app-builder`, `pipeline-expert`, `octo`** — app HTTP APIs are authenticated by default (AB#9128, Feature AB#8777; decided by Gerald 2026-11-16). The build sequence, `references/http-api-pipelines.md` and the blueprint seed example use `FromHttpRequest@2` instead of the deprecated, always public `FromHttpRequest@1`; new sections "Route security" (token of the tenant's identity service → `401`, token of another tenant → `403`, `requiredRoles` → `403`; the `Authorization` header never reaches the DataContext) and "Public routes (only on purpose)" with the warning (callable by anyone with the URL, no identity, tenant or role check; only for webhooks, public forms and one-time links; `allowAnonymous: true` explicit with a comment; minimal response; verify in the pipeline; never `@1`). Pattern 3 (one-time link) is the public example, noting that an rtId is not a secret. The response semantics now name the envelope the adapter strips (AB#5674) and that only the route authorization answers `401`/`403`; the `ServiceTokenEnforcement=Warn` relaxation is named; one eval assertion checks `@2` and an explicit public route. `references/app-workload.md`: the proxy passes the caller's `Authorization` header through, the SPA signs the user in with an OIDC client of the tenant (authorization code with PKCE) and sends the access token; never a fixed proxy token for every caller. The recipe no longer turns off TLS verification for https upstreams: verification stays on (cluster CA via `NODE_EXTRA_CA_CERTS`), because the proxy now forwards tokens. Troubleshooting row for `401`/`403`; the design constraint "no auth on adapter HTTP routes" is replaced. `node-reference-mesh.md` `FromHttpRequest@2`: authorization steps and the warning that every `@1` route is public; the billing example uses `@2`.
+
 ## [0.28.11] — 2026-11-16
 
 ### Changed
