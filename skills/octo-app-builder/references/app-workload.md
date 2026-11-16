@@ -157,7 +157,8 @@ Secret attribute in a seed is only ever empty or omitted; blueprints have no ins
   every tenant it no longer reaches at the next projection, but not while the Application is in Error: it keeps them
   until a redeploy succeeds (undeploy to withdraw). An invalid entry (a duplicate key, no value) is never written,
   but the Application keeps the default it already projected for that key in every tenant that all its entries of
-  the key allow, at deploy and at reconcile; fix or remove the entry, or exclude the tenant, to withdraw it.
+  the key allow, at deploy and at reconcile; to withdraw it, remove the entry or exclude the tenant (a fixed entry
+  projects the default again).
   The projection is best effort per tenant: a skipped tenant (no
   System.Communication 4.15.0, not resolvable) or a failed write is a Warning/Error event, and the deploy still
   succeeds. Events about an Application's defaults are **linked to the Application** (`relatesFrom` of
