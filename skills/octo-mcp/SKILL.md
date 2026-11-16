@@ -108,11 +108,11 @@ The Family-2/3 tools read the engine directly, so the asset repository's API gua
 | `get_association_tree` (root entities) | `rootTake` | `rootSkip` |
 | `execute_runtime_query` (`RtSimpleRtQuery`) | `take` | `skip` |
 
-- No page size → `DynamicToolOptions.GetEffectiveDefaultQueryLimit()` (100).
-- Page size above `GetEffectiveMaxQueryResultLimit()` (1000) → **refused** before any session or engine call, with an error that names the limit (`limit 5000 exceeds the maximum of 1000; page with offset ...`). Never silently cap. A page size below 1 or a negative skip is refused too.
-- `MaxQueryResultLimit` can be lowered in config, never raised: `DynamicToolOptions.MaxPageSize` (1000) is a constant, a higher value is ignored and reported by the health check.
-- Every result carries `Paging` (`QueryPagingInfo`: `skip`, `take`, `defaultTakeApplied`, `maxTake`, `returnedCount`, `hasMore`, `nextSkip`, `hint`). Clients page with `nextSkip` until `hasMore` is false.
-- Not paged: the aggregation/grouping tools (aggregates, no entities) and the children per level of `get_association_tree`.
+- No page size → `DynamicToolOptions.GetEffectiveDefaultQueryLimit()`: the configured `DefaultQueryLimit` (100 by default), lowered to the effective maximum when that is smaller.
+- Page size above `GetEffectiveMaxQueryResultLimit()` (1000 unless configured lower) → **refused** before any session or engine call, with an error that names the limit (`limit 5000 exceeds the maximum of 1000; page with offset ...`). Never silently cap. A page size below 1, a negative skip and a skip above `int.MaxValue` minus the maximum are refused too. `execute_runtime_query` checks `take` before it loads the persisted query, so an oversized `take` is refused for every subtype.
+- `MaxQueryResultLimit` can be lowered in config, never raised: `DynamicToolOptions.MaxPageSize` (1000) is a constant, a higher value is ignored, logged at startup and reported by the health check (Degraded).
+- Every entity result carries `Paging` (`QueryPagingInfo`: `skip`, `take`, `defaultTakeApplied`, `maxTake`, `returnedCount`, `hasMore`, `nextSkip`, `hint`); for `execute_runtime_query` only `RtSimpleRtQuery` results. `hasMore` compares with the engine's total count when it reports one, else it is true for a full page. Clients page with `nextSkip` until `hasMore` is false.
+- Not paged: the aggregation/grouping tools and the aggregation subtypes of `execute_runtime_query` (aggregates, no entities), and the children per level of `get_association_tree`.
 
 **A new tool that returns runtime entities** calls `QueryPaging.Resolve(server, take, skip, "<takeArg>", "<skipArg>")` first, passes `paging.Skip`/`paging.Take` to the engine, returns `paging.ToInfo(returned, totalCount)` and states default, maximum and paging in its description (`RuntimeEntityCrudTools.PagingDescription`). Test it like `Tools/RuntimeQueryPagingTests`: no limit → take 100, 1000 accepted, 1001 refused without an engine call, skip forwarded.
 
