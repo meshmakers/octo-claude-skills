@@ -28,7 +28,7 @@ This skill is the hub for all OctoMesh tasks. Before doing any work, check if th
 | **Refinery Studio Angular frontend** development (code in `octo-frontend-refinery-studio`), components, GraphQL codegen, Angular build/lint/test for the studio app | `Skill("refinery-studio", args: "<user's request>")` |
 | **Kubernetes Communication Operator** + Helm chart development/deployment (operator code, CRDs, Helm values, K8s manifests) | `Skill("octo-operator", args: "<user's request>")` |
 | **Building a new OctoMesh-powered app/workload end to end** — custom CK model + blueprint authoring (`blueprint.yaml`, seed data, `ckModelDependencies`), HTTP APIs from `FromHttpRequest@2` pipelines, operator-deployed Application web apps, CK/blueprint catalog publishing | `Skill("octo-app-builder", args: "<user's request>")` |
-| **Deploying/promoting an app to the test-2 environment** — publishing CK models/blueprints to the shared GitHub catalogs (`octo-ckc`/`octo-bpm`), pushing images to `<registry>`, test-2 context setup, install + verify on a test-2 tenant | `Skill("octo-deploy", args: "<user's request>")` |
+| **Deploying/promoting an app to a shared test environment** — publishing CK models/blueprints to shared catalogs (`octo-ckc`/`octo-bpm`), pushing images to `<registry>`, context setup, install + verify on a tenant there | `Skill("octo-deploy", args: "<user's request>")` |
 | **Reading/tracing logs from a deployed cluster** in Dash0 (Dash0 MCP tools) — log filters, D0QL error rates, tracing an error across pod redeployments, log retention | `Skill("octo-logs", args: "<user's request>")` |
 | **Setting up log access** — registering / logging in to the Dash0 MCP server when the `mcp__dash0__*` tools are missing or unauthenticated | `Skill("octo-logs-setup", args: "<user's request>")` |
 
@@ -42,7 +42,7 @@ Run these checks once per session and cache the results. If any check has alread
 
 ### 1. Active Context
 
-Run `octo-cli -c ListContexts -j` (or `-n <name>`) for the active context name (e.g., `local_meshtest`), and per context its tenant ID, service endpoints and auth status. Never open `~/.octo-cli/contexts.json` yourself and never print, copy or forward a token from it; `ListContexts` and `AuthStatus` give everything needed.
+Run `octo-cli -c ListContexts -j` (or `-n <name>`) for the active context name (e.g., `local_mytenant`), and per context its tenant ID, service endpoints and auth status. Never open `~/.octo-cli/contexts.json` yourself and never print, copy or forward a token from it; `ListContexts` and `AuthStatus` give everything needed.
 
 The active context is the *persisted default* — but a command may run against a different context when `--context <name>` is passed or `OCTO_CLI_CONTEXT` is set (see Invocation Syntax). Check the env var and prefer `--context` when targeting a specific environment so you never depend on, or mutate, the global active context.
 
@@ -62,12 +62,10 @@ If not authenticated: inform the user and offer to run `octo-cli -c LogIn -i` (i
 | URL Pattern | Environment |
 |---|---|
 | `localhost:500x` | local |
-| `*.<test-2-domain>` | test-2 |
-| `*.<staging-domain>` | staging-1 |
-| `*.<prod-1-domain>` | prod-1 |
-| `*.<prod-2-domain>` | prod-2 |
+| `*.<staging-domain>` | staging |
+| `*.<production-domain>` | production |
 
-> Hostnames are placeholders (`<test-2-domain>`, `<staging-domain>`, …): with `octo-claude-pm` installed see its `agent-operating-rules/references/environments.md`.
+> Hostnames are placeholders: the service URLs of the context name the installation; ask its administrator which domain belongs to which environment.<!-- developer-machine --> The Meshmakers installations and their domains are in `references/environments.md`; with `octo-claude-pm` installed see its `agent-operating-rules/references/environments.md`.<!-- /developer-machine -->
 
 ## Invocation Syntax
 
@@ -116,6 +114,9 @@ Command-name + one-line purpose + safety type only. **For full flag detail, read
 | `AddAuthorizationCodeClient` / `AddDeviceCodeClient` | Add OIDC clients | Mutating |
 | `AddClientCredentialsClient` | Add client-credentials client (`-apic` auto-provision into sub-tenants) | Mutating |
 | `UpdateClient` / `DeleteClient` / `AddScopeToClient` | Manage clients | Mutating |
+| `AddClientToRole` / `RemoveClientFromRole` | Assign/remove a role (by name) of a client-credentials client (`-id <clientId> -r <role>`); new token needed | Mutating |
+| `UpdateClientRoles` | Replace all directly assigned roles of a client (`-id`, `-rids <roleId,…>`) | Mutating |
+| `AddClientToGroup` / `RemoveClientFromGroup` | Add/remove a client to/from a group (`-id <groupId> -cid <clientId>`); the client inherits the group's roles | Mutating |
 | `GetClientMirrors` | List sub-tenants a client is mirrored into | Read-only |
 | `SetClientAutoProvision` | Flip a client's auto-provision flag (no backfill) | Mutating |
 | `ProvisionClientInExistingTenants` | Backfill a flagged client into all existing sub-tenants | Mutating |
@@ -218,7 +219,7 @@ Archive lifecycle mutations require the **StreamDataAdminRole**.
 
 ### Communication Services
 
-All communication commands accept plain runtime object IDs — the SDK builds the composite RtEntityId internally. `GetAdapters`/`GetPools` return human-readable enum names (e.g. `Online`, `Offline`), not integers.
+All communication commands accept plain runtime object IDs — the SDK builds the composite RtEntityId internally. `GetAdapters`/`GetDeploymentSites` return human-readable enum names (e.g. `Online`, `Offline`), not integers.
 
 | Command | Purpose | Type |
 |---|---|---|
@@ -226,7 +227,8 @@ All communication commands accept plain runtime object IDs — the SDK builds th
 | `GetAdapters` / `GetAdapter` | List/get adapters (`-j`); `GetAdapter` also shows the typed CPU/memory `resources` | Read-only |
 | `GetAdapterNodes` | Aggregated node descriptors from connected adapters (`-j`) | Read-only |
 | `GetPipelineSchema` | JSON Schema of valid pipeline YAML for an adapter (`-aid`, `-o`) | Read-only |
-| `GetPools` | List pools for the tenant (`-j`) | Read-only |
+| `GetDeploymentSites` | List the tenant's deployment sites, formerly "pools" (`-j`) | Read-only |
+| `DeployDeploymentSite` / `UndeployDeploymentSite` | Deploy/undeploy a deployment site (`-id`; undeploy `-y`) | Mutating / Destructive |
 | `GetPipelineStatus` | Pipeline deployment state (`-id`, `-j`) | Read-only |
 | `DeployPipeline` | Deploy pipeline YAML to an adapter (`-aid`, `-pid`, `-f`) | Mutating |
 | `ExecutePipeline` | Execute a pipeline, returns execution ID (`-id`, `-f` input file) | Mutating |
@@ -241,12 +243,12 @@ All communication commands accept plain runtime object IDs — the SDK builds th
 | `GetWorkloadsByChart` | List workloads by Helm chart name (`-cn`) | Read-only |
 | `UpdateWorkloadChartVersion` | Set a workload's chart version — no deploy (`-id`, `-cv`) | Mutating |
 | `UpdateWorkloadResources` | Show/set/clear an adapter's or application's CPU and memory requests and limits — no deploy (`-id`, `-cr`, `-cl`, `-mr`, `-ml`; flag without value clears) | Mutating |
-| `DeployWorkload` | Deploy a workload through its parent pool (`-id`) | Mutating |
+| `DeployWorkload` | Deploy a workload through its parent deployment site (`-id`) | Mutating |
 | `UndeployWorkload` | Undeploy a workload — operator helm-uninstalls (`-id`) | Destructive |
 
-> Adapters are now Helm-deployed by the Communication Operator when a pool is deployed; there is **no** manual adapter-deploy command anymore (legacy `DeployAdapter`, `GetPool`, `DeployPoolAdapters`, `UndeployPoolAdapters` were removed). Use `DeployWorkload`/`UndeployWorkload` for adapter/application workloads.
+> Adapters are now Helm-deployed by the Communication Operator when a deployment site is deployed; there is **no** manual adapter-deploy command anymore (legacy `DeployAdapter`, `GetPool`, `DeployPoolAdapters`, `UndeployPoolAdapters` were removed). Use `DeployWorkload`/`UndeployWorkload` for adapter/application workloads.
 >
-> **Deploying the pool itself is REST-only** (no octo-cli command): `POST {CommunicationServiceUrl}{tenantId}/v1/Pool/deploy?poolRtId=<rtId>` → 204 (`undeploy` likewise). The bearer token must be one issued for `{tenantId}` itself (the per-tenant context of that tenant, signed in), never a token of another tenant such as the root tenant (see *Tenant tokens, child tenants and sweeps*). There is no CLI command yet, so this one call is the remaining exception to "no hand-made token handling". **Order matters:** on a freshly comm-enabled tenant the pool starts `Undeployed`, and `DeployWorkload` triggers fired in that state are **silently lost** — the workload sits in `Pending` forever with no error. Deploy the pool first, then (re-)run `DeployWorkload`.
+> **Order matters:** on a freshly comm-enabled tenant the deployment site starts `Undeployed`, and `DeployWorkload` triggers fired in that state are **silently lost** — the workload sits in `Pending` forever with no error. Deploy the deployment site first (`DeployDeploymentSite -id <deploymentSiteRtId>`; `GetDeploymentSites -j` shows its ID and state), then (re-)run `DeployWorkload`.
 
 ### AI Services
 
@@ -293,9 +295,9 @@ All communication commands accept plain runtime object IDs — the SDK builds th
 
 ## Environment Switching
 
-octo-cli uses **named contexts** (like kubectl), each storing its own service URLs, tenant, and auth tokens. Naming convention: `{installation}_{tenantId}` (e.g. `local_meshtest`, `staging-1_meshtest`, `prod-1_meshmakers`); default tenant is `meshtest`.
+octo-cli uses **named contexts** (like kubectl), each storing its own service URLs, tenant, and auth tokens. Naming convention: `{installation}_{tenantId}` (e.g. `local_mytenant`, `staging_mytenant`, `production_mytenant`).<!-- developer-machine --> The local developer stack's default tenant is `meshtest`.<!-- /developer-machine -->
 
-On "switch to <env>" / "connect to <env>": read `references/environments.md` for URL mappings (installations `local`, `test-2`, `staging-1`, `prod-1`, `prod-2`), then `AddContext -n {ctx}` (idempotent; add `-aisu` if AI is needed). Authenticate and work **against that context without changing the active one**: `AuthStatus --context {ctx}`; if the token is invalid, `LogIn -i --context {ctx}` (or `LogInClientCredentials --context {ctx}` for headless) — the token is stored in `{ctx}`. Then pass `--context {ctx}` on every command, or `export OCTO_CLI_CONTEXT={ctx}` for the session. Only use `UseContext -n {ctx}` when the user explicitly wants to change their persistent default (single-session/interactive). List contexts with `ListContexts`. In the OctoMesh developer shell, the `Register-OctoCliContext` cmdlet wraps context creation + login for any installation (it knows the current cluster domains) — route there via `octo-devtools`.
+On "switch to <env>" / "connect to <env>": read `references/environments.md` for URL mappings<!-- developer-machine --> (installations `local`, `test-2`, `staging-1`, `prod-1`, `prod-2`)<!-- /developer-machine -->, then `AddContext -n {ctx}` (idempotent; add `-aisu` if AI is needed). Authenticate and work **against that context without changing the active one**: `AuthStatus --context {ctx}`; if the token is invalid, `LogIn -i --context {ctx}` (or `LogInClientCredentials --context {ctx}` for headless) — the token is stored in `{ctx}`. Then pass `--context {ctx}` on every command, or `export OCTO_CLI_CONTEXT={ctx}` for the session. Only use `UseContext -n {ctx}` when the user explicitly wants to change their persistent default (single-session/interactive). List contexts with `ListContexts`. In the OctoMesh developer shell, the `Register-OctoCliContext` cmdlet wraps context creation + login for any installation (it knows the current cluster domains) — route there via `octo-devtools`.
 
 ## Tenant tokens, child tenants and sweeps
 
@@ -312,7 +314,7 @@ A command addresses **one tenant: the tenant of its context**. octo-cli 3.5.27+ 
 - **Batch ("create 3 test users"):** loop the command with unique values; show the full plan, execute after confirmation.
 - **"with my roles":** `GetUsers` → identify current user → apply the same roles via `AddUserToRole`.
 - **Tenant context:** use the active context's tenant; never add `-tid` to commands that use the configured tenant (`EnableCommunication`, `EnableReporting`, `EnableStreamData`, `EnableAi`, `RunFixupScripts`). Only pass `-tid` on Asset Repository tenant commands that require it.
-- **Environment-aware prompts:** always indicate the active environment when confirming (e.g. "**[prod-1]** This will create a new user...").
+- **Environment-aware prompts:** always indicate the active environment when confirming (e.g. "**[<context>]** This will create a new user...").
 
 ## Temporary Tenants (Non-Interactive)
 

@@ -1,8 +1,8 @@
 # Blueprint authoring — CK model, manifest, seed data, catalogs
 
-Everything here was verified live on 2026-06-09 (local kind, tenant `test`,
-System.Communication 3.22.0) while building the `OneTimeTicket-1.0.0` blueprint
-(workspace `one-time-ticket/`). Engine-level reference:
+Everything here was first verified live on 2026-06-09 (local kind, tenant `test`)
+while building a ticket demo blueprint (CK model `Demo.Tickets`); the dependency
+ranges below follow the current System.Communication 4.x. Engine-level reference:
 `octo-construction-kit-engine/docs/blueprints.md`.
 
 ## CK model source (the minimal three-file layout)
@@ -67,9 +67,9 @@ with `isRuntimeState: true` so blueprint re-applies never trample them.
 
 `octo-ckc` is the CK compiler CLI of `octo-construction-kit-engine`, not on PATH by default. <!-- developer-machine -->(on a developer machine: the build output `bin/DebugL/net10.0/` of that repository)<!-- /developer-machine -->
 
-```powershell
-octo-ckc -c Compile -p .\ck\ConstructionKit -o .\ck\out      # → ck-<modelid>.yaml
-octo-ckc -c Publish -f .\ck\out\ck-demo.tickets.yaml -r      # default catalog: LocalFileSystemCatalog
+```bash
+octo-ckc -c Compile -p ./ck/ConstructionKit -o ./ck/out      # → ck-<modelid>.yaml
+octo-ckc -c Publish -f ./ck/out/ck-demo.tickets.yaml -r      # default catalog: LocalFileSystemCatalog
 ```
 
 Publish writes into `~/.octo/local-catalog/ck-models/v2/<letter>/<Name>/<major>/`
@@ -96,7 +96,7 @@ with the octo skill's `ck_explorer.py preflight <Model>/<Type> --for-import`)<!-
 
 ```yaml
 $schema: https://schemas.meshmakers.cloud/blueprint-meta.schema.json
-blueprintId: OneTimeTicket-1.0.0          # Name-Major.Minor.Patch; folder name = Name
+blueprintId: Tickets-1.0.0                # Name-Major.Minor.Patch; folder name = Name
 description: |
   What it installs, prerequisites, and the post-install deploy commands.
 ckModelDependencies:
@@ -125,7 +125,7 @@ Mesh Adapter `670000000000000000000002`, dev Helm repo `670000000000000000000003
 ```yaml
 $schema: https://schemas.meshmakers.cloud/runtime-model.schema.json
 dependencies:
-- System.Communication-[3.1,4.0)
+- System.Communication-[4.0,5.0)   # current major; raise the lower bound to the minor your pipelines need
 entities:
   - rtId: '077100000000000000000001'
     ckTypeId: System.Communication/DataFlow-1
@@ -160,6 +160,42 @@ The pipeline YAML lives **inline as a block scalar** in `PipelineDefinition-1` �
 no separate files. An Application workload entity goes in the same seed (see
 app-workload.md).
 
+**App roles for `requiredRoles`.** A role that a route lists in `requiredRoles` must
+exist in the tenant. Seed it as a `System.Identity/Role` entity (add
+`System.Identity-[3.0,4.0)` to the seed's `dependencies`), and optionally a group that
+carries it, so administrators grant the role by group membership:
+
+```yaml
+  - rtId: '077100000000000000000101'
+    ckTypeId: System.Identity/Role
+    rtWellKnownName: TicketIssuer
+    attributes:
+      - id: System/Name
+        value: TicketIssuer
+      - id: System.Identity/NormalizedName
+        value: TICKETISSUER                # the name in upper case; form as in production seeds
+  - rtId: '077100000000000000000102'
+    ckTypeId: System.Identity/Group
+    rtWellKnownName: TicketIssuers
+    attributes:
+      - id: System.Identity/GroupName
+        value: TicketIssuers
+      - id: System.Identity/NormalizedGroupName
+        value: TICKETISSUERS
+    associations:
+      - roleId: System.Identity/AssignedRole
+        targetRtId: '077100000000000000000101'
+        targetCkTypeId: System.Identity/Role
+```
+
+The role name in the seed is exactly the name in `requiredRoles`. Role members are
+runtime state and survive a re-apply of the blueprint. A blueprint cannot assign roles
+to users or clients: after the install an administrator adds users to the group
+(`AddUserToGroup`) or the role (`AddUserToRole`), and clients with `AddClientToRole` or
+`AddClientToGroup` (octo skill, command reference *Client Roles and Groups*). This
+includes the pipeline service account when the app's pipelines read data guarded by a
+policy for that role.
+
 ### Variables
 
 | Syntax | Resolved | By | Examples |
@@ -186,21 +222,22 @@ blueprints/v1/<Name>/<version>/
 └── seed-data/entities.yaml
 ```
 
-**Cache pitfall:** the catalog cache at
-`~/.octo/blueprint-catalog/cache/local-blueprint-catalog-cache.json` is only
-rebuilt when the file is **missing** — `ListBlueprints` serves stale content
-otherwise. Always delete it after adding/changing a blueprint in the catalog.
-(This applies to read paths that do not auto-refresh; `octo-bpm`'s own
-`list`/`get` and the `unpublish` dry-run force a catalog refresh before
-reading, so they do **not** need this manual delete.)
+**Cache pitfall:** the catalog index is cached — `ListBlueprints` serves stale
+content until it is refreshed. After adding or changing a blueprint in the catalog run
+`octo-cli -c RefreshBlueprintCatalogs -cn LocalFileSystemBlueprintCatalog` (forced, no
+restart, role `DataModelManagement`). `octo-bpm`'s own `list`/`get` and the
+`unpublish` dry-run refresh by themselves.<!-- developer-machine --> Older local builds
+without the refresh command rebuild the cache only when
+`~/.octo/blueprint-catalog/cache/local-blueprint-catalog-cache.json` is missing —
+delete it there.<!-- /developer-machine -->
 
-GitHub catalogs (e.g. `meshmakers/blueprint-libraries-build`, layout
+GitHub blueprint catalogs (a GitHub repository the asset repository reads, layout
 `blueprints/v1/<letter>/<Name>/<major>/<Name>-<version>/`) are where shared
 blueprints get published.
 
 ## Lifecycle commands
 
-```powershell
+```bash
 octo-cli -c ListBlueprints                              # all catalogs
 octo-cli -c InstallBlueprint -b <Name>-<Version>        # -f = force re-apply (upserts seed)
 octo-cli -c ListBlueprintInstallations

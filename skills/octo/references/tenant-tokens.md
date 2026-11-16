@@ -8,28 +8,28 @@ A command addresses **one tenant: the tenant of its context**. octo-cli (3.5.27 
 <!-- developer-machine -->- **Many tenants: use the helper, not a script.** With the OctoMesh developer shell loaded (route via `octo-devtools`): `Register-OctoCliContext -Installation <i> -TenantId a,b,c -NoSwitch` creates one context per tenant, then `Invoke-OctoTenantSweep -Installation <i> -Tenant a,b,c -CliArguments '-c','LibraryStatus','-io' [-WhatIf] [-Json]` runs the command per tenant through `octo-cli --context <i>_<tenant>`, prints one row per tenant (`Ok` / `Denied` + cause / `Failed`) and continues after a denial. Commands with their own tenant argument use `-Context <ctx> -CliArguments '-c','ClearCache','-tid','{tenant}'`; `-AllTenants` takes the list from `GetTenants --all`. `-WhatIf` lists the calls without running them. The helper never reads, prints or writes a token.<!-- /developer-machine -->
 - **No token scraping.** Do not write scripts (curl, Python, PowerShell) that read an access token out of the context file and call a child tenant's route with it: after the gate is enforced such calls are denied. Use an octo-cli command<!-- developer-machine -->, or the helper around one<!-- /developer-machine -->. GraphQL against a tenant is the command `octo-cli -c GraphQl -tid <tenant> -q|-f|-si` (AB#7027). Impersonation loops use `SwitchServiceAccountsToImpersonation`, not curl.<!-- developer-machine --> The Python explorers in `scripts/` use the selected context's token for that context's **own** tenant and keep working.<!-- /developer-machine -->
 - Tenant status/capability routes of the finished files migration have no CLI command and get none; do not script them.
-- Pool deploy (`POST .../v1/Pool/deploy`) has no CLI command yet (known gap): see the REST note in `SKILL.md`; its token must be issued for that tenant.
+- Deployment sites (formerly pools) have CLI commands: `DeployDeploymentSite` / `UndeployDeploymentSite` / `GetDeploymentSites` — no REST call with a hand-made token is needed.
 
 ## Worked example
 
 <!-- developer-machine -->
 ```powershell
 # one context per tenant, nothing switched, no login yet
-Register-OctoCliContext -Installation test-2 -TenantId tecob,lkv,wwc26 -NoSwitch -NoLogin
+Register-OctoCliContext -Installation <installation> -TenantId tenant-a,tenant-b,tenant-c -NoSwitch -NoLogin
 
 # dry run: which calls would run?
-Invoke-OctoTenantSweep -Installation test-2 -Tenant tecob,lkv,wwc26 -CliArguments '-c','LibraryStatus','-io' -WhatIf
+Invoke-OctoTenantSweep -Installation <installation> -Tenant tenant-a,tenant-b,tenant-c -CliArguments '-c','LibraryStatus','-io' -WhatIf
 
 # run; a tenant without provisioning shows Outcome=Denied with the ProvisionCurrentUser hint, the others continue
-Invoke-OctoTenantSweep -Installation test-2 -Tenant tecob,lkv,wwc26 -CliArguments '-c','LibraryStatus','-io'
+Invoke-OctoTenantSweep -Installation <installation> -Tenant tenant-a,tenant-b,tenant-c -CliArguments '-c','LibraryStatus','-io'
 
 # provision the operator in every child tenant (once, also for new tenants)
-Invoke-OctoTenantSweep -Context test-2_octosystem -AllTenants -Exclude octosystem `
+Invoke-OctoTenantSweep -Context <installation>_octosystem -AllTenants -Exclude octosystem `
     -CliArguments '-c','ProvisionCurrentUser','-ttid','{tenant}'
 
 # GraphQL query over many tenants, the answer per tenant (read-only; clean JSON in .Stdout)
 $q = '{ constructionKit { models(first:1) { totalCount } } }'
-Invoke-OctoTenantSweep -Context test-2_octosystem -Tenant tecob,lkv,wwc26 -IncludeOutput `
+Invoke-OctoTenantSweep -Context <installation>_octosystem -Tenant tenant-a,tenant-b,tenant-c -IncludeOutput `
     -CliArguments '-c','GraphQl','-tid','{tenant}','-q',$q |
   ForEach-Object { [pscustomobject]@{ Tenant = $_.Tenant; Outcome = $_.Outcome
       Total = if ($_.Outcome -eq 'Ok') { ($_.Stdout | ConvertFrom-Json).data.constructionKit.models.totalCount } } }
