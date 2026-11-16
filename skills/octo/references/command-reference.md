@@ -997,7 +997,7 @@ All IDs in ImportRt YAML (ckTypeId, attribute id, roleId, targetCkTypeId) use th
 |--------|---------|---------|
 | Import format (correct for ImportRt) | `System.Communication/Pipeline-1` | ImportRt YAML |
 | Fully versioned (CK model listings) | `System.Communication-3.0.0/Pipeline-1` | type listings with model version |
-| Fully unversioned | `System.Communication/Pipeline` | rt_explorer.py input |
+| Fully unversioned | `System.Communication/Pipeline` | runtime queries (GraphQL, MCP query tools) |
 
 **Key rules:**
 - **CK type IDs**: `System.Communication/Pipeline-1` (not `System.Communication-3.0.0/Pipeline-1`, not `System.Communication/Pipeline`)
