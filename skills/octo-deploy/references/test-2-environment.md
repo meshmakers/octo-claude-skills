@@ -90,8 +90,8 @@ Notes:
 
 ## Creating a tenant on test-2
 
-1. Ensure an **octosystem** context on test-2 exists (`Register-OctoCliContext
-   -Installation test-2 -TenantId octosystem`); target it below with `--context
+1. Ensure an **octosystem** context on test-2 exists<!-- developer-machine --> (`Register-OctoCliContext
+   -Installation test-2 -TenantId octosystem`)<!-- /developer-machine -->; target it below with `--context
    test-2_octosystem`.
 2. `octo-cli -c Create -tid <tenantId> -db <tenantId> --context test-2_octosystem`
    — interactive sessions provision the current user as tenant admin. Headless
@@ -145,7 +145,7 @@ no-op with `WasSkipped: true` means the gate didn't match the actual value.
 - `*.<test-2-domain>` services: publicly reachable (TLS).
 - `<registry>` (image registry): internal network only — office WiFi
   direct, otherwise Tailscale first. Reachability probe:
-  `curl -skI https://<registry>/v2/` → `HTTP/1.1 200 OK` with
+  `curl -sI https://<registry>/v2/` (registry CA trusted) → `HTTP/1.1 200 OK` with
   `Docker-Distribution-Api-Version: registry/2.0`.
 - kubectl access to test-2 EXISTS via a Rancher kubeconfig download
   (`<rancher-url>`, publicly reachable — no VPN). Caveats:

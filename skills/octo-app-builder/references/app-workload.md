@@ -93,8 +93,8 @@ injection. Shared clusters (test-2 etc.): push to `<registry>` instead.
 ```
 
 - `${octo.tenantId}` resolves at blueprint apply; `{{domain.default}}` resolves at
-  **deploy** time against the controller's domain config (`127.0.0.1.nip.io` on
-  kind → ingress works directly at `https://my-app-<tenant>.127.0.0.1.nip.io`).
+  **deploy** time against the controller's domain config<!-- developer-machine --> (`127.0.0.1.nip.io` on
+  kind → ingress works directly at `https://my-app-<tenant>.127.0.0.1.nip.io`)<!-- /developer-machine -->.
 - `upstreamUrl`: the Mesh Adapter's in-cluster service is named
   `{tenantId}-{adapterRtId}` in namespace `octo`, plain HTTP on `:80`, routes
   prefixed with `/{tenantId}`.
@@ -209,5 +209,5 @@ Failure triage:
   make sure exactly that name was kind-loaded/pushed.
 - Pod restarts / not Ready → probes failing: `GET /` must return 200 on `PORT`.
 - Helm install error → `kubectl logs -n octo-operator-system deploy/communication-operator`
-  and the workload's `lastDeploymentError` attribute (rt_explorer/Studio).
+  and the workload's `lastDeploymentError` attribute (Studio<!-- developer-machine -->, rt_explorer<!-- /developer-machine -->).
 - Uninstalling the blueprint? `UndeployWorkload` FIRST, then `UninstallBlueprint`.

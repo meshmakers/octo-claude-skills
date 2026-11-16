@@ -299,7 +299,7 @@ On "switch to <env>" / "connect to <env>": read `references/environments.md` for
 
 ## Tenant tokens, child tenants and sweeps
 
-A command addresses **one tenant: the tenant of its context**. octo-cli 3.5.27+ never sends a token issued for another tenant: it exchanges it per tenant (cached) or stops with exit `-4` and a message naming tenant and cause (no fallback). Authority in a child tenant comes **only from explicit provisioning**: `octo-cli -c ProvisionCurrentUser -ttid <child>` once per child tenant, new tenants included. For many tenants use the octo-tools helper, not a script: `Register-OctoCliContext -Installation <i> -TenantId a,b,c -NoSwitch`, then `Invoke-OctoTenantSweep -Installation <i> -Tenant a,b,c -CliArguments '-c','LibraryStatus' [-WhatIf] [-Json]` (one row per tenant: Ok / Denied + cause / Failed; continues after a denial; never touches a token). **Never write scripts that read a token out of the context file and call a child tenant** — they are denied once the gate is enforced; GraphQL goes through `octo-cli -c GraphQl -tid <tenant> -q ...` (also inside the sweep: `-CliArguments \'-c\',\'GraphQl\',\'-tid\',\'{tenant}\',\'-q\',$q -IncludeOutput`). The Python explorers in `scripts/` address the context's own tenant and keep working. Denial causes, per-tenant contexts for CI, and a worked example: `references/tenant-tokens.md`.
+A command addresses **one tenant: the tenant of its context**. octo-cli 3.5.27+ never sends a token issued for another tenant: it exchanges it per tenant (cached) or stops with exit `-4` and a message naming tenant and cause (no fallback). Authority in a child tenant comes **only from explicit provisioning**: `octo-cli -c ProvisionCurrentUser -ttid <child>` once per child tenant, new tenants included.<!-- developer-machine --> For many tenants use the octo-tools helper, not a script: `Register-OctoCliContext -Installation <i> -TenantId a,b,c -NoSwitch`, then `Invoke-OctoTenantSweep -Installation <i> -Tenant a,b,c -CliArguments '-c','LibraryStatus' [-WhatIf] [-Json]` (one row per tenant: Ok / Denied + cause / Failed; continues after a denial; never touches a token).<!-- /developer-machine --> **Never write scripts that read a token out of the context file and call a child tenant** — they are denied once the gate is enforced; GraphQL goes through `octo-cli -c GraphQl -tid <tenant> -q ...`<!-- developer-machine --> (also inside the sweep: `-CliArguments \'-c\',\'GraphQl\',\'-tid\',\'{tenant}\',\'-q\',$q -IncludeOutput`). The Python explorers in `scripts/` address the context's own tenant and keep working<!-- /developer-machine -->. Denial causes, per-tenant contexts for CI, and a worked example: `references/tenant-tokens.md`.
 
 ## Secrets Rule
 
@@ -327,7 +327,7 @@ Understanding how Communication entities relate allows intelligent resolution of
 - **Pipeline** holds its YAML in the `PipelineDefinition` attribute; parented to a DataFlow, executed by an Adapter.
 - **PipelineTrigger** *triggers* Pipelines (`System.Communication/Triggers-1`); has `cronExpression` and `enabled`; parented to a DataFlow.
 
-CK types for `rt_explorer.py`: `System.Communication/Adapter`, `/Pipeline`, `/DataFlow`, `/PipelineTrigger`, `/PipelineExecution`, `/PipelineStatistics`.
+CK types to query (Studio, GraphQL<!-- developer-machine -->, `rt_explorer.py`<!-- /developer-machine -->): `System.Communication/Adapter`, `/Pipeline`, `/DataFlow`, `/PipelineTrigger`, `/PipelineExecution`, `/PipelineStatistics`.
 
 ## Communication Workflows
 
@@ -335,36 +335,37 @@ When the user expresses one of these intents, resolve IDs, run the commands, and
 
 - **"What adapters are available?"** — `GetAdapters --json`, then summarize name, rtId, online/offline, config state.
 - **"What pipeline nodes can I use?"** — `GetAdapters --json` to find the adapter; `GetAdapterNodes` for the node list (grouped Trigger vs Transform); `GetPipelineSchema --adapterId <rtId>` for the full per-node config schema. With multiple adapters, ask which one.
-- **"Deploy this pipeline"** — find the adapter (`GetAdapters --json`) and the pipeline (`rt_explorer.py list System.Communication/Pipeline`); write inline YAML to a temp file; `DeployPipeline --adapterId <id> --pipelineId <id> --file <path>`; verify with `GetPipelineStatus --identifier <pipelineId> --json` = Deployed.
-- **"Run this pipeline"** — resolve the pipeline (`rt_explorer.py search System.Communication/Pipeline <name>`); `ExecutePipeline --identifier <rtId>` (capture the execution ID); after a brief wait, `GetLatestPipelineExecution --identifier <rtId> --json`; report status/duration/error; if failed, check debug points.
+- **"Deploy this pipeline"** — find the adapter (`GetAdapters --json`) and the pipeline (GraphQL/Studio<!-- developer-machine -->, or `rt_explorer.py list System.Communication/Pipeline`<!-- /developer-machine -->); write inline YAML to a temp file; `DeployPipeline --adapterId <id> --pipelineId <id> --file <path>`; verify with `GetPipelineStatus --identifier <pipelineId> --json` = Deployed.
+- **"Run this pipeline"** — resolve the pipeline (GraphQL/Studio<!-- developer-machine -->, or `rt_explorer.py search System.Communication/Pipeline <name>`<!-- /developer-machine -->); `ExecutePipeline --identifier <rtId>` (capture the execution ID); after a brief wait, `GetLatestPipelineExecution --identifier <rtId> --json`; report status/duration/error; if failed, check debug points.
 - **"Show me what happened" / "Debug the last execution"** — `GetLatestPipelineExecution --identifier <pipelineId> --json` for the execution ID + status; if it has debug data, `GetPipelineDebugPoints --identifier <pipelineId> --executionId <guid> --json` and present the node tree. (Toggle capture beforehand with `SetPipelineDebug --identifier <id> --enabled true`.)
 
 ### "Set up a new data flow end-to-end"
 Full lifecycle — combines `pipeline-expert` (YAML) with `octo` operations:
 1. Clarify the data flow (trigger, transformations).
-2. **Pre-flight:** for each CK type the pipeline touches, `ck_explorer.py preflight <type> --for-import --insecure` to discover exact attribute IDs + mandatory associations.
+2. **Pre-flight:** for each CK type the pipeline touches, <!-- developer-machine -->`ck_explorer.py preflight <type> --for-import --insecure` or <!-- /developer-machine -->the MCP tool `get_type_schema` to discover exact attribute IDs + mandatory associations.
 3. Route to `pipeline-expert` via `Skill("pipeline-expert", ...)` for the YAML.
 4. Discover the adapter: `GetAdapters --json` → adapter rtId.
 5. Create the runtime entities: `ImportRt -f <file> -w` (template below).
 6. `DeployPipeline --adapterId <id> --pipelineId <id> --file <yaml>` → verify `GetPipelineStatus --identifier <pipelineId> --json` = Deployed → test `ExecutePipeline --identifier <rtId>`. For cron triggers, `DeployTriggers`.
 
-**Step 5 — ImportRt YAML for DataFlow + Pipeline:** use the full DataFlow+Pipeline template in `references/command-reference.md` (ImportRt section), or generate one for any CK type automatically:
+**Step 5 — ImportRt YAML for DataFlow + Pipeline:** use the full DataFlow+Pipeline template in [ImportRt](references/command-reference.md#models)<!-- developer-machine -->, or generate one for any CK type automatically:
 ```
 ck_explorer.py preflight System.Communication/Pipeline --for-import --insecure
 ```
+<!-- /developer-machine -->
 The DataFlow holds `System/Name-1`; the Pipeline links to it via `System/ParentChild-1` and to the adapter via `System.Communication/Executes-1`, and carries `System.Communication/DeploymentState-1`, `System/Name-1`, `System/Enabled-1`, and the YAML in `System.Communication/PipelineDefinition-1`.
 
-**ImportRt ID format** is `ModelName/TypeName-TypeVersion` (e.g. `System.Communication/Pipeline-1`, `System/Name-1`); rtIds are exactly 24 hex characters. Full rules and the YAML format: `references/command-reference.md` (ImportRt), and *CK Type ID Format Differences* below.
+**ImportRt ID format** is `ModelName/TypeName-TypeVersion` (e.g. `System.Communication/Pipeline-1`, `System/Name-1`); rtIds are exactly 24 hex characters. Full rules and the YAML format: [ImportRt](references/command-reference.md#models), and *CK Type ID Format Differences* below.
 
-- **"What's the status of my data flows?"** — `rt_explorer.py list System.Communication/DataFlow`, then `GetDataFlowStatus --identifier <rtId> --json` for each; summarize name, state, pipeline states, last execution, statistics.
+- **"What's the status of my data flows?"** — list the data flows (GraphQL/Studio<!-- developer-machine -->, or `rt_explorer.py list System.Communication/DataFlow`<!-- /developer-machine -->), then `GetDataFlowStatus --identifier <rtId> --json` for each; summarize name, state, pipeline states, last execution, statistics.
 
 ### Pipeline Schema as Node Discovery
 
-`GetPipelineSchema --adapterId <rtId>` returns a JSON Schema (draft/2020-12) of every available pipeline node for that adapter, with each node's config properties (types, descriptions, enums, defaults). The available nodes depend on which adapter is running and which plugins it loaded, so prefer this over the build-time schema files when the user asks "what nodes are available?" or about a node's config, or before authoring YAML for a target environment. Save with `--outputFile <path>` for reuse (and feed to `pipeline_validate.py --schema`). `DataMapping@1` with a wildcard / recursive / filter `path` (`$.sd.Rows[*].Values[5]`) maps a whole array in place — stream-data enum keys to names without `ForEach@1` or a script; `targetPath` = same path or left out (AB#6589, details in `pipeline-expert` → `node-reference-mesh.md`).
+`GetPipelineSchema --adapterId <rtId>` returns a JSON Schema (draft/2020-12) of every available pipeline node for that adapter, with each node's config properties (types, descriptions, enums, defaults). The available nodes depend on which adapter is running and which plugins it loaded, so prefer this over the build-time schema files when the user asks "what nodes are available?" or about a node's config, or before authoring YAML for a target environment. Save with `--outputFile <path>` for reuse<!-- developer-machine --> (and feed to `pipeline_validate.py --schema`)<!-- /developer-machine -->. `DataMapping@1` with a wildcard / recursive / filter `path` (`$.sd.Rows[*].Values[5]`) maps a whole array in place — stream-data enum keys to names without `ForEach@1` or a script; `targetPath` = same path or left out (AB#6589, details in `pipeline-expert` → `node-reference-mesh.md`).
 
 ### FromHttpRequest — Endpoint Location
 
-**CRITICAL:** `FromHttpRequest@1`-triggered pipeline endpoints live on the **mesh adapter** process (default `https://localhost:5020`), NOT the communication service (`https://localhost:5015`, which only does pipeline management — deploy/status/execute). The URL pattern is `https://localhost:5020/{tenantId}/{path}`, where `{path}` matches the trigger's `path` property (e.g. `/create-machines`). The adapter runs its own ASP.NET Core server and registers/unregisters routes as pipelines are deployed/undeployed.
+**CRITICAL:** `FromHttpRequest@1`-triggered pipeline endpoints live on the **mesh adapter** process<!-- developer-machine --> (default `https://localhost:5020`)<!-- /developer-machine -->, NOT the communication service (which only does pipeline management — deploy/status/execute<!-- developer-machine -->; locally `https://localhost:5015`<!-- /developer-machine -->). The URL pattern is `https://<mesh-adapter-host>/{tenantId}/{path}`<!-- developer-machine --> (locally `https://localhost:5020/{tenantId}/{path}`)<!-- /developer-machine -->, where `{path}` matches the trigger's `path` property (e.g. `/create-machines`). The adapter runs its own ASP.NET Core server and registers/unregisters routes as pipelines are deployed/undeployed.
 
 ### Pipeline Debugging — After Execution
 
@@ -477,7 +478,7 @@ Progressive drill-down when the user asks about the data model (expand `<RUN>` t
 
 ### Querying and deleting runtime entities via GraphQL
 
-`octo-cli -c GraphQl -tid <tenant> -q '<query>'` (also `-f`, `-si`, `-vars`, `-on`) runs any query or mutation with the token for that tenant; the answer is clean JSON on standard output. Flags, exit codes and the multi-tenant sweep example: `references/command-reference.md` (*GraphQl*) and `references/tenant-tokens.md`. Deleting entities is a **mutating** call, confirm first: `-q 'mutation { runtime { runtimeEntities { delete(entities: [{rtId: "<RTID>", ckTypeId: "<UnversionedCkTypeId>"}]) } } }'` (unversioned CK type IDs such as `Industry.Manufacturing/Shift`; several objects in the array delete several entities; success is `"delete":true`). Never use curl with a token from a context file.
+`octo-cli -c GraphQl -tid <tenant> -q '<query>'` (also `-f`, `-si`, `-vars`, `-on`) runs any query or mutation with the token for that tenant; the answer is clean JSON on standard output. Flags, exit codes and the multi-tenant sweep example: [GraphQl](references/command-reference.md#graphql) and `references/tenant-tokens.md`. Deleting entities is a **mutating** call, confirm first: `-q 'mutation { runtime { runtimeEntities { delete(entities: [{rtId: "<RTID>", ckTypeId: "<UnversionedCkTypeId>"}]) } } }'` (unversioned CK type IDs such as `Industry.Manufacturing/Shift`; several objects in the array delete several entities; success is `"delete":true`). Never use curl with a token from a context file.
 
 ### Schema Evolution Handling
 

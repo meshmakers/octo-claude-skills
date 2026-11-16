@@ -29,7 +29,7 @@ the seed itself needs NO changes for test-2:
 | Seed element | Why it ports |
 |---|---|
 | `${octo.tenantId}` in hostname/upstreamUrl | resolved at blueprint apply, per tenant |
-| `{{domain.default}}` in hostname | resolved at DeployWorkload time: `127.0.0.1.nip.io` on kind, `<test-2-domain>` on test-2 |
+| `{{domain.default}}` in hostname | resolved at DeployWorkload time to the cluster's default domain<!-- developer-machine -->: `127.0.0.1.nip.io` on kind<!-- /developer-machine -->, `<test-2-domain>` on test-2 |
 | Pool/Adapter/HelmRepo rtIds `670…001/002/003` | seeded by System.Communication on every comm-enabled tenant |
 | `ChartName` + empty `ChartVersion` | same dev-channel Helm repo on both clusters |
 | Pipeline YAML | standard nodes, available on any Mesh Adapter |
@@ -53,8 +53,8 @@ Set this up once, then promotion = merge to main.
 
 **Manual lane (first time / no CI yet):** run the publish commands yourself —
 exact commands and one-time token setup in
-[references/publishing.md](references/publishing.md). Network prerequisite:
-`<registry>` is reachable on office WiFi; off-site requires Tailscale first.
+[references/publishing.md](references/publishing.md).<!-- developer-machine --> Network prerequisite:
+`<registry>` is reachable on office WiFi; off-site requires Tailscale first.<!-- /developer-machine -->
 
 ## The promotion sequence
 
@@ -70,12 +70,12 @@ octo-ckc -c Publish -f .\ck\out\ck-<name>.yaml -c PrivateGitHubCatalog -r
 # Blueprint -> shared blueprint catalog (one-time: octo-bpm -c config -gt <github-token>)
 octo-bpm -c publish -p .\blueprint\<Name>\<version> -c PrivateGitHubBlueprintCatalog -f
 
-# App image -> internal registry (Tailscale if off-site!)
+# App image -> the registry
 docker push <registry>/meshmakers/<app>:<tag>
 ```
 
-`octo-ckc`/`octo-bpm` are build outputs of `octo-construction-kit-engine`
-(`bin/DebugL/net10.0/`), not on PATH. The pushed image tag must equal the tag
+`octo-ckc`/`octo-bpm` are the CK and blueprint CLIs of `octo-construction-kit-engine`,
+not on PATH by default. The pushed image tag must equal the tag
 pinned in the seed's ValuesYaml — verify before pushing.
 
 **CK catalog shortcut:** if publishing the CK model to the shared catalog is not
@@ -102,10 +102,10 @@ context and only with a token for that tenant. In a child tenant, authority come
 only from explicit provisioning: after creating a tenant run `octo-cli -c
 ProvisionCurrentUser -ttid <tenantId> --context test-2_octosystem` once (new tenants
 included). A missing provisioning stops the command with exit `-4` and a message that
-names the tenant and `ProvisionCurrentUser -ttid <tenantId>`. For a rollout over several
+names the tenant and `ProvisionCurrentUser -ttid <tenantId>`.<!-- developer-machine --> For a rollout over several
 tenants use `Invoke-OctoTenantSweep` (dry run `-WhatIf`, one result row per tenant, continues
 after a denial, never touches a token) instead of a script that copies a token out of the
-context file; details in the `octo` skill, `references/tenant-tokens.md`.
+context file; details in the `octo` skill, `references/tenant-tokens.md`.<!-- /developer-machine -->
 
 **Parallel-safe targeting:** rather than relying on the active context (which
 the cmdlet switched, and which a concurrent session could flip), pass
@@ -185,7 +185,7 @@ test-2-environment.md), but the octo-cli signals below work without it:
 | Signal | Command |
 |---|---|
 | Adapter online, pipelines deployed | `octo-cli -c GetAdapters -j`, `octo-cli -c GetDataFlowStatus -id <dataflowRtId> -j` |
-| Workload state + failure detail | `octo-cli -c GetWorkloadsByChart -cn <chartName>`; the Application entity's `deploymentState` / `statusMessage` / `lastDeploymentError` attributes via rt_explorer or Studio |
+| Workload state + failure detail | `octo-cli -c GetWorkloadsByChart -cn <chartName>`; the Application entity's `deploymentState` / `statusMessage` / `lastDeploymentError` attributes via Studio<!-- developer-machine --> or rt_explorer<!-- /developer-machine --> |
 | App reachable | `https://<app>-<tenantId>.<test-2-domain>` (from the `{{domain.default}}` hostname) |
 | API reachable | adapter ingress host from `GetAdapters -j` (`publicUri`), then `curl https://<adapter-host>/<tenantId>/<path>` |
 
@@ -202,8 +202,8 @@ no leaked fields) against the test-2 hosts, then the browser flow.
 |---|---|---|
 | 1 | Blueprint missing from `ListBlueprints` on test-2 | Server-side blueprint catalog cache is stale and has **no refresh API** (`RefreshCatalogs` covers CK model catalogs only). Restart the asset-repo pod: `kubectl --context test-2 -n octo rollout restart deploy/octo-mesh-asset-rep-services`. Deleting local cache files does nothing for test-2. |
 | 2 | `InstallBlueprint` fails resolving the CK model | Model not in a shared catalog and not imported in the tenant. Publish it (`octo-ckc … -c PrivateGitHubCatalog`) or `ImportCk` it directly, then retry. |
-| 3 | Workload `lastDeploymentError` shows ImagePullBackOff | Image not in `<registry>` under the exact `meshmakers/<app>:<tag>` from the seed. Push it (Tailscale if off-site), then `DeployWorkload` again. |
-| 4 | `docker push` hangs/fails off-site | `<registry>` is internal-network only — connect Tailscale first. Probe: `curl -skI https://<registry>/v2/` → expect HTTP 200. |
+| 3 | Workload `lastDeploymentError` shows ImagePullBackOff | Image not in `<registry>` under the exact `meshmakers/<app>:<tag>` from the seed. Push it<!-- developer-machine --> (Tailscale if off-site)<!-- /developer-machine -->, then `DeployWorkload` again. |
+| 4 | `docker push` hangs/fails off-site | `<registry>` is not reachable from your network<!-- developer-machine --> (internal-network only — connect Tailscale first)<!-- /developer-machine -->. Probe: `curl -sI https://<registry>/v2/` (with the registry's CA trusted) → expect HTTP 200 or 401. |
 | 5 | Install is a silent no-op (`WasSkipped: true`) | `requires: octo.environment` gate mismatch. Use `[dev, test]` (covers both readings of test-2's configuration) and re-check. |
 | 6 | Mutating the wrong environment | Context confusion. `AuthStatus` before every mutating step; the context name (`test-2_<tenant>` vs `local_<tenant>`) is the tell. |
 | 7 | Adapter stuck `Unregistered`/`Pending` forever, no pod, no error | The parent **pool is Undeployed** — workload deploy triggers fired before the pool is up are silently lost. Deploy the pool first (REST `POST …/v1/Pool/deploy?poolRtId=670…001`, no octo-cli command), then re-run `DeployWorkload -id 670…002`. |

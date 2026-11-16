@@ -205,8 +205,8 @@ Acceptable for demos — say so explicitly when the use case is production-like.
    entities with `ParentChild` → scratch DataFlow, `Executes` → Mesh Adapter.
 2. `octo-cli -c ImportRt -f <file> -w` (use `-r` on re-runs) +
    `octo-cli -c DeployDataFlow --identifier <scratchDataflowRtId>`.
-3. Curl via port-forward: `kubectl port-forward -n octo svc/<tenant>-<adapterRtId> 5020:80`,
-   then `http://localhost:5020/{tenant}{path}`.
+3. Call the route on the Mesh Adapter<!-- developer-machine --> (curl via port-forward: `kubectl port-forward -n octo svc/<tenant>-<adapterRtId> 5020:80`,
+   then `http://localhost:5020/{tenant}{path}`)<!-- /developer-machine -->.
 4. **Deploy-rotation quirk**: after a `-r` re-import, a `DeployDataFlow` may
    REMOVE an unchanged pipeline while re-registering a changed one (adapter log:
    `Removing pipeline …` / `Re-registering changed pipeline …`). Re-run
