@@ -76,7 +76,7 @@ transformations:
 ```
 
 **Triggers** define how the pipeline starts: polling interval, HTTP request, entity change watch, event hub message, explicit command, or email. Each trigger type populates the DataContext with different initial paths — see `references/data-context-guide.md` "Trigger DataContext Placement" for the full table. Key examples:
-- `FromHttpRequest@1`: body at `$.body`, query params at `$.query`, files at `$.files`
+- `FromHttpRequest@2` (and the deprecated `@1`): body at `$.body`, query params at `$.query`, files at `$.files`
 - `FromWatchRtEntity@1`: changed entity at `$.Document`
 - `FromExecutePipelineCommand@1` / `FromPipelineTriggerEvent@1`: empty context. `FromExecutePipelineCommand@1` now lives in `Sdk.Common` and is available on **all** adapters (Edge and Mesh), not Mesh-only — the pipeline must still belong to a DataFlow.
 
@@ -94,7 +94,7 @@ These errors cause deployment failures. Check your YAML against this table befor
 | `valueType: Int32` | `Not in enum` | Use the short enum name: `Int`, `Boolean`, `String`, `Double`, `DateTime`, etc. |
 | `ckTypeId: Model-Version/Type` | Deployment error | Use unversioned: `Model/Type` (pipeline YAML ckTypeId refs are unversioned, unlike ImportRt YAML) |
 
-**Prevention:** before deploying, fetch the schema (`octo-cli -c GetPipelineSchema --adapterId <rtId> --outputFile schema.json`) and confirm each node's property names and enum values in `$defs`, or use `pipeline_validate.py`.
+**Prevention:** before deploying, fetch the schema (`octo-cli -c GetPipelineSchema --adapterId <rtId> --outputFile schema.json`) and confirm each node's property names and enum values in `$defs`, or use the MCP tool `validate_pipeline_definition`<!-- developer-machine --> (developer machine: `pipeline_validate.py`)<!-- /developer-machine -->.
 
 ## DataContext Essentials
 
@@ -150,7 +150,7 @@ This is an operational overview of the **most-used** nodes. The full property ta
 | Node | Purpose |
 |------|---------|
 | `FromPolling@1` | Poll at interval (e.g., `00:05:00`) |
-| `FromHttpRequest@1` | HTTP endpoint (method + path) |
+| `FromHttpRequest@2` | HTTP endpoint (method + path, `allowAnonymous`, `requiredRoles`); `@1` is deprecated |
 | `FromWatchRtEntity@1` | Entity change stream (Insert/Update/Delete) |
 | `FromPipelineDataEvent@1` | Receive data from another pipeline in the same DataFlow |
 | `FromExecutePipelineCommand@1` | Manual execution command (SDK node — all adapters); pipeline must be in a DataFlow |
@@ -259,7 +259,7 @@ This is **different** from the PascalCase you see in GraphQL query results (wher
 | Field filters (`attributePath` in fieldFilters) | PascalCase (matches DB field names) | `attributePath: SerialNumber` |
 | System properties in fieldFilters | PascalCase | `attributePath: RtWellKnownName` |
 
-**Always run `ck_explorer.py preflight <type>` before writing CreateUpdateInfo to get the exact attribute names.**
+**Always look up the exact attribute names before writing CreateUpdateInfo** (the MCP tool `get_type_schema`<!-- developer-machine -->, or `ck_explorer.py preflight <type>`<!-- /developer-machine -->).
 
 ## EntityUpdateInfo JSON Structure
 
@@ -275,7 +275,7 @@ The top-level `RtId` is populated only when a static `rtId` is given or an upstr
 
 Some CK types have **mandatory outbound associations** (multiplicity = ONE). Creating an entity of such a type WITHOUT the required association will fail at `ApplyChanges` time with: `"Inbound association 'X' has minimum multiplicity of 'One'"`.
 
-**Pre-flight check:** Always run `ck_explorer.py preflight <type>` before writing CreateUpdateInfo for a new entity type. If the output shows mandatory associations, you MUST include `CreateAssociationUpdate@1` nodes in the same `ApplyChanges@2` call.
+**Pre-flight check:** Always look up the type (the MCP tool `get_type_schema`<!-- developer-machine -->, or `ck_explorer.py preflight <type>`<!-- /developer-machine -->) before writing CreateUpdateInfo for a new entity type. If the output shows mandatory associations, you MUST include `CreateAssociationUpdate@1` nodes in the same `ApplyChanges@2` call.
 
 **Common mandatory association:** `System/ParentChild` — types like Machine, TreeNode, and many domain entities require a parent.
 
@@ -385,9 +385,11 @@ Save high-frequency data to both a CrateDB archive and the entity store. `SaveSt
 
 ## Pipeline Validation
 
-When validating a pipeline YAML (user-written or generated), use the **build-time JSON Schema** as the authoritative source. Every OctoMesh adapter generates its own `pipeline-schema.json` at build time, containing all nodes it supports (SDK nodes + adapter-specific nodes).
+When validating a pipeline YAML (user-written or generated), validate it against the JSON Schema of the adapter that will run it. Every OctoMesh adapter generates its own `pipeline-schema.json`, containing all nodes it supports (SDK nodes + adapter-specific nodes).
 
-**Schema locations** (relative to monorepo root):
+**On a tenant:** validate with the MCP tool `validate_pipeline_definition` (and try it with `dry_run_pipeline`), or fetch the schema of the running adapter with `octo-cli -c GetPipelineSchema --adapterId <rtId>` (MCP `get_pipeline_schema`) — it lists exactly the nodes that adapter loaded.
+
+<!-- developer-machine -->**On a developer machine** the build-time schema is the authoritative source. Schema locations (relative to monorepo root):
 
 | Adapter | Schema Path |
 |---------|------------|
@@ -395,7 +397,7 @@ When validating a pipeline YAML (user-written or generated), use the **build-tim
 | Zenon Adapter | `octo-plug-zenon/src/Octo.Edge.Adapter.Zenon.WindowsService/bin/DebugL/net10.0/pipeline-schema.json` |
 | Simulation Adapter | `octo-sdk/src/Sdk.Plug.Simulation/bin/DebugL/net10.0/pipeline-schema.json` |
 
-**Which schema to use:** Pick the adapter that will execute the pipeline (Mesh Adapter has the richest node set). If it hasn't been built locally, fall back to the node reference docs.
+**Which schema to use:** Pick the adapter that will execute the pipeline (Mesh Adapter has the richest node set). If it hasn't been built locally, fall back to the node reference docs.<!-- /developer-machine -->
 
 **Validation:** look up each node by its `type` const in `$defs.TriggerNode.oneOf` / `$defs.TransformationNode.oneOf`, then verify all `required` keys are present, every property exists in the node's `properties`, and enum values match. For the extraction commands and fallback rules, read `references/pipeline-schema-guide.md`.
 
@@ -476,9 +478,9 @@ logFiles/MeshAdapter.log
 
 | Error message | Cause | Fix |
 |---------------|-------|-----|
-| "Inbound association 'X' has minimum multiplicity of 'One'" | Entity type requires a mandatory association | Run `ck_explorer.py preflight <type>`, add `CreateAssociationUpdate` |
+| "Inbound association 'X' has minimum multiplicity of 'One'" | Entity type requires a mandatory association | Look up the type (the MCP tool `get_type_schema`<!-- developer-machine -->, or `ck_explorer.py preflight <type>`<!-- /developer-machine -->), add `CreateAssociationUpdate` |
 | "Value of origin RtId is null" | Path-based RtId reference resolves to null | Ensure upstream `GetOrCreateRtEntitiesByType@1` or `GetRtEntitiesByWellKnownName@1` writes RtId via `rtIdTargetPath` before this node reads it |
-| "Attribute 'X' does not exist at type 'Y'" | Wrong attribute name or casing | Run `ck_explorer.py preflight <type>` for exact names |
+| "Attribute 'X' does not exist at type 'Y'" | Wrong attribute name or casing | Look up the type (the MCP tool `get_type_schema`<!-- developer-machine -->, or `ck_explorer.py preflight <type>`<!-- /developer-machine -->) for exact names |
 
 ### Debugging workflow
 
