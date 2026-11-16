@@ -4,7 +4,8 @@ JSON HTTP APIs built purely from `FromHttpRequest@2` pipelines — no service co
 The transformations below ran verbatim in production-shape on 2026-06-09 (one-time-ticket
 demo, System.Communication 3.22.0, then with the deprecated `FromHttpRequest@1`
 trigger); the triggers now use `FromHttpRequest@2`, which takes the same `method` and
-`path` and adds the route security. Node property details → pipeline-expert skill.
+`path` and adds the route security. The role in Pattern 1 (`TicketIssuer`) is an
+example: use a role your app's blueprint or tenant defines. Node property details → pipeline-expert skill.
 
 ## Route security (authenticated by default)
 
@@ -13,7 +14,8 @@ trigger); the triggers now use `FromHttpRequest@2`, which takes the same `method
 1. a bearer token issued by the tenant's identity service (signature, issuer, audience,
    lifetime) — otherwise `401`;
 2. the token's tenant must be the tenant the adapter serves — otherwise `403` (also for
-   client-credentials tokens);
+   client-credentials tokens, unless an environment relaxes that to a warning with
+   `ServiceTokenEnforcement=Warn`);
 3. with `requiredRoles`, the caller must hold at least one of them — otherwise `403`;
    without it any valid token of the tenant is enough.
 
@@ -28,8 +30,8 @@ token of the same tenant.
 > **Warning — a public route can be called by anyone who knows the URL.** No token, no
 > tenant check, no role check, no caller identity: the pipeline runs with the adapter's
 > rights, and whatever it reads or returns is open to the internet. The adapter records
-> only that the route exists (one event per deployment); single calls are not audited by
-> default. Unintended public routes have been found on production tenants before.
+> that the route exists (one event per deployment); single calls carry no caller identity
+> and, by default, leave only the pipeline execution row. Unintended public routes have been found on production tenants before.
 
 Make a route public only when its callers cannot have an account of the tenant, for
 example a webhook of an external service, a public form, or a one-time link sent to a
@@ -50,11 +52,14 @@ person outside the tenant (Pattern 3). Then:
   **200 with empty body in ~0.1 ms** — treat that symptom as "route missing".
 - Request context: `$.body` (parsed JSON body — POST/PUT only), `$.query.<param>`,
   `$.path`, `$.method`, `$.files[]`, `$.formData`.
-- **Response = the entire final DataContext serialized as JSON.** Always 200,
-  always `application/json` — no status-code or content-type control, and
-  `SetPipelineExecutionResult@1` does NOT shape the HTTP response. The ONLY
-  shaping tool is `Project@1` with `clear: true` as the last node. Without it the
-  response leaks `$.body` (the raw request!) and every lookup result.
+- **Response = the final data root serialized as JSON, minus the request envelope**
+  (`path`, `method`, `principal`, `headers`, `body`, `query`, `files`, `formData`, …
+  are removed by the adapter). A pipeline always answers 200 and
+  `application/json` — no status-code or content-type control (only the route
+  authorization answers `401`/`403`), and `SetPipelineExecutionResult@1` does NOT
+  shape the HTTP response. The ONLY shaping tool is `Project@1` with `clear: true`
+  as the last node. Without it every intermediate and lookup result leaks into the
+  response.
 - Errors: return `{ "error": "<code>" }` fields and let clients check for them.
 
 ## Pattern 1 — create an entity (`POST /tickets` → `{ ticketId }`)
