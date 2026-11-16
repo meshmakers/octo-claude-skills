@@ -83,7 +83,7 @@ Retrieve specific entities by their IDs.
 
 ### GetRtEntitiesByWellKnownName@1
 
-Look up entities by well-known name. Enriches source data with matching entity IDs and optionally generates insert operations for missing entities.
+Look up entities by well-known name. Enriches source data with matching entity IDs and optionally generates insert operations for missing entities. The three target paths are required properties of the schema: write all of them, or `validate_pipeline_definition` rejects the node. Worked upsert example: [CSV import with upsert](pipeline-examples.md#7-csv-import-with-upsert-per-natural-key).
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -91,9 +91,9 @@ Look up entities by well-known name. Enriches source data with matching entity I
 | `ckTypeIdPath` | string | optional | JSONPath to CK type ID |
 | `path` | string | required | Source data path (applies to each item) |
 | `wellKnownNamePath` | string | required | Path to well-known name in source |
-| `rtIdTargetPath` | string | `$.rtId` | Where to write found RtId |
-| `ckTypeIdTargetPath` | string | `$.ckTypeId` | Where to write CkTypeId |
-| `modOperationPath` | string | `$.modOperation` | Where to write mod operation (0=Insert, 1=Update) |
+| `rtIdTargetPath` | string | **required** (`$.rtId` in the UI) | Where to write found RtId |
+| `ckTypeIdTargetPath` | string | **required** (`$.ckTypeId` in the UI) | Where to write CkTypeId |
+| `modOperationPath` | string | **required** (`$.modOperation` in the UI) | Where to write mod operation (0=Insert, 1=Update) |
 | `generateInsertOperation` | bool | false | Generate Insert op if entity not found |
 | `attributeTargetPath` | string | optional | Path to write entity attributes as dictionary |
 
@@ -540,7 +540,7 @@ Compute a SHA-256 hash of base64-encoded file data.
 
 ### ImportFromCsv@1
 
-Parse a CSV file and produce an array of typed objects. The file is sourced from `$.files[]` (populated by `FromHttpRequest@1` for multipart uploads).
+Parse a CSV file and produce an array of typed objects. The file is sourced from `$.files[]` (populated by `FromHttpRequest@2` for multipart uploads; worked example: [CSV import with upsert](pipeline-examples.md#7-csv-import-with-upsert-per-natural-key)).
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -1236,14 +1236,18 @@ Post a message, embed, and/or single file attachment to a Discord channel via th
 
 ## Trigger Nodes
 
-### FromHttpRequest@1
+### FromHttpRequest@2
 
-Trigger pipeline on HTTP requests.
+Trigger pipeline on HTTP requests. **Use `@2`; `FromHttpRequest@1` is deprecated** (same `method` and `path`, no security properties).
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `method` | enum | required | HTTP method (GET, POST, PUT, DELETE) |
+| `method` | enum | required | HTTP method (`GET`, `POST`, `PUT`, `DELETE`; `Get`/`Post`/... are accepted too) |
 | `path` | string | required | URL path pattern |
+| `allowAnonymous` | bool | false | Accept requests without a valid access token |
+| `requiredRoles` | string[] | `[]` | Roles that grant access, any one is enough; empty = any caller with a valid token |
+
+The response is the final data root minus the request envelope (`path`, `method`, `principal`, `headers`, `body`, `bodyEncoding`, `query`, `files`, `formData`, `contentType`, `contentLength`); shape it with `Project@1` and `clear: true`.
 
 **DataContext placement:** The trigger populates the DataContext with these paths:
 
@@ -1260,7 +1264,7 @@ Trigger pipeline on HTTP requests.
 
 ```yaml
 triggers:
-  - type: FromHttpRequest@1
+  - type: FromHttpRequest@2
     path: /createBillingItems
     method: POST
 

@@ -856,3 +856,129 @@ transformations:
 ```
 
 **Key patterns:** FromExecutePipelineCommand trigger, DataMapping for value translation, IN filter with comparisonValuePath, Join for entity enrichment, conditional Insert vs Update based on null check, separate ApplyChanges calls for new vs existing entities.
+
+
+---
+
+## 7. CSV Import with Upsert per Natural Key
+
+Imports monthly electricity meter readings from an uploaded CSV file and stores **one reading per meter and month**: a second upload of the same month updates the reading instead of adding a duplicate. The pattern fits every "import rows, keep one entity per business key" case.
+
+**Verified** (AB#9085): every node and property below is checked against the Mesh Adapter pipeline JSON Schema (strict: required properties and no unknown keys). Validate your own copy on the tenant with `validate_pipeline_definition` and try it with `dry_run_pipeline` before you deploy it.
+
+**CK type** (in your model, e.g. `Demo.MeterReadings`): `MeterReading` with the attributes `MeterNumber` (String), `ReadingMonth` (String, `yyyy-MM`) and `ConsumptionKwh` (Double). The natural key `<meter>_<month>` is the entity's `rtWellKnownName`, so no extra key attribute and no query are needed to find an existing reading.
+
+**Input file** (`;`-separated, header row, Austrian decimal comma):
+
+```text
+MeterNumber;Month;ConsumptionKwh
+AT0012345;2026-10;312,5
+AT0012346;2026-10;128,0
+```
+
+```yaml
+triggers:
+  # POST multipart/form-data with the CSV as first file; any caller with a valid token
+  - type: FromHttpRequest@2
+    method: POST
+    path: /meter-readings/import
+
+transformations:
+  # 1. Parse the uploaded file ($.files[0].data) into one object per CSV row
+  - type: ImportFromCsv@1
+    fileIndex: 0
+    delimiter: ";"
+    hasHeaderRow: true
+    targetPath: $.rows
+    columnMappings:
+      - sourceColumn: MeterNumber
+        targetProperty: meterNumber
+        dataType: String
+      - sourceColumn: Month            # e.g. 2026-10
+        targetProperty: month
+        dataType: String
+      - sourceColumn: ConsumptionKwh
+        targetProperty: consumptionKwh
+        dataType: Double
+        numberCulture: de-AT
+
+  # 2. Natural key: one reading per meter and month, e.g. "AT0012345_2026-10"
+  - type: Concat@1
+    path: $.rows[*]
+    concatSubPath: $.readingKey
+    parts:
+      - valuePath: $.meterNumber
+      - value: _
+      - valuePath: $.month
+
+  # 3. Look up an existing reading by that key (rtWellKnownName); a missing one gets an Insert
+  - type: GetRtEntitiesByWellKnownName@1
+    ckTypeId: Demo.MeterReadings/MeterReading
+    path: $.rows[*]
+    wellKnownNamePath: $.readingKey
+    rtIdTargetPath: $.rtId
+    ckTypeIdTargetPath: $.ckTypeId
+    modOperationPath: $.modOperation
+    generateInsertOperation: true
+
+  # 4. One update per row: Insert or Update, keyed by the natural key
+  - type: ForEach@1
+    iterationPath: $.rows
+    targetPath: $.updateItems
+    fullDocumentPath: $.full
+    keyPath: $.key
+    mergePath: $.key
+    transformations:
+      - type: CreateUpdateInfo@1
+        targetPath: $.key.update
+        updateKindPath: $.key.modOperation
+        rtIdPath: $.key.rtId
+        ckTypeId: Demo.MeterReadings/MeterReading
+        rtWellKnownNamePath: $.key.readingKey
+        attributeUpdates:
+          - attributeName: MeterNumber
+            attributeValueType: String
+            valuePath: $.key.meterNumber
+          - attributeName: ReadingMonth
+            attributeValueType: String
+            valuePath: $.key.month
+          - attributeName: ConsumptionKwh
+            attributeValueType: Double
+            valuePath: $.key.consumptionKwh
+
+  # 5. Collect the updates and write them in one transaction
+  - type: Flatten@1
+    path: $.updateItems[*].update
+    targetPath: $.entityUpdates
+
+  - type: ApplyChanges@2
+    entityUpdatesPath: $.entityUpdates
+
+  # 6. Answer with the keys that were written, nothing else
+  - type: Flatten@1
+    path: $.rows[*].readingKey
+    targetPath: $.imported
+
+  - type: Project@1
+    path: $
+    clear: true
+    fields:
+      - path: $.imported
+        inclusion: true
+```
+
+**Call it** with a multipart upload; the file becomes `$.files[0]` and its content `$.files[0].data` (base64), which `ImportFromCsv@1` reads by `fileIndex`:
+
+```bash
+curl -X POST "https://<mesh-adapter-host>/<tenantId>/meter-readings/import" \
+  -H "Authorization: Bearer <token>" -F "file=@readings.csv"
+# -> { "imported": [ "AT0012345_2026-10", "AT0012346_2026-10" ] }
+```
+
+**Key patterns:**
+- `FromHttpRequest@2` (not the deprecated `@1`); without `allowAnonymous` the route needs a valid token, `requiredRoles` narrows it further.
+- `ImportFromCsv@1` reads `$.files[<fileIndex>].data`; give every column a `dataType` and, for decimal commas, a `numberCulture`.
+- Build the natural key with `Concat@1` on every row (`path: $.rows[*]`, `concatSubPath`), then let `GetRtEntitiesByWellKnownName@1` find existing entities by that key: it writes `rtId`, `ckTypeId` and `modOperation` on each row (all three target paths are **required** properties), and `generateInsertOperation: true` turns a missing entity into an Insert with a new rtId.
+- In `ForEach@1`, `CreateUpdateInfo@1` takes the kind from `updateKindPath` (Insert or Update per row) and sets `rtWellKnownNamePath` to the key, so the next import finds the same entity.
+- `Flatten@1` collects the per-row updates into one array for a single `ApplyChanges@2` call (one transaction).
+- The HTTP answer is the data root minus the request envelope, so shape it: `Project@1` with `clear: true` keeps only `$.imported`.
