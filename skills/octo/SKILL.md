@@ -478,7 +478,7 @@ Progressive drill-down when the user asks about the data model (expand `<RUN>` t
 
 ### Querying and deleting runtime entities via GraphQL
 
-`octo-cli -c GraphQl -tid <tenant> -q '<query>'` (also `-f`, `-si`, `-vars`, `-on`) runs any query or mutation with the token for that tenant; the answer is clean JSON on standard output. Flags, exit codes and the multi-tenant sweep example: `references/command-reference.md` (*GraphQl*) and `references/tenant-tokens.md`. Deleting entities is a **mutating** call, confirm first: `-q 'mutation { runtime { runtimeEntities { delete(entities: [{rtId: "<RTID>", ckTypeId: "<UnversionedCkTypeId>"}]) } } }'` (unversioned CK type IDs such as `Industry.Manufacturing/Shift`; several objects in the array delete several entities; success is `"delete":true`). Never use curl with a token from a context file.
+`octo-cli -c GraphQl -tid <tenant> -q '<query>'` (also `-f`, `-si`, `-vars`, `-on`) runs any query or mutation with the token for that tenant; the answer is clean JSON on standard output. Flags, exit codes and the multi-tenant sweep example: [GraphQl](references/command-reference.md#graphql) and `references/tenant-tokens.md`. Deleting entities is a **mutating** call, confirm first: `-q 'mutation { runtime { runtimeEntities { delete(entities: [{rtId: "<RTID>", ckTypeId: "<UnversionedCkTypeId>"}]) } } }'` (unversioned CK type IDs such as `Industry.Manufacturing/Shift`; several objects in the array delete several entities; success is `"delete":true`). Never use curl with a token from a context file.
 
 ### Schema Evolution Handling
 
