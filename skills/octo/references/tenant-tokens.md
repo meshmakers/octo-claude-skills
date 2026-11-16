@@ -12,6 +12,7 @@ A command addresses **one tenant: the tenant of its context**. octo-cli (3.5.27 
 
 ## Worked example
 
+<!-- developer-machine -->
 ```powershell
 # one context per tenant, nothing switched, no login yet
 Register-OctoCliContext -Installation test-2 -TenantId tecob,lkv,wwc26 -NoSwitch -NoLogin
@@ -33,5 +34,6 @@ Invoke-OctoTenantSweep -Context test-2_octosystem -Tenant tecob,lkv,wwc26 -Inclu
   ForEach-Object { [pscustomobject]@{ Tenant = $_.Tenant; Outcome = $_.Outcome
       Total = if ($_.Outcome -eq 'Ok') { ($_.Stdout | ConvertFrom-Json).data.constructionKit.models.totalCount } } }
 ```
+<!-- /developer-machine -->
 
 Reference: octo-tools `docs/tenant-sweep.md`. octo-cli behaviour: octo-cli `CLAUDE.md`, "Tokens per tenant".
