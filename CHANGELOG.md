@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Fixed
+
+- **`octo-deploy`, `octo-app-builder`, `pipeline-expert`** — example fixes from the CodeRabbit review of octo-ai-services#55 (AB#9174, Feature AB#8777): `test-2-environment.md` § *Creating a tenant* steps 4 and 5 run `GetDeploymentSites`, `DeployWorkload` and `GetAdapters` with `--context <tenant-context>`; the minimal CK model in `blueprint-authoring.md` declares the attribute `TicketName` its `Ticket` type references (the example now compiles with `octo-ckc Compile`, before it failed with "CkAttributeId … TicketName-1 does not exist"); the SAP order pipeline in `pipeline-examples.md` keeps `Operation.SequenceNumber` in its `Project@1`, which the receiving pipeline needs for the `orderItemId` key and `ItemNumber`.
+
 ## [0.28.12] — 2026-11-16
 
 ### Changed

@@ -30,6 +30,9 @@ String|Boolean|DateTime|Int|Double|… :
 ```yaml
 $schema: https://schemas.meshmakers.cloud/construction-kit-elements.schema.json
 attributes:
+- id: TicketName
+  description: Display name of the ticket.
+  valueType: String
 - id: TicketSecret
   description: The secret delivered on a successful redeem. Cleared after redemption.
   valueType: String
