@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Changed
+
+- **`octo`, `octo-app-builder`, `pipeline-expert`** — passages that only apply on a developer machine (local stack ports, kind domains, developer-shell helpers `Register-OctoCliContext` / `Invoke-OctoTenantSweep`, build-output paths) are wrapped in `<!-- developer-machine -->` ... `<!-- /developer-machine -->`, and the `octo-cli` context examples use `https://<service-host>/` placeholders instead of `localhost` ports. Claude Code reads the skills unchanged; the System.Ai.Builder knowledge pages (octo-ai-services `tools/SkillPages`) leave the marked passages out. `pipeline-expert` "Pipeline Validation" now names the tenant path first (`validate_pipeline_definition`, `dry_run_pipeline`, `GetPipelineSchema`) and keeps the build-time schema table for developer machines. `octo-ckc`/`octo-bpm` are described as the CLIs of `octo-construction-kit-engine` without a `bin/DebugL` path (AB#9083).
+
 ## [0.28.10] — 2026-11-16
 
 ### Changed

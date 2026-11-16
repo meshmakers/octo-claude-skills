@@ -93,8 +93,8 @@ injection. Shared clusters (test-2 etc.): push to `<registry>` instead.
 ```
 
 - `${octo.tenantId}` resolves at blueprint apply; `{{domain.default}}` resolves at
-  **deploy** time against the controller's domain config (`127.0.0.1.nip.io` on
-  kind → ingress works directly at `https://my-app-<tenant>.127.0.0.1.nip.io`).
+  **deploy** time against the controller's domain config<!-- developer-machine --> (`127.0.0.1.nip.io` on
+  kind → ingress works directly at `https://my-app-<tenant>.127.0.0.1.nip.io`)<!-- /developer-machine -->.
 - `upstreamUrl`: the Mesh Adapter's in-cluster service is named
   `{tenantId}-{adapterRtId}` in namespace `octo`, plain HTTP on `:80`, routes
   prefixed with `/{tenantId}`.

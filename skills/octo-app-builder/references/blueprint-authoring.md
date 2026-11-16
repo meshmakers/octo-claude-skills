@@ -65,8 +65,7 @@ with `isRuntimeState: true` so blueprint re-applies never trample them.
 
 ### Compile + publish
 
-`octo-ckc` is the build output of `octo-construction-kit-engine`
-(`bin/DebugL/net10.0/octo-ckc.exe`), not on PATH.
+`octo-ckc` is the CK compiler CLI of `octo-construction-kit-engine`, not on PATH by default.
 
 ```powershell
 octo-ckc -c Compile -p .\ck\ConstructionKit -o .\ck\out      # → ck-<modelid>.yaml
@@ -166,7 +165,7 @@ app-workload.md).
 | Syntax | Resolved | By | Examples |
 |---|---|---|---|
 | `${name}` | at blueprint apply | `IBlueprintVariableProvider` | `${octo.tenantId}`, `${octo.environment}`, `${octo.version}`, `${octo.isSystemTenant}` |
-| `{{domain.NAME}}` | at workload deploy | communication controller | `{{domain.default}}` → `127.0.0.1.nip.io` on kind |
+| `{{domain.NAME}}` | at workload deploy | communication controller | `{{domain.default}}` → the cluster's default domain<!-- developer-machine --> (`127.0.0.1.nip.io` on kind)<!-- /developer-machine --> |
 
 `${…}` is substituted only in string attribute values and `rtWellKnownName`.
 Unknown `${placeholder}` logs a warning and stays verbatim in the database.

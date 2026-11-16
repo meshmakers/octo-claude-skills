@@ -57,8 +57,8 @@ Pool `670000000000000000000001`, Mesh Adapter `670000000000000000000002`,
 dev Helm repo `670000000000000000000003`.
 
 For an operator-deployed web app additionally: a cluster with the Communication
-Operator running (`kubectl get pods -n octo-operator-system`) — on local dev this
-is the kind cluster (see octo-devtools for setup).
+Operator running (`kubectl get pods -n octo-operator-system`)<!-- developer-machine --> — on local dev this
+is the kind cluster (see octo-devtools for setup)<!-- /developer-machine -->.
 
 ## Build sequence
 
@@ -75,7 +75,7 @@ Author a minimal model (one folder, three files — full syntax in
 attributes as `${this}/<AttrId>-1`).
 
 ```powershell
-# octo-ckc = build output of octo-construction-kit-engine (bin/DebugL/net10.0/octo-ckc.exe), not on PATH
+# octo-ckc = the CK compiler CLI of octo-construction-kit-engine, not on PATH by default
 octo-ckc -c Compile -p .\ck\ConstructionKit -o .\ck\out
 octo-ckc -c Publish -f .\ck\out\ck-<name>.yaml -r     # → ~/.octo/local-catalog (LocalFileSystemCatalog)
 ```
@@ -109,9 +109,9 @@ iteration — it does not affect the final fresh install. When the endpoints beh
 copy the pipeline YAML verbatim into the blueprint seed, then undeploy and delete
 the scratch entities (GraphQL `runtime.runtimeEntities.delete`, unversioned ckTypeIds).
 
-Reach the adapter for curl tests: in-cluster it serves plain HTTP on `:80`; from the
+Reach the adapter for curl tests: in-cluster it serves plain HTTP on `:80`<!-- developer-machine -->; from the
 host use `kubectl port-forward -n octo svc/<tenant>-<adapterRtId> 5020:80`, routes
-are `http://localhost:5020/{tenantId}{path}`.
+are `http://localhost:5020/{tenantId}{path}`<!-- /developer-machine -->.
 
 ### 3. Web app workload (optional)
 
@@ -148,7 +148,7 @@ Key decisions:
   `System.Communication/Executes-1` → Mesh Adapter `670…002`.
 - The Application associates `Manages-1` → Pool `670…001` and `HelmRepository-1`
   → `670…003`; hostname template `<app>-${octo.tenantId}.{{domain.default}}`
-  works on every cluster (`127.0.0.1.nip.io` on kind).
+  works on every cluster<!-- developer-machine --> (`127.0.0.1.nip.io` on kind)<!-- /developer-machine -->.
 - Gate with `requires: {octo.environment: [dev, test]}` if the rollout depends on
   the operator (staging/prod may not run it).
 

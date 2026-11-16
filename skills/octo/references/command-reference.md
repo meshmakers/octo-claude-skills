@@ -28,18 +28,18 @@ octo-cli -c AddContext -n <name> [-isu <identityServicesUri>] [-asu <assetServic
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-n` | `name` | Name of the context (e.g. `local_meshtest`, `staging-1_customer1`) | Yes |
-| `-isu` | `identityServicesUri` | URI of identity services (e.g. `https://localhost:5003/`) | No |
-| `-asu` | `assetServicesUri` | URI of asset repository services (e.g. `https://localhost:5001/`) | No |
-| `-bsu` | `botServicesUri` | URI of bot services (e.g. `https://localhost:5009/`) | No |
-| `-csu` | `communicationServicesUri` | URI of communication services (e.g. `https://localhost:5015/`) | No |
-| `-rsu` | `reportingServicesUri` | URI of reporting services (e.g. `https://localhost:5007/`) | No |
-| `-aisu` | `aiServicesUri` | URI of AI services (e.g. `https://localhost:5019/`) | No |
-| `-apu` | `adminPanelUri` | URI of admin panel (e.g. `https://localhost:5005/`) | No |
+| `-isu` | `identityServicesUri` | URI of identity services (e.g. `https://<identity-host>/`) | No |
+| `-asu` | `assetServicesUri` | URI of asset repository services (e.g. `https://<asset-repo-host>/`) | No |
+| `-bsu` | `botServicesUri` | URI of bot services (e.g. `https://<bot-host>/`) | No |
+| `-csu` | `communicationServicesUri` | URI of communication services (e.g. `https://<communication-host>/`) | No |
+| `-rsu` | `reportingServicesUri` | URI of reporting services (e.g. `https://<reporting-host>/`) | No |
+| `-aisu` | `aiServicesUri` | URI of AI services (e.g. `https://<ai-host>/`) | No |
+| `-apu` | `adminPanelUri` | URI of admin panel (e.g. `https://<admin-panel-host>/`) | No |
 | `-tid` | `tenantId` | ID of tenant (e.g. `meshtest`) | No |
 
 Context naming convention: `{installation}_{tenantId}` (e.g., `local_meshtest`, `staging-1_meshtest`, `prod-1_meshmakers`, `test-2_pr123_meshtest`).
 
-If this is the first context or no active context is set, it is automatically activated. Each context stores its own authentication tokens independently. `AddContext` only creates/updates the stored context — to run against it without changing the active context, pass `--context <name>` (or set `OCTO_CLI_CONTEXT`) on subsequent commands instead of `UseContext`. In the OctoMesh developer shell, `Register-OctoCliContext` wraps `AddContext` + `UseContext` + login for the known installations using the current cluster domains.
+If this is the first context or no active context is set, it is automatically activated. Each context stores its own authentication tokens independently. `AddContext` only creates/updates the stored context — to run against it without changing the active context, pass `--context <name>` (or set `OCTO_CLI_CONTEXT`) on subsequent commands instead of `UseContext`.<!-- developer-machine --> In the OctoMesh developer shell, `Register-OctoCliContext` wraps `AddContext` + `UseContext` + login for the known installations using the current cluster domains.<!-- /developer-machine -->
 
 ### Config
 Configures the **active** context's service URLs and tenant in-place (no `-n` — operates on whatever context is active). Same fields as `AddContext` minus `-n`; `-isu` is required.
@@ -53,7 +53,7 @@ octo-cli -c Config -isu <identityServicesUri> [-asu <assetServicesUri>] [-bsu <b
 | `-bsu` | `botServicesUri` | URI of bot services | No |
 | `-csu` | `communicationServicesUri` | URI of communication services | No |
 | `-rsu` | `reportingServicesUri` | URI of reporting services | No |
-| `-aisu` | `aiServicesUri` | URI of AI services (e.g. `https://localhost:5019/`) | No |
+| `-aisu` | `aiServicesUri` | URI of AI services (e.g. `https://<ai-host>/`) | No |
 | `-apu` | `adminPanelUri` | URI of admin panel | No |
 | `-tid` | `tenantId` | ID of tenant | No |
 
@@ -841,7 +841,7 @@ octo-cli -c CreateAdminProvisioningMapping -ttid <targetTenantId> -stid <sourceT
 | `-rids` | `roleIds` | Comma-separated role IDs | No |
 
 #### ProvisionCurrentUser
-Provisions the current user as admin in the target tenant. **Required once per child tenant, also for every new tenant** (AB#6836): a root-tenant operator has no implicit rights in a child tenant, and octo-cli's per-tenant token exchange is denied (exit `-4`, message names the tenant and `ProvisionCurrentUser -ttid <tenant>`) until this has run. For many tenants: `Invoke-OctoTenantSweep -Context <root-ctx> -AllTenants -CliArguments '-c','ProvisionCurrentUser','-ttid','{tenant}'` (see `tenant-tokens.md`).
+Provisions the current user as admin in the target tenant. **Required once per child tenant, also for every new tenant** (AB#6836): a root-tenant operator has no implicit rights in a child tenant, and octo-cli's per-tenant token exchange is denied (exit `-4`, message names the tenant and `ProvisionCurrentUser -ttid <tenant>`) until this has run.<!-- developer-machine --> For many tenants: `Invoke-OctoTenantSweep -Context <root-ctx> -AllTenants -CliArguments '-c','ProvisionCurrentUser','-ttid','{tenant}'` (see `tenant-tokens.md`).<!-- /developer-machine -->
 ```
 octo-cli -c ProvisionCurrentUser -ttid <targetTenantId>
 ```
@@ -944,7 +944,7 @@ cat query.graphql | octo-cli --context test-2_octosystem -c GraphQl -tid <tenant
 | `-vars` | `variables` | Variables as JSON object or `@file`. | No |
 | `-on` | `operationName` | Operation to run when the document has several. | No |
 
-Exit codes: `0` success; `-5` GraphQL `errors` (body on standard error, nothing on standard output), missing or ambiguous document, invalid variables; `-4` not provisioned / denied / 403 (message names tenant and cause, nothing is sent); `-3` transport or 5xx. Mutations (for example `runtimeEntities { delete(...) }`) are sent as given: confirm before running them. Over many tenants: `Invoke-OctoTenantSweep ... -IncludeOutput -CliArguments '-c','GraphQl','-tid','{tenant}','-q',$q` (see `tenant-tokens.md`).
+Exit codes: `0` success; `-5` GraphQL `errors` (body on standard error, nothing on standard output), missing or ambiguous document, invalid variables; `-4` not provisioned / denied / 403 (message names tenant and cause, nothing is sent); `-3` transport or 5xx. Mutations (for example `runtimeEntities { delete(...) }`) are sent as given: confirm before running them.<!-- developer-machine --> Over many tenants: `Invoke-OctoTenantSweep ... -IncludeOutput -CliArguments '-c','GraphQl','-tid','{tenant}','-q',$q` (see `tenant-tokens.md`).<!-- /developer-machine -->
 
 ### Models
 
@@ -1737,7 +1737,7 @@ octo-cli -c UndeployWorkload -id <rtId> [-y]
 
 ## AI Services
 
-The AI Adapter is managed per tenant. **`EnableAi` requires the communication controller to be enabled first** (run `EnableCommunication`; the server returns HTTP 409 otherwise), and the active context must have an AI service URL set via `-aisu` on `Config`/`AddContext` (local default `https://localhost:5019/`).
+The AI Adapter is managed per tenant. **`EnableAi` requires the communication controller to be enabled first** (run `EnableCommunication`; the server returns HTTP 409 otherwise), and the active context must have an AI service URL set via `-aisu` on `Config`/`AddContext`<!-- developer-machine --> (local default `https://localhost:5019/`)<!-- /developer-machine -->.
 
 #### EnableAi
 Enables the AI Adapter for the current tenant. No arguments.

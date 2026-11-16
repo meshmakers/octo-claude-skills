@@ -814,7 +814,7 @@ Query Claude AI for document analysis, information extraction, and (optionally) 
 | `includeRawResponse` | bool | false | Store the raw AI response |
 | `rawResponseOutputPath` | string | optional | Where to store the raw response |
 | `continueOnError` | bool | false | Continue the pipeline if the query fails |
-| `mcpServerUrl` | string | optional | OctoMesh MCP server URL (e.g. `https://localhost:5017`). When set, Claude can call MCP tools to query live OctoMesh data; the tenant ID is appended automatically as `{url}/{tenantId}/mcp` |
+| `mcpServerUrl` | string | optional | OctoMesh MCP server URL (e.g. `https://<mcp-host>`). When set, Claude can call MCP tools to query live OctoMesh data; the tenant ID is appended automatically as `{url}/{tenantId}/mcp` |
 | `mcpServiceAccountConfigName` | string | optional | `ServiceAccountConfiguration` whose token authenticates the MCP calls. **Without it (or `mcpDelegateToCaller`) MCP is not called at all** — see *MCP needs an identity* below |
 | `mcpDelegateToCaller` | bool | false | Run the MCP calls as the calling user (delegated token via `mcpServiceAccountConfigName`; same as `identity: Caller`). Fail-closed: no caller token or no delegated token fails the node. Needs a trigger with a caller (`FromHttpRequest@2`, not anonymous) |
 | `maxToolRounds` | int | 10 | Max MCP tool-use rounds (loop guard) |
@@ -912,7 +912,7 @@ Calls **one allowlisted tool** on the tenant's OctoMesh MCP service, determinist
 | `argumentsPath` | string | optional | JSONPath to a JSON **object** sent as the tool arguments. Unset = `{}` |
 | `executionIdArgument` | string | optional | Name of a top-level tool argument that receives the **id of the current pipeline execution** (GUID string), e.g. `runRef` for `knowledge_upsert_page`, so the page version references the exact run. Replaces an argument of the same name from `argumentsPath`. An empty name or one with leading/trailing spaces is a configuration error |
 | `aiConfigurationName` | string | optional | `AiConfiguration` whose `mcpServerUrl` is used (recommended; needs a `Uses` association) |
-| `mcpServerUrl` | string | optional | Fallback URL, e.g. `https://localhost:5017` locally. The tenant is appended: `{url}/{tenantId}/mcp` |
+| `mcpServerUrl` | string | optional | Fallback URL, e.g. `https://<mcp-host>`. The tenant is appended: `{url}/{tenantId}/mcp` |
 | `mcpServiceAccountConfigName` | string | **required** | `ServiceAccountConfiguration` the call runs as (e.g. `knowledge-curator`) |
 | `targetPath` | string | `$` | Where the tool result is written: `structuredContent` if the tool sends it; else a **single** text content that starts with `{` or `[` parsed as JSON; else the text (several texts joined by newlines). A text like `42` or `true` stays a string |
 | `timeoutSeconds` | int | 90 | Timeout of the MCP calls |

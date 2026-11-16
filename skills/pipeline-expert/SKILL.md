@@ -384,9 +384,11 @@ Save high-frequency data to both a CrateDB archive and the entity store. `SaveSt
 
 ## Pipeline Validation
 
-When validating a pipeline YAML (user-written or generated), use the **build-time JSON Schema** as the authoritative source. Every OctoMesh adapter generates its own `pipeline-schema.json` at build time, containing all nodes it supports (SDK nodes + adapter-specific nodes).
+When validating a pipeline YAML (user-written or generated), validate it against the JSON Schema of the adapter that will run it. Every OctoMesh adapter generates its own `pipeline-schema.json`, containing all nodes it supports (SDK nodes + adapter-specific nodes).
 
-**Schema locations** (relative to monorepo root):
+**On a tenant:** validate with the MCP tool `validate_pipeline_definition` (and try it with `dry_run_pipeline`), or fetch the schema of the running adapter with `octo-cli -c GetPipelineSchema --adapterId <rtId>` (MCP `get_pipeline_schema`) — it lists exactly the nodes that adapter loaded.
+
+<!-- developer-machine -->**On a developer machine** the build-time schema is the authoritative source. Schema locations (relative to monorepo root):
 
 | Adapter | Schema Path |
 |---------|------------|
@@ -394,7 +396,7 @@ When validating a pipeline YAML (user-written or generated), use the **build-tim
 | Zenon Adapter | `octo-plug-zenon/src/Octo.Edge.Adapter.Zenon.WindowsService/bin/DebugL/net10.0/pipeline-schema.json` |
 | Simulation Adapter | `octo-sdk/src/Sdk.Plug.Simulation/bin/DebugL/net10.0/pipeline-schema.json` |
 
-**Which schema to use:** Pick the adapter that will execute the pipeline (Mesh Adapter has the richest node set). If it hasn't been built locally, fall back to the node reference docs.
+**Which schema to use:** Pick the adapter that will execute the pipeline (Mesh Adapter has the richest node set). If it hasn't been built locally, fall back to the node reference docs.<!-- /developer-machine -->
 
 **Validation:** look up each node by its `type` const in `$defs.TriggerNode.oneOf` / `$defs.TransformationNode.oneOf`, then verify all `required` keys are present, every property exists in the node's `properties`, and enum values match. For the extraction commands and fallback rules, read `references/pipeline-schema-guide.md`.
 
