@@ -39,10 +39,12 @@ blueprint (one InstallBlueprint provisions everything)
 Tickets/orders/whatever the domain needs are plain runtime entities of the custom
 CK type — browsable in Studio, queryable via GraphQL, manipulated by pipelines.
 
-A complete worked example lives in the workspace at `one-time-ticket/` (read its
-README.md + CLAUDE.md): secret-redeemable-once app, 3 pipelines, operator-deployed
-UI. The `ZenonDynprop.MainLatest` blueprint (meshmakers/blueprint-libraries-build,
-`blueprints/v1/z/...`) is the same pattern with two adapters.
+The references hold a complete, self-contained example: a ticket app (CK model
+`Demo.Tickets`) with three HTTP routes (create, list without secrets, reveal once),
+its blueprint seed and an operator-deployed UI — see
+[references/http-api-pipelines.md](references/http-api-pipelines.md),
+[references/blueprint-authoring.md](references/blueprint-authoring.md) and
+[references/app-workload.md](references/app-workload.md).
 
 ## Prerequisite checks (run before building)
 
@@ -57,7 +59,8 @@ Pool `670000000000000000000001`, Mesh Adapter `670000000000000000000002`,
 dev Helm repo `670000000000000000000003`.
 
 For an operator-deployed web app additionally: a cluster with the Communication
-Operator running (`kubectl get pods -n octo-operator-system`)<!-- developer-machine --> — on local dev this
+Operator running (the tenant's deployment site shows `Online`/`Deployed` in
+`octo-cli -c GetDeploymentSites -j`)<!-- developer-machine --> — on local dev this
 is the kind cluster (see octo-devtools for setup)<!-- /developer-machine -->.
 
 ## Build sequence
@@ -74,10 +77,10 @@ Author a minimal model (one folder, three files — full syntax in
 `attributes/*.yaml`, `types/*.yaml` (derive from `${System}/Entity-1`, reference
 attributes as `${this}/<AttrId>-1`).
 
-```powershell
+```bash
 # octo-ckc = the CK compiler CLI of octo-construction-kit-engine, not on PATH by default
-octo-ckc -c Compile -p .\ck\ConstructionKit -o .\ck\out
-octo-ckc -c Publish -f .\ck\out\ck-<name>.yaml -r     # → ~/.octo/local-catalog (LocalFileSystemCatalog)
+octo-ckc -c Compile -p ./ck/ConstructionKit -o ./ck/out
+octo-ckc -c Publish -f ./ck/out/ck-<name>.yaml -r     # → ~/.octo/local-catalog (LocalFileSystemCatalog)
 ```
 
 Publishing to the catalog is what lets the blueprint auto-import the model via
@@ -132,8 +135,8 @@ and the Application entity YAML: [references/app-workload.md](references/app-wor
 
 Image handling on local kind (no registry needed):
 
-```powershell
-docker build -t meshmakers/<app>:0.1.0 .\app
+```bash
+docker build -t meshmakers/<app>:0.1.0 ./app
 docker tag meshmakers/<app>:0.1.0 <registry>/meshmakers/<app>:0.1.0
 kind load docker-image meshmakers/<app>:0.1.0 <registry>/meshmakers/<app>:0.1.0
 ```
@@ -167,18 +170,19 @@ Key decisions:
 
 Install into the local blueprint catalog:
 
-```powershell
+```bash
 # layout: ~/.octo/local-blueprint-catalog/blueprints/v1/<Name>/<version>/{blueprint.yaml,seed-data/}
-Copy-Item ... # copy both files preserving layout
-Remove-Item "$HOME\.octo\blueprint-catalog\cache\local-blueprint-catalog-cache.json" -Force
+mkdir -p ~/.octo/local-blueprint-catalog/blueprints/v1/<Name>
+cp -R ./blueprint/<Name>/<version> ~/.octo/local-blueprint-catalog/blueprints/v1/<Name>/
+octo-cli -c RefreshBlueprintCatalogs -cn LocalFileSystemBlueprintCatalog   # forced refresh, no restart
 octo-cli -c ListBlueprints     # must now show <Name>-<version>
 ```
 
-Deleting the cache file is mandatory — it only rebuilds when missing (pitfall #1).
+The catalog index is cached; refresh it after every new blueprint or version (pitfall #1).
 
 ### 5. Install + deploy
 
-```powershell
+```bash
 octo-cli -c InstallBlueprint -b <Name>-<Version>       # -f to force re-apply after seed edits
 octo-cli -c DeployDataFlow --identifier <dataflowRtId>
 octo-cli -c DeployWorkload -id <applicationRtId>       # only if there is an app
@@ -192,18 +196,20 @@ under `LoadedCkModels`, no warnings. A silent no-op with `WasSkipped` means the
 
 - Curl matrix against every endpoint: happy path, conditional/error paths, and
   that no response leaks fields it shouldn't (grep the raw JSON).
-- App: pod Running (`kubectl get pods -n octo`), ingress host answers, then drive
-  the real UI flow in a browser (Playwright) — not just the API.
-- On any silent failure read the adapter log first:
-  `kubectl logs -n octo deploy/<tenant>-<adapterRtId>` — pipeline exceptions,
-  route registrations (`Removing pipeline` / `Registering pipeline`), request traces.
+- App: the Application entity reports `deploymentState` Deployed (no
+  `lastDeploymentError`), the ingress host answers, then drive the real UI flow in a
+  browser (Playwright) — not just the API.
+- On any silent failure check the pipeline runs first (`GetPipelineExecutions -id
+  <pipelineRtId> -j`, `GetPipelineDebugPoints` with `SetPipelineDebug -e true`); with
+  read access to the cluster the adapter log adds pipeline exceptions, route
+  registrations (`Removing pipeline` / `Registering pipeline`) and request traces.
 - Clean up test entities afterwards so the consumer starts fresh.
 
 ## Pitfalls (each cost real debugging time)
 
 | # | Symptom | Cause / fix |
 |---|---|---|
-| 1 | New blueprint missing from `ListBlueprints` | Local blueprint catalog cache only rebuilds when the cache file is **missing**. Delete `~/.octo/blueprint-catalog/cache/local-blueprint-catalog-cache.json`. |
+| 1 | New blueprint missing from `ListBlueprints` | The blueprint catalog index is cached. `octo-cli -c RefreshBlueprintCatalogs [-cn <catalog>]` refreshes it without a restart (forced; needs the tenant role `DataModelManagement`).<!-- developer-machine --> Older local builds rebuild the local cache only when `~/.octo/blueprint-catalog/cache/local-blueprint-catalog-cache.json` is missing — delete it.<!-- /developer-machine --> |
 | 2 | Endpoint answers 200 with empty body in ~0.1 ms | Route's method not registered (path-only fallback). After `ImportRt -r` on a live dataflow, each `DeployDataFlow` can remove an unchanged pipeline while re-registering a changed one. Re-run `DeployDataFlow` and re-test ALL routes; fresh install + single deploy is reliable. |
 | 3 | Pipeline 500s only for some entities | `SetPrimitiveValue@1` on an optional attribute that is unset. Guard with `If@1`. |
 | 4 | Response contains request body / secrets / lookup internals | No `Project@1 clear: true` at the end. The response is the whole final DataContext. |

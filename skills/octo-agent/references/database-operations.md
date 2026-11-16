@@ -74,7 +74,7 @@ For a remote environment, use `Invoke-MongoPortForward` to port-forward MongoDB 
 |----------|---------|
 | `octosystem` | System tenant — identity, notification, bot CK models |
 | `meshtest` | Default test tenant — all CK models deployed here |
-| `maco` | Additional tenant (if configured) |
+| `<tenant>` | Any further tenant (database name = tenant ID) |
 
 ### Diagnostic Queries
 
@@ -119,7 +119,7 @@ db.CkModel.find({}, { _id: 1, modelState: 1 }).sort({ _id: 1 })
 
 Each tenant gets its own MongoDB database. The database name matches the tenant ID:
 - Tenant `meshtest` -> database `meshtest`
-- Tenant `maco` -> database `maco`
+- Tenant `<tenant>` -> database `<tenant>`
 
 The system tenant (`octosystem`) stores:
 - System CK models (System, System.Identity, System.Bot, etc.)

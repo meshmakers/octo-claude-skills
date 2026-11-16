@@ -5,7 +5,7 @@
 How to ship a web UI for a mesh app so that the **platform itself deploys it**:
 an `System.Communication/Application` entity in the blueprint seed, helm-installed
 by the Communication Operator on `DeployWorkload`. Verified 2026-06-09 on local
-kind (one-time-ticket demo). Operator/chart internals → octo-operator skill.
+kind (ticket demo, CK model `Demo.Tickets`). Operator/chart internals → octo-operator skill.
 
 ## Why a workload (and not the adapter)
 
@@ -26,8 +26,7 @@ via image override — no chart authoring, no CI:
 | `GET /` | returns 200 + the SPA (liveness/readiness probes hit `/`) |
 | container port | 5055 |
 
-App shape that fits (zero npm dependencies, see `one-time-ticket/app/` for a
-complete implementation):
+App shape that fits (zero npm dependencies):
 
 - `server/server.js` — node:http server. `GET /` → serve `client/index.html`;
   `/api/<rest>` (any method) → proxy to `UPSTREAM_URL/<rest>` preserving query +
@@ -59,14 +58,14 @@ deploy time, so the final image reference is `<registry>/<repository>:<tag>`.
 
 Local kind (no registry needed — `pullPolicy: IfNotPresent` finds node-local images):
 
-```powershell
-docker build -t meshmakers/<app>:0.1.0 .\app
+```bash
+docker build -t meshmakers/<app>:0.1.0 ./app
 docker tag meshmakers/<app>:0.1.0 <registry>/meshmakers/<app>:0.1.0
 kind load docker-image meshmakers/<app>:0.1.0 <registry>/meshmakers/<app>:0.1.0
 ```
 
 Tag and load **both** names so the image resolves regardless of registry-prefix
-injection. Shared clusters (test-2 etc.): push to `<registry>` instead.
+injection. Shared clusters: push to `<registry>` instead.
 
 ## The Application seed entity
 
@@ -149,7 +148,7 @@ Secret attribute in a seed is only ever empty or omitted; blueprints have no ins
         rtId secretDefaults { key allowedTenantIds secretValue { isSet } } } } }
     }
     ```
-  - **A CD from a secret store**, as the Energy Community app on test-2 (Vault -> `SecretDefaults` before the
+  - **A CD from a secret store**, as an app on a shared cluster does (Vault -> `SecretDefaults` before the
     deploy). The store is then the source of truth; a Studio edit is overwritten by the next run.
 
   Re-apply and blueprint updates keep the entry (TenantOwned, carried over by record key). Rotate by writing the new
@@ -202,23 +201,31 @@ Worked sample with the Application, a tenant override type, the `VerifyCaptcha@1
 
 ## Deploy + operate
 
-```powershell
+```bash
 octo-cli -c DeployWorkload -id <applicationRtId>      # operator helm-installs
-kubectl get pods -n octo                              # <tenant>-<appRtId>-<chart>-… Running
-kubectl get ingress -n octo                           # host shows the resolved domain
 octo-cli -c UndeployWorkload -id <applicationRtId> -y # helm-uninstall (destructive)
 octo-cli -c UpdateWorkloadChartVersion -id <rtId> -cv <semver>  # set version, then DeployWorkload
 ```
 
-Iteration loop after app changes: rebuild image → `kind load` both tags →
+The Application entity's `deploymentState`, `statusMessage` and `lastDeploymentError`
+show the result; the ingress host from `{{domain.default}}` must answer.<!-- developer-machine -->
+On a local kind cluster `kubectl get pods -n octo` / `kubectl get ingress -n octo` show the
+pod (`<tenant>-<appRtId>-<chart>-…`) and the resolved host.<!-- /developer-machine -->
+
+New image after app changes: push a **new tag**, set it in the seed's `ValuesYaml`,
+`InstallBlueprint -b <id> -f` (or `UpdateBlueprint`) and `DeployWorkload` again — a
+push under the same tag does not restart the pod; `UndeployWorkload` + `DeployWorkload`
+also works. Never restart deployments with kubectl on a shared cluster.<!-- developer-machine -->
+On a local kind cluster: rebuild the image, `kind load` both tags, then
 `kubectl rollout restart deploy/<release-name> -n octo` (release name =
-`{tenantId}-{applicationRtId}-<chartname>` as shown by `kubectl get deploy -n octo`).
+`{tenantId}-{applicationRtId}-<chartname>`).<!-- /developer-machine -->
 
 Failure triage:
-- `ImagePullBackOff` → registry-prefix mismatch; check the pod's image reference
-  (`kubectl get pod … -o jsonpath='{.items[0].spec.containers[0].image}'`) and
-  make sure exactly that name was kind-loaded/pushed.
+- `ImagePullBackOff` (in the pod diagnostics of `lastDeploymentError`) → registry-prefix
+  mismatch or missing image: make sure exactly `<registry>/<repository>:<tag>` from the
+  seed was pushed (or kind-loaded locally).
 - Pod restarts / not Ready → probes failing: `GET /` must return 200 on `PORT`.
-- Helm install error → `kubectl logs -n octo-operator-system deploy/communication-operator`
-  and the workload's `lastDeploymentError` attribute (Studio<!-- developer-machine -->, rt_explorer<!-- /developer-machine -->).
+- Helm install error → the workload's `lastDeploymentError` attribute (Helm error plus pod
+  diagnostics collected by the operator; with cluster access also the communication
+  operator's log) (Studio<!-- developer-machine -->, rt_explorer<!-- /developer-machine -->).
 - Uninstalling the blueprint? `UndeployWorkload` FIRST, then `UninstallBlueprint`.

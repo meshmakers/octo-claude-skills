@@ -90,10 +90,10 @@ Notes:
 
 ## Creating a tenant on test-2
 
-1. Ensure an **octosystem** context on test-2 exists<!-- developer-machine --> (`Register-OctoCliContext
-   -Installation test-2 -TenantId octosystem`)<!-- /developer-machine -->; target it below with `--context
-   test-2_octosystem`.
-2. `octo-cli -c Create -tid <tenantId> -db <tenantId> --context test-2_octosystem`
+1. Ensure an **octosystem** context on the target installation exists<!-- developer-machine --> (`Register-OctoCliContext
+   -Installation <installation> -TenantId octosystem`)<!-- /developer-machine -->; target it below with `--context
+   <octosystem-context>`.
+2. `octo-cli -c Create -tid <tenantId> -db <tenantId> --context <octosystem-context>`
    — interactive sessions provision the current user as tenant admin. Headless
    (client-credentials) sessions add `--scratch` (the client becomes administrator
    of the tenant it creates, no user provisioning; the client needs `-apic` and
@@ -102,35 +102,28 @@ Notes:
    a scratch tenant, `-np` (machine tokens carry no user to provision). Tenant
    IDs are lowercased. If the tenant was created without provisioning (`-np`) or
    by someone else, run `octo-cli -c ProvisionCurrentUser -ttid <tenantId>
-   --context test-2_octosystem` before using the root operator's token in it: a
+   --context <octosystem-context>` before using the root operator's token in it: a
    root-tenant user has no implicit rights in a child tenant (AB#6836).
-3. `octo-cli -c EnableCommunication --context test-2_<tenantId>` — must run
+3. `octo-cli -c EnableCommunication --context <tenant-context>` — must run
    against the TARGET tenant context, not octosystem (pass its `--context`, no
    switching needed). This only
-   SEEDS the Pool/Adapter/HelmRepo entities (`670…001/002/003`) — it deploys
+   SEEDS the deployment site/Adapter/HelmRepo entities (`670…001/002/003`) — it deploys
    nothing. `GetAdapters` may return 500 until communication is enabled.
-4. **Deploy the Pool** (live-verified 2026-06-10: nothing rolls out while the
-   pool is `Undeployed`, and deploy triggers fired in that state are silently
-   lost). No octo-cli command exists — REST only:
-   `POST https://communication.<test-2-domain>/<tenantId>/v1/Pool/deploy?poolRtId=670000000000000000000001`
-   with an access token issued for `<tenantId>` itself (the signed-in context
-   `test-2_<tenantId>`, never the root tenant's token; never echo it) → 204.
-   `GetPools -j` → `Online`/`Deployed`.
+4. **Deploy the deployment site** (live-verified 2026-06-10: nothing rolls out
+   while it is `Undeployed`, and deploy triggers fired in that state are silently
+   lost): `octo-cli -c DeployDeploymentSite -id 670000000000000000000001 --context
+   <tenant-context>`, then `GetDeploymentSites -j` → `Online`/`Deployed`.
 5. `octo-cli -c DeployWorkload -id 670000000000000000000002` (re-trigger after
-   the pool is up), then `octo-cli -c GetAdapters -j` until the Mesh Adapter
+   the deployment site is up), then `octo-cli -c GetAdapters -j` until the Mesh Adapter
    shows Online (~1 min: operator provisions the CommunicationPool CR, then
    Helm-installs the adapter pod `<tenantId>-670…002-…`).
 
 ## The environment gate (`requires: octo.environment`)
 
-`${octo.environment}` on test-2 comes from `OCTO_BLUEPRINTS__ENVIRONMENT` on
-the asset-repo deployment. Two sources disagree about its value:
-- the helm values chain (`octo-mesh` chart default `dev`, not overridden in
-  `test-2-values.yaml`) ⇒ `dev`
-- blueprint comments (ZenonDynprop) treat test-2 as the `test` channel ⇒ `test`
-
-The runtime value was NOT verified. Consequence for authors: gate test-2-bound
-blueprints with **both** values —
+`${octo.environment}` comes from the asset repository's configuration
+(`OCTO_BLUEPRINTS__ENVIRONMENT`; chart default `dev`), and a test cluster may be
+read as either the `dev` or the `test` channel. Gate blueprints meant for a test
+cluster with **both** values —
 
 ```yaml
 requires:
@@ -150,13 +143,14 @@ no-op with `WasSkipped: true` means the gate didn't match the actual value.
 - kubectl access to test-2 EXISTS via a Rancher kubeconfig download
   (`<rancher-url>`, publicly reachable — no VPN). Caveats:
   - The downloaded yaml is NOT auto-integrated — merge it:
-    `$env:KUBECONFIG="$env:USERPROFILE\.kube\config;<downloaded.yaml>";
-    kubectl config view --flatten > merged; mv merged ~/.kube/config`
+    `KUBECONFIG=~/.kube/config:<downloaded.yaml> kubectl config view --flatten > merged && mv merged ~/.kube/config`
+    (PowerShell: `$env:KUBECONFIG="$HOME\.kube\config;<downloaded.yaml>"`, then the same `kubectl config view`)
     (context name `test-2`).
   - Older `k3s-test-2` contexts route via `<internal-rancher-host>` (internal,
     needs VPN) — connection refused off-VPN; prefer the `<rancher-url>` one.
-  - Asset-repo deployment (for the blueprint-catalog cache restart):
-    `octo/octo-mesh-asset-rep-services`.
+  - Use it to read (pods, logs, events). Never restart or change workloads with
+    kubectl: blueprint catalogs refresh with `RefreshBlueprintCatalogs`, workloads
+    redeploy with `DeployWorkload`.
 - Without kubectl, observability runs through octo-cli status commands and the
   workload entities' `deploymentState`/`statusMessage`/`lastDeploymentError`
   attributes (rt_explorer / Studio).

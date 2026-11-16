@@ -116,6 +116,9 @@ Command-name + one-line purpose + safety type only. **For full flag detail, read
 | `AddAuthorizationCodeClient` / `AddDeviceCodeClient` | Add OIDC clients | Mutating |
 | `AddClientCredentialsClient` | Add client-credentials client (`-apic` auto-provision into sub-tenants) | Mutating |
 | `UpdateClient` / `DeleteClient` / `AddScopeToClient` | Manage clients | Mutating |
+| `AddClientToRole` / `RemoveClientFromRole` | Assign/remove a role (by name) of a client-credentials client (`-id <clientId> -r <role>`); new token needed | Mutating |
+| `UpdateClientRoles` | Replace all directly assigned roles of a client (`-id`, `-rids <roleId,…>`) | Mutating |
+| `AddClientToGroup` / `RemoveClientFromGroup` | Add/remove a client to/from a group (`-id <groupId> -cid <clientId>`); the client inherits the group's roles | Mutating |
 | `GetClientMirrors` | List sub-tenants a client is mirrored into | Read-only |
 | `SetClientAutoProvision` | Flip a client's auto-provision flag (no backfill) | Mutating |
 | `ProvisionClientInExistingTenants` | Backfill a flagged client into all existing sub-tenants | Mutating |
@@ -218,7 +221,7 @@ Archive lifecycle mutations require the **StreamDataAdminRole**.
 
 ### Communication Services
 
-All communication commands accept plain runtime object IDs — the SDK builds the composite RtEntityId internally. `GetAdapters`/`GetPools` return human-readable enum names (e.g. `Online`, `Offline`), not integers.
+All communication commands accept plain runtime object IDs — the SDK builds the composite RtEntityId internally. `GetAdapters`/`GetDeploymentSites` return human-readable enum names (e.g. `Online`, `Offline`), not integers.
 
 | Command | Purpose | Type |
 |---|---|---|
@@ -226,7 +229,8 @@ All communication commands accept plain runtime object IDs — the SDK builds th
 | `GetAdapters` / `GetAdapter` | List/get adapters (`-j`); `GetAdapter` also shows the typed CPU/memory `resources` | Read-only |
 | `GetAdapterNodes` | Aggregated node descriptors from connected adapters (`-j`) | Read-only |
 | `GetPipelineSchema` | JSON Schema of valid pipeline YAML for an adapter (`-aid`, `-o`) | Read-only |
-| `GetPools` | List pools for the tenant (`-j`) | Read-only |
+| `GetDeploymentSites` | List the tenant's deployment sites, formerly "pools" (`-j`) | Read-only |
+| `DeployDeploymentSite` / `UndeployDeploymentSite` | Deploy/undeploy a deployment site (`-id`; undeploy `-y`) | Mutating / Destructive |
 | `GetPipelineStatus` | Pipeline deployment state (`-id`, `-j`) | Read-only |
 | `DeployPipeline` | Deploy pipeline YAML to an adapter (`-aid`, `-pid`, `-f`) | Mutating |
 | `ExecutePipeline` | Execute a pipeline, returns execution ID (`-id`, `-f` input file) | Mutating |
@@ -241,12 +245,12 @@ All communication commands accept plain runtime object IDs — the SDK builds th
 | `GetWorkloadsByChart` | List workloads by Helm chart name (`-cn`) | Read-only |
 | `UpdateWorkloadChartVersion` | Set a workload's chart version — no deploy (`-id`, `-cv`) | Mutating |
 | `UpdateWorkloadResources` | Show/set/clear an adapter's or application's CPU and memory requests and limits — no deploy (`-id`, `-cr`, `-cl`, `-mr`, `-ml`; flag without value clears) | Mutating |
-| `DeployWorkload` | Deploy a workload through its parent pool (`-id`) | Mutating |
+| `DeployWorkload` | Deploy a workload through its parent deployment site (`-id`) | Mutating |
 | `UndeployWorkload` | Undeploy a workload — operator helm-uninstalls (`-id`) | Destructive |
 
-> Adapters are now Helm-deployed by the Communication Operator when a pool is deployed; there is **no** manual adapter-deploy command anymore (legacy `DeployAdapter`, `GetPool`, `DeployPoolAdapters`, `UndeployPoolAdapters` were removed). Use `DeployWorkload`/`UndeployWorkload` for adapter/application workloads.
+> Adapters are now Helm-deployed by the Communication Operator when a deployment site is deployed; there is **no** manual adapter-deploy command anymore (legacy `DeployAdapter`, `GetPool`, `DeployPoolAdapters`, `UndeployPoolAdapters` were removed). Use `DeployWorkload`/`UndeployWorkload` for adapter/application workloads.
 >
-> **Deploying the pool itself is REST-only** (no octo-cli command): `POST {CommunicationServiceUrl}{tenantId}/v1/Pool/deploy?poolRtId=<rtId>` → 204 (`undeploy` likewise). The bearer token must be one issued for `{tenantId}` itself (the per-tenant context of that tenant, signed in), never a token of another tenant such as the root tenant (see *Tenant tokens, child tenants and sweeps*). There is no CLI command yet, so this one call is the remaining exception to "no hand-made token handling". **Order matters:** on a freshly comm-enabled tenant the pool starts `Undeployed`, and `DeployWorkload` triggers fired in that state are **silently lost** — the workload sits in `Pending` forever with no error. Deploy the pool first, then (re-)run `DeployWorkload`.
+> **Order matters:** on a freshly comm-enabled tenant the deployment site starts `Undeployed`, and `DeployWorkload` triggers fired in that state are **silently lost** — the workload sits in `Pending` forever with no error. Deploy the deployment site first (`DeployDeploymentSite -id <deploymentSiteRtId>`; `GetDeploymentSites -j` shows its ID and state), then (re-)run `DeployWorkload`.
 
 ### AI Services
 
@@ -312,7 +316,7 @@ A command addresses **one tenant: the tenant of its context**. octo-cli 3.5.27+ 
 - **Batch ("create 3 test users"):** loop the command with unique values; show the full plan, execute after confirmation.
 - **"with my roles":** `GetUsers` → identify current user → apply the same roles via `AddUserToRole`.
 - **Tenant context:** use the active context's tenant; never add `-tid` to commands that use the configured tenant (`EnableCommunication`, `EnableReporting`, `EnableStreamData`, `EnableAi`, `RunFixupScripts`). Only pass `-tid` on Asset Repository tenant commands that require it.
-- **Environment-aware prompts:** always indicate the active environment when confirming (e.g. "**[prod-1]** This will create a new user...").
+- **Environment-aware prompts:** always indicate the active environment when confirming (e.g. "**[<context>]** This will create a new user...").
 
 ## Temporary Tenants (Non-Interactive)
 
