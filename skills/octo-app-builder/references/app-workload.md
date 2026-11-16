@@ -155,7 +155,10 @@ Secret attribute in a seed is only ever empty or omitted; blueprints have no ins
   the previous release keeps running, so the Application holds the defaults it already projected and offers nothing
   to a tenant it did not serve before. Removing the entry or narrowing `AllowedTenantIds` removes the default from
   every tenant it no longer reaches at the next projection, but not while the Application is in Error: it keeps them
-  until a redeploy succeeds (undeploy to withdraw). The projection is best effort per tenant: a skipped tenant (no
+  until a redeploy succeeds (undeploy to withdraw). An invalid entry (a duplicate key, no value) is never written,
+  but the Application keeps the default it already projected for that key in every tenant that all its entries of
+  the key allow, at deploy and at reconcile; fix or remove the entry, or exclude the tenant, to withdraw it.
+  The projection is best effort per tenant: a skipped tenant (no
   System.Communication 4.15.0, not resolvable) or a failed write is a Warning/Error event, and the deploy still
   succeeds. Events about an Application's defaults are **linked to the Application** (`relatesFrom` of
   `System.Notification/Event`) when stored in its own tenant. After every deploy read those events; for a skipped or
