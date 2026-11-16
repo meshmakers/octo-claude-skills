@@ -28,7 +28,7 @@ This skill is the hub for all OctoMesh tasks. Before doing any work, check if th
 | **Refinery Studio Angular frontend** development (code in `octo-frontend-refinery-studio`), components, GraphQL codegen, Angular build/lint/test for the studio app | `Skill("refinery-studio", args: "<user's request>")` |
 | **Kubernetes Communication Operator** + Helm chart development/deployment (operator code, CRDs, Helm values, K8s manifests) | `Skill("octo-operator", args: "<user's request>")` |
 | **Building a new OctoMesh-powered app/workload end to end** — custom CK model + blueprint authoring (`blueprint.yaml`, seed data, `ckModelDependencies`), HTTP APIs from `FromHttpRequest@2` pipelines, operator-deployed Application web apps, CK/blueprint catalog publishing | `Skill("octo-app-builder", args: "<user's request>")` |
-| **Deploying/promoting an app to the test-2 environment** — publishing CK models/blueprints to the shared GitHub catalogs (`octo-ckc`/`octo-bpm`), pushing images to `<registry>`, test-2 context setup, install + verify on a test-2 tenant | `Skill("octo-deploy", args: "<user's request>")` |
+| **Deploying/promoting an app to a shared test environment** — publishing CK models/blueprints to shared catalogs (`octo-ckc`/`octo-bpm`), pushing images to `<registry>`, context setup, install + verify on a tenant there | `Skill("octo-deploy", args: "<user's request>")` |
 | **Reading/tracing logs from a deployed cluster** in Dash0 (Dash0 MCP tools) — log filters, D0QL error rates, tracing an error across pod redeployments, log retention | `Skill("octo-logs", args: "<user's request>")` |
 | **Setting up log access** — registering / logging in to the Dash0 MCP server when the `mcp__dash0__*` tools are missing or unauthenticated | `Skill("octo-logs-setup", args: "<user's request>")` |
 
@@ -42,7 +42,7 @@ Run these checks once per session and cache the results. If any check has alread
 
 ### 1. Active Context
 
-Run `octo-cli -c ListContexts -j` (or `-n <name>`) for the active context name (e.g., `local_meshtest`), and per context its tenant ID, service endpoints and auth status. Never open `~/.octo-cli/contexts.json` yourself and never print, copy or forward a token from it; `ListContexts` and `AuthStatus` give everything needed.
+Run `octo-cli -c ListContexts -j` (or `-n <name>`) for the active context name (e.g., `local_mytenant`), and per context its tenant ID, service endpoints and auth status. Never open `~/.octo-cli/contexts.json` yourself and never print, copy or forward a token from it; `ListContexts` and `AuthStatus` give everything needed.
 
 The active context is the *persisted default* — but a command may run against a different context when `--context <name>` is passed or `OCTO_CLI_CONTEXT` is set (see Invocation Syntax). Check the env var and prefer `--context` when targeting a specific environment so you never depend on, or mutate, the global active context.
 
@@ -62,12 +62,10 @@ If not authenticated: inform the user and offer to run `octo-cli -c LogIn -i` (i
 | URL Pattern | Environment |
 |---|---|
 | `localhost:500x` | local |
-| `*.<test-2-domain>` | test-2 |
-| `*.<staging-domain>` | staging-1 |
-| `*.<prod-1-domain>` | prod-1 |
-| `*.<prod-2-domain>` | prod-2 |
+| `*.<staging-domain>` | staging |
+| `*.<production-domain>` | production |
 
-> Hostnames are placeholders (`<test-2-domain>`, `<staging-domain>`, …): with `octo-claude-pm` installed see its `agent-operating-rules/references/environments.md`.
+> Hostnames are placeholders: the service URLs of the context name the installation; ask its administrator which domain belongs to which environment.<!-- developer-machine --> The Meshmakers installations and their domains are in `references/environments.md`; with `octo-claude-pm` installed see its `agent-operating-rules/references/environments.md`.<!-- /developer-machine -->
 
 ## Invocation Syntax
 
@@ -297,9 +295,9 @@ All communication commands accept plain runtime object IDs — the SDK builds th
 
 ## Environment Switching
 
-octo-cli uses **named contexts** (like kubectl), each storing its own service URLs, tenant, and auth tokens. Naming convention: `{installation}_{tenantId}` (e.g. `local_meshtest`, `staging-1_meshtest`, `prod-1_meshmakers`); default tenant is `meshtest`.
+octo-cli uses **named contexts** (like kubectl), each storing its own service URLs, tenant, and auth tokens. Naming convention: `{installation}_{tenantId}` (e.g. `local_mytenant`, `staging_mytenant`, `production_mytenant`).<!-- developer-machine --> The local developer stack's default tenant is `meshtest`.<!-- /developer-machine -->
 
-On "switch to <env>" / "connect to <env>": read `references/environments.md` for URL mappings (installations `local`, `test-2`, `staging-1`, `prod-1`, `prod-2`), then `AddContext -n {ctx}` (idempotent; add `-aisu` if AI is needed). Authenticate and work **against that context without changing the active one**: `AuthStatus --context {ctx}`; if the token is invalid, `LogIn -i --context {ctx}` (or `LogInClientCredentials --context {ctx}` for headless) — the token is stored in `{ctx}`. Then pass `--context {ctx}` on every command, or `export OCTO_CLI_CONTEXT={ctx}` for the session. Only use `UseContext -n {ctx}` when the user explicitly wants to change their persistent default (single-session/interactive). List contexts with `ListContexts`. In the OctoMesh developer shell, the `Register-OctoCliContext` cmdlet wraps context creation + login for any installation (it knows the current cluster domains) — route there via `octo-devtools`.
+On "switch to <env>" / "connect to <env>": read `references/environments.md` for URL mappings<!-- developer-machine --> (installations `local`, `test-2`, `staging-1`, `prod-1`, `prod-2`)<!-- /developer-machine -->, then `AddContext -n {ctx}` (idempotent; add `-aisu` if AI is needed). Authenticate and work **against that context without changing the active one**: `AuthStatus --context {ctx}`; if the token is invalid, `LogIn -i --context {ctx}` (or `LogInClientCredentials --context {ctx}` for headless) — the token is stored in `{ctx}`. Then pass `--context {ctx}` on every command, or `export OCTO_CLI_CONTEXT={ctx}` for the session. Only use `UseContext -n {ctx}` when the user explicitly wants to change their persistent default (single-session/interactive). List contexts with `ListContexts`. In the OctoMesh developer shell, the `Register-OctoCliContext` cmdlet wraps context creation + login for any installation (it knows the current cluster domains) — route there via `octo-devtools`.
 
 ## Tenant tokens, child tenants and sweeps
 

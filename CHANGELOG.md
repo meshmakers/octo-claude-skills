@@ -17,6 +17,7 @@ All notable changes to the octo-claude-skills plugin. Format loosely follows [Ke
   - System.Communication dependency ranges in examples follow the current major (`[4.0,5.0)`);
   - `http-api-pipelines.md`: how to validate required body fields with `If@1` (null/empty checks, guarded write), where a route is reachable (in-cluster service address; from outside only with the opt-in adapter ingress `IngressEnabled` + `DeployWorkload`, AB#9166), token passed as a header on stdin; `blueprint-authoring.md`: seeding a `System.Identity/Role` (and group) for `requiredRoles`, granting it after the install;
   - GitHub tokens of `octo-ckc`/`octo-bpm` go into their settings files instead of `-gt` on the command line; octo-deploy eval expects `RefreshBlueprintCatalogs`.
+  - context-name and tenant examples are neutral (`local_mytenant`, `staging_…`, `production_…`, `<root-context>`, `tenant-a,tenant-b,tenant-c`); the environment detection table names `staging`/`production` and keeps the Meshmakers installations in a developer-machine note; octo-deploy no longer names the internal catalog repositories or CI templates in tenant-facing sections, and `test-2-environment.md` § *Creating a tenant on test-2* is renamed *Creating a tenant* (page-plan key).
 
 ## [0.28.11] — 2026-11-16
 

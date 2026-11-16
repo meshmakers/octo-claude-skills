@@ -88,7 +88,7 @@ Notes:
     role `TenantManagement`, `client_id <client>` and the audiences `octoAPI`
     plus the MCP audience.
 
-## Creating a tenant on test-2
+## Creating a tenant
 
 1. Ensure an **octosystem** context on the target installation exists<!-- developer-machine --> (`Register-OctoCliContext
    -Installation <installation> -TenantId octosystem`)<!-- /developer-machine -->; target it below with `--context

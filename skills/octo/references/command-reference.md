@@ -27,7 +27,7 @@ octo-cli -c AddContext -n <name> [-isu <identityServicesUri>] [-asu <assetServic
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
-| `-n` | `name` | Name of the context (e.g. `local_meshtest`, `staging-1_customer1`) | Yes |
+| `-n` | `name` | Name of the context (e.g. `local_mytenant`, `staging_customer1`) | Yes |
 | `-isu` | `identityServicesUri` | URI of identity services (e.g. `https://<identity-host>/`) | No |
 | `-asu` | `assetServicesUri` | URI of asset repository services (e.g. `https://<asset-repo-host>/`) | No |
 | `-bsu` | `botServicesUri` | URI of bot services (e.g. `https://<bot-host>/`) | No |
@@ -35,9 +35,9 @@ octo-cli -c AddContext -n <name> [-isu <identityServicesUri>] [-asu <assetServic
 | `-rsu` | `reportingServicesUri` | URI of reporting services (e.g. `https://<reporting-host>/`) | No |
 | `-aisu` | `aiServicesUri` | URI of AI services (e.g. `https://<ai-host>/`) | No |
 | `-apu` | `adminPanelUri` | URI of admin panel (e.g. `https://<admin-panel-host>/`) | No |
-| `-tid` | `tenantId` | ID of tenant (e.g. `meshtest`) | No |
+| `-tid` | `tenantId` | ID of tenant (e.g. `mytenant`) | No |
 
-Context naming convention: `{installation}_{tenantId}` (e.g., `local_meshtest`, `staging-1_meshtest`, `prod-1_meshmakers`, `test-2_pr123_meshtest`).
+Context naming convention: `{installation}_{tenantId}` (e.g., `local_mytenant`, `staging_mytenant`, `production_mytenant`).
 
 If this is the first context or no active context is set, it is automatically activated. Each context stores its own authentication tokens independently. `AddContext` only creates/updates the stored context — to run against it without changing the active context, pass `--context <name>` (or set `OCTO_CLI_CONTEXT`) on subsequent commands instead of `UseContext`.<!-- developer-machine --> In the OctoMesh developer shell, `Register-OctoCliContext` wraps `AddContext` + `UseContext` + login for the known installations using the current cluster domains.<!-- /developer-machine -->
 
@@ -957,7 +957,7 @@ Sends one GraphQL query or mutation to `tenants/<tenant>/GraphQL` with the token
 ```
 octo-cli -c GraphQl -tid <tenant> -q "{ constructionKit { models(first:1) { totalCount } } }"
 octo-cli -c GraphQl -tid <tenant> -f query.graphql -vars @vars.json -on MyQuery
-cat query.graphql | octo-cli --context test-2_octosystem -c GraphQl -tid <tenant> -si | jq .data
+cat query.graphql | octo-cli --context <root-context> -c GraphQl -tid <tenant> -si | jq .data
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|

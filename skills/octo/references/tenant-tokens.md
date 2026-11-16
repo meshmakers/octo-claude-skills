@@ -15,21 +15,21 @@ A command addresses **one tenant: the tenant of its context**. octo-cli (3.5.27 
 <!-- developer-machine -->
 ```powershell
 # one context per tenant, nothing switched, no login yet
-Register-OctoCliContext -Installation test-2 -TenantId tecob,lkv,wwc26 -NoSwitch -NoLogin
+Register-OctoCliContext -Installation <installation> -TenantId tenant-a,tenant-b,tenant-c -NoSwitch -NoLogin
 
 # dry run: which calls would run?
-Invoke-OctoTenantSweep -Installation test-2 -Tenant tecob,lkv,wwc26 -CliArguments '-c','LibraryStatus','-io' -WhatIf
+Invoke-OctoTenantSweep -Installation <installation> -Tenant tenant-a,tenant-b,tenant-c -CliArguments '-c','LibraryStatus','-io' -WhatIf
 
 # run; a tenant without provisioning shows Outcome=Denied with the ProvisionCurrentUser hint, the others continue
-Invoke-OctoTenantSweep -Installation test-2 -Tenant tecob,lkv,wwc26 -CliArguments '-c','LibraryStatus','-io'
+Invoke-OctoTenantSweep -Installation <installation> -Tenant tenant-a,tenant-b,tenant-c -CliArguments '-c','LibraryStatus','-io'
 
 # provision the operator in every child tenant (once, also for new tenants)
-Invoke-OctoTenantSweep -Context test-2_octosystem -AllTenants -Exclude octosystem `
+Invoke-OctoTenantSweep -Context <installation>_octosystem -AllTenants -Exclude octosystem `
     -CliArguments '-c','ProvisionCurrentUser','-ttid','{tenant}'
 
 # GraphQL query over many tenants, the answer per tenant (read-only; clean JSON in .Stdout)
 $q = '{ constructionKit { models(first:1) { totalCount } } }'
-Invoke-OctoTenantSweep -Context test-2_octosystem -Tenant tecob,lkv,wwc26 -IncludeOutput `
+Invoke-OctoTenantSweep -Context <installation>_octosystem -Tenant tenant-a,tenant-b,tenant-c -IncludeOutput `
     -CliArguments '-c','GraphQl','-tid','{tenant}','-q',$q |
   ForEach-Object { [pscustomobject]@{ Tenant = $_.Tenant; Outcome = $_.Outcome
       Total = if ($_.Outcome -eq 'Ok') { ($_.Stdout | ConvertFrom-Json).data.constructionKit.models.totalCount } } }

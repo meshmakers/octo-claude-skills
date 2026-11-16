@@ -5,7 +5,7 @@
 How the three promotable artifacts (CK model, blueprint, app image) reach
 infrastructure the target cluster's services can read. Verified 2026-06-10 against
 octo-ckc/octo-bpm help + engine source (`GitHubCatalog.cs`,
-`GitHubBlueprintCatalog.cs`), the `blueprint-libraries-build` commit history,
+`GitHubBlueprintCatalog.cs`), the commit history of a GitHub blueprint catalog,
 and a live registry probe.
 
 Tooling: `octo-ckc` and `octo-bpm` are the CK and blueprint CLIs of
@@ -14,10 +14,8 @@ octo-cli has NO publish commands — publishing always goes through these tools.
 
 ## CK model → shared CK catalog
 
-Catalog: `PrivateGitHubCatalog` = GitHub repo
-`meshmakers/construction-kit-libraries-build` (public), read via GitHub Pages
-(`https://meshmakers.github.io/construction-kit-libraries-build/`), written via
-the GitHub API.
+Catalog: `PrivateGitHubCatalog` = a GitHub repository configured in the asset
+repository, read via its GitHub Pages site, written via the GitHub API.
 
 ```bash
 # one-time: GitHub token in ~/.octo-ckc/settings.json ("PrivateOctoGitHub": {"GitHubApiToken": "…"}),
@@ -48,8 +46,8 @@ tenants need the model.
 
 ## Blueprint → shared blueprint catalog
 
-Catalog: `PrivateGitHubBlueprintCatalog` = GitHub repo
-`meshmakers/blueprint-libraries-build` (**private**), layout
+Catalog: `PrivateGitHubBlueprintCatalog` = a GitHub repository configured in the
+asset repository, layout
 `blueprints/v1/<letter>/<Name>/<major>/<Name>-<version>/{blueprint.yaml,seed-data/}`.
 
 ```bash
@@ -99,9 +97,9 @@ docker push <registry>/meshmakers/<app>:<tag>
 
 ## The CI lane (recommended once the app stabilizes)
 
-An Azure DevOps pipeline in the app repository, built from the templates
-`build-and-push-docker-image.yml`, `publish-ck-and-blueprint.yml`,
-`install-octo-tools.yml` and `update-build-number.yml`.
+A CI pipeline in the app repository (for example Azure DevOps or GitHub Actions)
+with steps for the image build and push, the CK and blueprint publish, the tool
+installation and the build number.
 
 Branch policy it encodes:
 

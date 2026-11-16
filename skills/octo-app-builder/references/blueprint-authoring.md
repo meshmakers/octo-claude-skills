@@ -231,7 +231,7 @@ without the refresh command rebuild the cache only when
 `~/.octo/blueprint-catalog/cache/local-blueprint-catalog-cache.json` is missing —
 delete it there.<!-- /developer-machine -->
 
-GitHub catalogs (e.g. `meshmakers/blueprint-libraries-build`, layout
+GitHub blueprint catalogs (a GitHub repository the asset repository reads, layout
 `blueprints/v1/<letter>/<Name>/<major>/<Name>-<version>/`) are where shared
 blueprints get published.
 

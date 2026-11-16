@@ -38,7 +38,7 @@ the seed itself needs NO changes for the target cluster:
 Three things DO have to move to infrastructure the target cluster's services can reach:
 
 1. **CK model** → shared CK catalog (or direct ImportCk on the tenant — see below)
-2. **Blueprint** → shared blueprint catalog (`meshmakers/blueprint-libraries-build`)
+2. **Blueprint** → shared blueprint catalog (a GitHub blueprint catalog the target asset repository reads)
 3. **App image** → `<registry>` registry (kind-load is local-only)
 
 ## Two lanes
@@ -156,9 +156,8 @@ id+version needs no refresh; `InstallBlueprint -b <id> -f` fetches the seed live
 
 Confirm: `Success: true`, your CK model in `LoadedCkModels`, no warnings.
 `WasSkipped: true` means the `requires:` gate didn't match — see the
-environment-gate note in
-[references/test-2-environment.md](references/test-2-environment.md) (section
-*The environment gate*).
+section *The environment gate* of the deploy environment
+reference.
 
 ### 5. Deploy
 
