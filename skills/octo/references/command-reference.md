@@ -996,7 +996,7 @@ All IDs in ImportRt YAML (ckTypeId, attribute id, roleId, targetCkTypeId) use th
 | Format | Example | Used in |
 |--------|---------|---------|
 | Import format (correct for ImportRt) | `System.Communication/Pipeline-1` | ImportRt YAML |
-| Fully versioned (from CK explorer) | `System.Communication-3.0.0/Pipeline-1` | ck_explorer.py output |
+| Fully versioned (CK model listings) | `System.Communication-3.0.0/Pipeline-1` | type listings with model version |
 | Fully unversioned | `System.Communication/Pipeline` | rt_explorer.py input |
 
 **Key rules:**
@@ -1052,10 +1052,10 @@ entities:
 Import failures return a generic error: `Stream contains invalid runtime model so that the schema validation failed.` This message does not indicate which entity or field caused the failure. Common causes:
 
 - **Wrong ID format:** Using fully versioned IDs (`System.Communication-3.0.0/Pipeline-1`) or fully unversioned IDs (`System.Communication/Pipeline`) instead of the import format (`System.Communication/Pipeline-1`). Use `ck_explorer.py preflight <type> --for-import` to generate the correct format.
-- **Wrong CK type name:** Using old/renamed types (e.g., `System.Communication/MeshPipeline` instead of `System.Communication/Pipeline`). Verify type names with `ck_explorer.py types --model <model>`.
-- **Wrong attribute ID format:** Using camelCase property names (`pipelineDefinition`) instead of CK attribute IDs (`System.Communication/PipelineDefinition-1`). Use `ck_explorer.py preflight <type> --for-import` to discover correct IDs.
+- **Wrong CK type name:** Using old/renamed types (e.g., `System.Communication/MeshPipeline` instead of `System.Communication/Pipeline`). Verify type names with the MCP tool `search_types`<!-- developer-machine --> or `ck_explorer.py types --model <model>`<!-- /developer-machine -->.
+- **Wrong attribute ID format:** Using camelCase property names (`pipelineDefinition`) instead of CK attribute IDs (`System.Communication/PipelineDefinition-1`). Look up the correct IDs with the MCP tool `get_type_schema`<!-- developer-machine --> (or `ck_explorer.py preflight <type> --for-import`)<!-- /developer-machine -->.
 - **Invalid rtId format:** Must be exactly 24 hex characters matching `^[0-9a-fA-F]{24}$`. Letters g-z are NOT hex. The error message gives no indication of which field failed — always validate rtIds before importing.
-- **Missing required associations:** Some types require associations (e.g., Pipeline needs ParentChild to DataFlow and Executes to Adapter). Check with `ck_explorer.py preflight <type>`.
+- **Missing required associations:** Some types require associations (e.g., Pipeline needs ParentChild to DataFlow and Executes to Adapter). Check with the MCP tool `get_type_schema`<!-- developer-machine --> or `ck_explorer.py preflight <type>`<!-- /developer-machine -->.
 - **Missing dependency:** The `dependencies` list must include the CK model(s) used in the file with a valid version range.
 
 **Debugging strategy:** Export an existing working entity with `ExportRtByDeepGraph` and compare the YAML structure to your import file. Try importing entities one at a time to isolate which entity fails.
