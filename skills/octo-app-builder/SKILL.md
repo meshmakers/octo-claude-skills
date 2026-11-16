@@ -88,7 +88,15 @@ attribute IDs with the MCP tool `get_type_schema`<!-- developer-machine --> (or 
 
 ### 2. HTTP-API pipelines (iterate on a scratch dataflow)
 
-Author the API as `FromHttpRequest@1` pipelines executed by the Mesh Adapter.
+Author the API as `FromHttpRequest@2` pipelines executed by the Mesh Adapter.
+**Authenticated by default:** without `allowAnonymous` a route answers `401` to a
+caller without a valid access token of this tenant and `403` to a token of
+another tenant; `requiredRoles` (any one is enough) narrows it to the roles of
+your app. Leave both as they are unless a route must be public, and then
+follow the warning in
+[references/http-api-pipelines.md](references/http-api-pipelines.md) §Public
+routes. Never author new routes with the deprecated `FromHttpRequest@1`: it has
+no security properties, so every `@1` route is public.
 The proven patterns — create entity, list without sensitive fields, conditional
 read-and-update — are in
 [references/http-api-pipelines.md](references/http-api-pipelines.md) with verbatim
@@ -202,13 +210,16 @@ under `LoadedCkModels`, no warnings. A silent no-op with `WasSkipped` means the
 | 5 | App pod `ImagePullBackOff` | Controller injected `<registry>` prefix and the image only exists under the plain name. Tag + `kind load` both names (or push to the registry). |
 | 6 | Install is a silent no-op | `requires:` gate mismatch (`WasSkipped: true`). Check `octo.environment`. |
 | 7 | `ImportRt` fails on re-run | Default mode is InsertOnly. Use `-r` for scratch iteration; blueprint re-apply (`InstallBlueprint -f`) upserts by itself. |
-| 8 | Errors return HTTP 200 | By design — `FromHttpRequest@1` pipelines cannot set status codes. Return `{ "error": ... }` payloads and make clients check for them. |
+| 8 | Errors return HTTP 200 | By design — HTTP pipelines cannot set status codes (only the route authorization of `FromHttpRequest@2` answers `401`/`403`). Return `{ "error": ... }` payloads and make clients check for them. |
+| 9 | Route answers `401` / `403` | `401`: no or invalid access token. `403`: a token of another tenant, or none of the route's `requiredRoles`. Call with a token of the app's tenant; do not switch to `allowAnonymous` to make the error go away. |
 
 ## Design constraints to set expectations early
 
 - Pipeline check-then-update is **not atomic** — concurrent requests can race.
   Fine for demos; call it out for production designs.
-- No auth on adapter HTTP routes — anyone with the URL can call them.
+- Adapter HTTP routes authenticate with the tenant's access tokens and roles
+  (`FromHttpRequest@2`); a route is public only when you set `allowAnonymous: true`
+  on purpose, and every `FromHttpRequest@1` route is public.
 - Content type is always `application/json`; the adapter cannot serve HTML.
   That's exactly why the UI ships as an Application workload instead.
 

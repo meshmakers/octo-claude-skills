@@ -1345,6 +1345,10 @@ Post a message, embed, and/or single file attachment to a Discord channel via th
 
 Trigger pipeline on HTTP requests. **Use `@2`; `FromHttpRequest@1` is deprecated** (same `method` and `path`, no security properties). Pipelines and examples that still use `@1` keep working; the DataContext paths below are the same for both versions.
 
+**Authenticated by default.** Without `allowAnonymous` the adapter answers `401` without a valid bearer token of the tenant's identity service, `403` for a token of another tenant (client-credentials tokens included) and `403` when the caller holds none of `requiredRoles`. The caller's `Authorization` header never reaches the DataContext.
+
+> **Warning:** `allowAnonymous: true` makes the route callable by anyone who knows the URL, without identity, tenant or role check, and **every `FromHttpRequest@1` route is public** the same way. Use a public route only on purpose (webhooks, public forms, one-time links for people without an account), return only what an anonymous caller may see, and verify the caller in the pipeline where possible (signature, secret in the link, `VerifyCaptcha@1`).
+
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `method` | enum | required | HTTP method (`GET`, `POST`, `PUT`, `DELETE`; `Get`/`Post`/... are accepted too) |

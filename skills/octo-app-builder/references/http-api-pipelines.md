@@ -1,8 +1,46 @@
 # HTTP-API pipelines on the Mesh Adapter — verified patterns
 
-JSON HTTP APIs built purely from `FromHttpRequest@1` pipelines — no service code.
-All YAML below ran verbatim in production-shape on 2026-06-09 (one-time-ticket
-demo, System.Communication 3.22.0). Node property details → pipeline-expert skill.
+JSON HTTP APIs built purely from `FromHttpRequest@2` pipelines — no service code.
+The transformations below ran verbatim in production-shape on 2026-06-09 (one-time-ticket
+demo, System.Communication 3.22.0, then with the deprecated `FromHttpRequest@1`
+trigger); the triggers now use `FromHttpRequest@2`, which takes the same `method` and
+`path` and adds the route security. Node property details → pipeline-expert skill.
+
+## Route security (authenticated by default)
+
+`FromHttpRequest@2` authorizes every call before the pipeline runs:
+
+1. a bearer token issued by the tenant's identity service (signature, issuer, audience,
+   lifetime) — otherwise `401`;
+2. the token's tenant must be the tenant the adapter serves — otherwise `403` (also for
+   client-credentials tokens);
+3. with `requiredRoles`, the caller must hold at least one of them — otherwise `403`;
+   without it any valid token of the tenant is enough.
+
+Use the defaults (`allowAnonymous` omitted = `false`) for every route of an app, and
+add `requiredRoles` with the app's roles for routes that change data. The caller's
+`Authorization` header never reaches the DataContext. A web app calls the routes with
+the signed-in user's access token; another service calls them with a client-credentials
+token of the same tenant.
+
+### Public routes (only on purpose)
+
+> **Warning — a public route can be called by anyone who knows the URL.** No token, no
+> tenant check, no role check, no caller identity: the pipeline runs with the adapter's
+> rights, and whatever it reads or returns is open to the internet. The adapter records
+> only that the route exists (one event per deployment); single calls are not audited by
+> default. Unintended public routes have been found on production tenants before.
+
+Make a route public only when its callers cannot have an account of the tenant, for
+example a webhook of an external service, a public form, or a one-time link sent to a
+person outside the tenant (Pattern 3). Then:
+
+- set `allowAnonymous: true` on `FromHttpRequest@2` explicitly and say why in a comment;
+- return only what an anonymous caller may see (`Project@1 clear: true`), never list or
+  search endpoints over tenant data, and verify the caller in the pipeline where possible
+  (a secret in the link, a signature of the webhook, a CAPTCHA with `VerifyCaptcha@1`);
+- never use `FromHttpRequest@1` for it: it is deprecated and always public, without a
+  visible marker in the YAML.
 
 ## Route + request/response semantics
 
@@ -23,9 +61,10 @@ demo, System.Communication 3.22.0). Node property details → pipeline-expert sk
 
 ```yaml
 triggers:
-  - type: FromHttpRequest@1
+  - type: FromHttpRequest@2
     method: Post
     path: /tickets
+    requiredRoles: [TicketIssuer]          # any valid token of the tenant without it
 
 transformations:
   - type: CreateUpdateInfo@1
@@ -114,10 +153,22 @@ transformations:
 
 ## Pattern 3 — conditional read-and-update (`GET /redeem?id=` — reveal once)
 
+The recipient of a one-time link has no account of the tenant, so this is one of the
+few routes that is public on purpose (see §Public routes). The ticket id is the only
+check here, and an rtId is not a secret (ObjectIds are partly predictable): a production
+design puts a random token into the link and compares it in the pipeline. The response
+holds the secret once and nothing else.
+
 Branching: `If@1` has no else — use complementary conditions. Look up by rtId via
 fieldFilters (`attributePath` is PascalCase; system fields like `RtId` work):
 
 ```yaml
+triggers:
+  - type: FromHttpRequest@2
+    method: Get
+    path: /redeem
+    allowAnonymous: true                   # public on purpose: link recipients have no account
+
 transformations:
   - type: GetRtEntitiesByType@1
     ckTypeId: Demo.Tickets/Ticket
