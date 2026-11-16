@@ -97,6 +97,25 @@ public class MyResponse
 
 **CS1591 breaks the build.** `TreatWarningsAsErrors` is on, so every public type/property/method on a new tool class needs an XML doc summary.
 
+## Entity Query Paging — default 100, hard max 1000
+
+The Family-2/3 tools read the engine directly, so the asset repository's API guard against unbounded queries never sees them. They bound themselves through `Services/QueryPaging.cs`:
+
+| Tool | Page size | Skip |
+|---|---|---|
+| `query_entities`, `query_entities_simple` | `limit` | `offset` |
+| `navigate_associations` | `take` | `skip` |
+| `get_association_tree` (root entities) | `rootTake` | `rootSkip` |
+| `execute_runtime_query` (`RtSimpleRtQuery`) | `take` | `skip` |
+
+- No page size → `DynamicToolOptions.GetEffectiveDefaultQueryLimit()`: the configured `DefaultQueryLimit` (100 by default), lowered to the effective maximum when that is smaller.
+- Page size above `GetEffectiveMaxQueryResultLimit()` (1000 unless configured lower) → **refused** before any session or engine call, with an error that names the limit (`limit 5000 exceeds the maximum of 1000; page with offset ...`). Never silently cap. A page size below 1, a negative skip and a skip above `int.MaxValue` minus the maximum are refused too. `execute_runtime_query` checks `take` before it loads the persisted query, so an oversized `take` is refused for every subtype.
+- `MaxQueryResultLimit` can be lowered in config, never raised: `DynamicToolOptions.MaxPageSize` (1000) is a constant, a higher value is ignored, logged at startup and reported by the health check (Degraded).
+- Every entity result carries `Paging` (`QueryPagingInfo`: `skip`, `take`, `defaultTakeApplied`, `maxTake`, `returnedCount`, `hasMore`, `nextSkip`, `hint`); for `execute_runtime_query` only `RtSimpleRtQuery` results. `hasMore` compares with the engine's total count when it reports one, else it is true for a full page. Clients page with `nextSkip` until `hasMore` is false.
+- Not paged: the aggregation/grouping tools and the aggregation subtypes of `execute_runtime_query` (aggregates, no entities), and the children per level of `get_association_tree`.
+
+**A new tool that returns runtime entities** calls `QueryPaging.Resolve(server, take, skip, "<takeArg>", "<skipArg>")` first, passes `paging.Skip`/`paging.Take` to the engine, returns `paging.ToInfo(returned, totalCount)` and states default, maximum and paging in its description (`RuntimeEntityCrudTools.PagingDescription`). Test it like `Tools/RuntimeQueryPagingTests`: no limit → take 100, 1000 accepted, 1001 refused without an engine call, skip forwarded.
+
 ## Risk Classification — `[McpRisk]`
 
 `[McpRisk(McpRiskLevel.Low|Medium|High)]` (in `src/McpServices/Models/`) classifies a tool's blast radius. The AI Adapter worker calls `get_tool_risk_metadata` once at session start and uses the result to drive its **user-facing approval gate**. `ToolRiskRegistry` reflects over the assembly at startup; tools without the attribute resolve as **Low**.
@@ -238,6 +257,7 @@ A client connects over HTTP to `https://localhost:5017/mcp` (tenant via tool par
 - Don't default `confirm` to `true`, and don't skip the gate in batch helpers.
 - Don't write to `Console`/`ILogger` for user-visible output.
 - Don't share SDK clients across requests.
+- Don't load runtime entities without a page size, and don't cap a too-large page size silently — refuse it (see *Entity Query Paging*).
 - Don't "fix" `AggregationFunctionDto` to PascalCase — the lowercase `count/sum/avg/min/max/integral` is intentional (see references).
 
 ## References
