@@ -160,11 +160,13 @@ Secret attribute in a seed is only ever empty or omitted; blueprints have no ins
   succeeds. Events about an Application's defaults are **linked to the Application** (`relatesFrom` of
   `System.Notification/Event`) when stored in its own tenant. After every deploy read those events; for a skipped or
   failed tenant fix the cause and deploy again, and revoke an old secret at the provider only once no such event is
-  left. A failed event write is only logged, so no event is no proof: the controller log has one line per deploy,
-  `Secret defaults of application '<name>' (<rtId>) projected: <n> written, <n> removed, <n> skipped, <n> failed` —
-  revoke only after a line with 0 skipped and 0 failed and no warning `Could not read the secret defaults of tenant
-  '…'` for that deploy: such a tenant is not counted in the summary and keeps the withdrawn default until its next
-  reconcile (`POST {tenant}/v1/secretDefaults/reconcile`).
+  left. A failed event write is only logged, so no event is no proof. The controller logs a summary per deploy,
+  `Secret defaults of application '<name>' (<rtId>) projected: <n> written, <n> removed, <n> skipped, <n> failed`,
+  but only when one of the counts is not 0, and a warning `Could not read the secret defaults of tenant '…'` is not
+  counted in it (that tenant keeps the withdrawn default until its next reconcile,
+  `POST {tenant}/v1/secretDefaults/reconcile`). So neither the summary nor its absence proves a withdrawal: before
+  revoking, query `systemCommunicationSecretDefault` with `rtWellKnownName` = key in every tenant the Application
+  served and revoke only when none is left whose `sourceWorkloadRtId` is the Application.
 - **Is it set in a tenant?** `SecretDefault.Value` is `Hidden` (System.Communication 4.16.0 and later, so 4.18.0 too):
   GraphQL, REST, MCP, import and export can neither read nor write it, not even `isSet`. The projected entity is the
   signal — query `systemCommunicationSecretDefault` by `rtWellKnownName` = key and read `sourceTenantId`,
