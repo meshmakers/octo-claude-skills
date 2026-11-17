@@ -2,6 +2,16 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Changed
+
+- **`octo-devtools`** — pre-release 0.x lines documented once (AB#9258): branch `test/0.<n>-<word>` (e.g. `test/0.2-dev`, `test/0.3-demo`), one checkout directory per line next to the main checkout (e.g. `../dev`, `../demo`; the cmdlets take it as `-branch`, they do not derive it from the branch name), branched from the main repositories. `references/workflows.md` section 5 gives the procedure with `Invoke-CloneMainRepos`, `New-TestBranch`, `Sync-TestBranch`, `Compare-BranchStatus` and `Remove-TestBranch`, and names two limits of the cmdlets: `New-TestBranch` branches from whatever each repository has checked out without fetching, and the three test-branch cmdlets touch only `octo-*` folders. How to check whether a line is active: `Get-BranchAvailability`.
+
+### Fixed
+
+- **`octo-devtools`** — `references/command-reference.md` described `-branch` of `New-TestBranch`/`Sync-TestBranch` as the base branch and `-branch` of `Invoke-SwitchAllBranches` as the expected current branch; it is the lane folder relative to `$rootPath` in all of them. `-MinorVersion` is an integer 2-999 and `-Description` allows no hyphen (the old workflow example `-Description "my-feature"` was rejected by the cmdlet). `Remove-TestBranch` gained `-branch` and `-LocalOnly`, every cmdlet `-Json`, `Compare-BranchStatus` its parameters. `New-TestBranch` and `Sync-TestBranch` push by default and are now listed as remote-mutating unless `-NoPush`.
+
 ## [0.28.13] — 2026-11-17
 
 ### Fixed
