@@ -154,7 +154,10 @@ id/version stays invisible to `ListBlueprints`/`InstallBlueprint` until
 PrivateGitHubBlueprintCatalog` refreshes one catalog). The index comes from GitHub
 Pages: refresh only after the Pages deployment of the publish has finished (about a
 minute), otherwise the refresh caches the old index. Both refresh commands need the
-tenant role `DataModelManagement`. Published blueprint versions are immutable: every
+tenant role `DataModelManagement`. Over MCP the blueprint refresh is the tool
+`refresh_blueprint_catalogs` (optional `catalogName`). On an installation with several
+asset-repository replicas a refresh reaches only one of them (bug AB#9169), so refresh
+again when `ListBlueprints` still lacks the version. Published blueprint versions are immutable: every
 content change (seed data, `ValuesYaml`, `blueprint.yaml`) gets a new version, which is
 published, refreshed and rolled out with `UpdateBlueprint -tv <Name>-<NewVersion>`.
 `octo-bpm -c validateVersion` reports changed content under a published version as `OCTO-BP100`.
@@ -193,7 +196,7 @@ no leaked fields) against the hosts of the target cluster, then the browser flow
 
 | # | Symptom | Cause / fix |
 |---|---|---|
-| 1 | Blueprint missing from `ListBlueprints` on the target cluster | The server-side blueprint catalog index is cached. Run `octo-cli -c RefreshBlueprintCatalogs [-cn <catalog>]` (needs `DataModelManagement`; `RefreshCatalogs` covers CK model catalogs only). Never restart the asset repository with kubectl; deleting local cache files does nothing for a shared cluster. |
+| 1 | Blueprint missing from `ListBlueprints` on the target cluster | The server-side blueprint catalog index is cached. Run `octo-cli -c RefreshBlueprintCatalogs [-cn <catalog>]` or the MCP tool `refresh_blueprint_catalogs` (needs `DataModelManagement`; `RefreshCatalogs` covers CK model catalogs only). Never restart the asset repository with kubectl; deleting local cache files does nothing for a shared cluster. |
 | 2 | `InstallBlueprint` fails resolving the CK model | Model not in a shared catalog and not imported in the tenant. Publish it (`octo-ckc … -c PrivateGitHubCatalog`) or `ImportCk` it directly, then retry. |
 | 3 | Workload `lastDeploymentError` shows ImagePullBackOff | Image not in `<registry>` under the exact `meshmakers/<app>:<tag>` from the seed. Push it<!-- developer-machine --> (Tailscale if off-site)<!-- /developer-machine -->, then `DeployWorkload` again. |
 | 4 | `docker push` hangs/fails off-site | `<registry>` is not reachable from your network<!-- developer-machine --> (internal-network only — connect Tailscale first)<!-- /developer-machine -->. Probe: `curl -sI https://<registry>/v2/` (with the registry's CA trusted) → expect HTTP 200 or 401. |

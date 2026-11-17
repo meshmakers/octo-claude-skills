@@ -2,6 +2,18 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.28.14] — 2026-11-17
+
+### Changed
+
+- **`octo-deploy`, `octo`** — the blueprint catalog refresh names its MCP tool `refresh_blueprint_catalogs` (AB#9182, Feature AB#8777): `octo-deploy` step 4 and pitfall row 1, the `octo` quick lookup and the command reference entry of `RefreshBlueprintCatalogs`. `octo-deploy` step 4 also says that a refresh reaches only one asset-repository replica on multi-replica installations (bug AB#9169), so refresh again when the version is still missing.
+- **`octo-devtools`** — pre-release 0.x lines documented once (AB#9258): branch `test/0.<n>-<word>` (e.g. `test/0.2-dev`, `test/0.3-demo`), one checkout directory per line next to the main checkout (e.g. `../dev`, `../demo`; the cmdlets take it as `-branch`, they do not derive it from the branch name), branched from the main repositories. `references/workflows.md` section 5 gives the procedure with `Invoke-CloneMainRepos`, `New-TestBranch`, `Sync-TestBranch`, `Compare-BranchStatus` and `Remove-TestBranch`, and names two limits of the cmdlets: `New-TestBranch` branches from whatever each repository has checked out without fetching, and the three test-branch cmdlets touch only `octo-*` folders (pitfall: put every repository on a fresh `main` before `New-TestBranch`). The rule decided by Gerald for octo-tools is marked as planned (AB#9259): directory `0.<n>-<description>` by default, `New-TestBranch` branches from `origin/main`, the cmdlets cover all repositories of `Invoke-CloneMainRepos`. How to check whether a line is active: `git ls-remote --heads origin test/0.<n>-<word>` (`Get-BranchAvailability` reads possibly stale remote-tracking refs of `$rootPath` only). Concrete `-branch` example (`-branch ../dev` from the main checkout's profile); the fresh-main step names `Invoke-SwitchAllBranches -Name main` and `Sync-AllGitRepos` with `-branch <line dir>`; `Invoke-SwitchAllBranches -Push` is listed as remote-mutating.
+
+### Fixed
+
+- **`octo`** — the scratch-tenant lifecycle polls `GetTenantLifecycle` with the agent's own system-tenant context (`--context <octosystem-ctx>` in `SKILL.md`, `--context $AGENT_CTX` in `references/temp-tenants.md`), like the `Create` before it; without it the poll used the persisted active context, which may address another installation (CodeRabbit on octo-ai-services#58, AB#9174).
+- **`octo-devtools`** — `references/command-reference.md` described `-branch` of `New-TestBranch`/`Sync-TestBranch` as the base branch and `-branch` of `Invoke-SwitchAllBranches` as the expected current branch; it is the lane folder relative to `$rootPath` in all of them. `-MinorVersion` is an integer 2-999 and `-Description` allows no hyphen (the old workflow example `-Description "my-feature"` was rejected by the cmdlet). `Remove-TestBranch` gained `-branch` and `-LocalOnly`, every cmdlet `-Json`, `Compare-BranchStatus` its parameters. `New-TestBranch` and `Sync-TestBranch` push by default and are now listed as remote-mutating unless `-NoPush`.
+
 ## [0.28.13] — 2026-11-17
 
 ### Fixed

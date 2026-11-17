@@ -176,7 +176,7 @@ Changing the data model requires scope `octo_api` **and** the tenant role **Data
 |---|---|---|
 | `ListBlueprints` | List blueprints across catalogs | Read-only |
 | `ListBlueprintInstallations` | List blueprints installed on the active tenant | Read-only |
-| `RefreshBlueprintCatalogs` | Refresh blueprint catalog caches, forced (`-cn` optional) | Mutating |
+| `RefreshBlueprintCatalogs` | Refresh blueprint catalog caches, forced (`-cn` optional; MCP `refresh_blueprint_catalogs`) | Mutating |
 | `ListBlueprintBackups` | List pre-update tenant backups | Read-only |
 | `GetBlueprintHistory` | Blueprint application history for the tenant | Read-only |
 | `PreviewBlueprintUpdate` | Preview an update without applying (`-tv`, `-m`) | Read-only |
@@ -319,7 +319,7 @@ A command addresses **one tenant: the tenant of its context**. octo-cli 3.5.27+ 
 
 ## Temporary Tenants (Non-Interactive)
 
-When a task needs a throwaway tenant, the agent can run the **entire lifecycle without user interaction** (no `LogIn -i`): `LogInClientCredentials` (machine token, env vars `OCTO_CLI_CLIENT_ID`/`OCTO_CLI_CLIENT_SECRET`) with a client in `octosystem` that has the role `TenantManagement` and `-apic`, then **`Create --scratch`** (the creating client becomes administrator of the new tenant) and **`Delete --disable-features -y`** (switches off the enabled capabilities with the child token, then deletes). Short form, all via `--context`, `<octosystem-ctx>` being a context of the agent's own (e.g. `agent_<lane>_octosystem`; never a human's `local_octosystem`, octo-cli refuses to replace its interactive login): `LogInClientCredentials --context <octosystem-ctx>` → `Create -tid tmp-<x> -db tmp-<x> --scratch --context <octosystem-ctx>` → wait until `GetTenantLifecycle -tid tmp-<x>` reports `Active` → `AddContext -n <tmp-ctx>` → `LogInClientCredentials --context <tmp-ctx>` → work with `--context <tmp-ctx>` → `Delete -tid tmp-<x> --disable-features -y --context <octosystem-ctx>` → `RemoveContext -n <tmp-ctx>`. `--scratch` refuses user tokens by design. Read `references/temp-tenants.md` for the workflow, one-time client setup and pitfalls.
+When a task needs a throwaway tenant, the agent can run the **entire lifecycle without user interaction** (no `LogIn -i`): `LogInClientCredentials` (machine token, env vars `OCTO_CLI_CLIENT_ID`/`OCTO_CLI_CLIENT_SECRET`) with a client in `octosystem` that has the role `TenantManagement` and `-apic`, then **`Create --scratch`** (the creating client becomes administrator of the new tenant) and **`Delete --disable-features -y`** (switches off the enabled capabilities with the child token, then deletes). Short form, all via `--context`, `<octosystem-ctx>` being a context of the agent's own (e.g. `agent_<lane>_octosystem`; never a human's `local_octosystem`, octo-cli refuses to replace its interactive login): `LogInClientCredentials --context <octosystem-ctx>` → `Create -tid tmp-<x> -db tmp-<x> --scratch --context <octosystem-ctx>` → wait until `GetTenantLifecycle -tid tmp-<x> --context <octosystem-ctx>` reports `Active` → `AddContext -n <tmp-ctx>` → `LogInClientCredentials --context <tmp-ctx>` → work with `--context <tmp-ctx>` → `Delete -tid tmp-<x> --disable-features -y --context <octosystem-ctx>` → `RemoveContext -n <tmp-ctx>`. `--scratch` refuses user tokens by design. Read `references/temp-tenants.md` for the workflow, one-time client setup and pitfalls.
 
 ## Communication Entity Relationships
 

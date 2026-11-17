@@ -257,37 +257,45 @@ Clean all git repos (removes untracked files).
 ## Branch Management
 
 ### `New-TestBranch`
-Create a new test branch across all repos.
-- `-MinorVersion` (string): Version number for the branch
-- `-Description` (string): Branch description
-- `-branch` (string): Base branch to branch from
-- `-NoPush` (switch): Don't push to remote after creation
-- **Safety:** Mutating
+Create the test branch `test/0.<MinorVersion>-<Description>` in every `octo-*` repository of the lane folder; a repository whose origin already has the branch is switched to it. Branches from what each repository has checked out (no fetch), see workflows.md section 5.
+- `-MinorVersion` (int, 2-999, required): minor version; the major version is always 0
+- `-Description` (string, required): one word, letters, digits and `_` only (no hyphen)
+- `-branch` (string): lane folder relative to `$rootPath` (default: `$rootPath` itself)
+- `-NoPush` (switch): don't push the new branch to origin
+- `-Json` (switch): machine-readable result
+- **Safety:** Mutating (remote, unless `-NoPush`)
 
 ### `Remove-TestBranch`
-Remove a test branch from all repos.
-- `-MinorVersion` (string): Version number of the branch to remove
-- `-Description` (string): Branch description
-- **Safety:** Destructive — deletes branches
+Delete the test branch from every `octo-*` repository of the lane folder; a repository on that branch is switched to `main`/`master` first.
+- `-MinorVersion` (int, 2-999, required), `-Description` (string, required): as for `New-TestBranch`
+- `-branch` (string): lane folder relative to `$rootPath`
+- `-LocalOnly` (switch): delete only the local branches, keep origin
+- `-Json` (switch)
+- **Safety:** Destructive — deletes branches, also on origin
 
 ### `Sync-TestBranch`
-Sync a test branch with its base branch (merge from base).
-- `-MinorVersion` (string): Version number
-- `-Description` (string): Branch description
-- `-branch` (string): Base branch
-- `-NoPush` (switch): Don't push after sync
-- **Safety:** Mutating
+Fetch and merge `origin/main` (or the default branch) into the test branch of every `octo-*` repository of the lane folder, then push. A merge conflict is aborted and listed with the command to run by hand.
+- `-MinorVersion` (int, 2-999, required), `-Description` (string, required): as for `New-TestBranch`
+- `-branch` (string): lane folder relative to `$rootPath`
+- `-NoPush` (switch): don't push after the merge
+- `-Json` (switch)
+- **Safety:** Mutating (remote, unless `-NoPush`)
 
 ### `Invoke-SwitchAllBranches`
-Switch all repos to a different branch.
-- `-Name` (string): Branch name to switch to
-- `-branch` (string): Expected current branch
-- `-Push` (switch): Push after switching
-- `-IncludeSubmodules` (switch): Include submodules
+Switch every git repository of the lane folder to a branch; when origin has no such branch it is created locally.
+- `-Name` (string, required): branch name to switch to
+- `-branch` (string): lane folder relative to `$rootPath`
+- `-Push` (switch): push newly created branches to origin
+- `-IncludeSubmodules` (switch): include submodules
+- `-Json` (switch)
 - **Safety:** Mutating
 
 ### `Compare-BranchStatus`
-Compare branch status across repos.
+Show, per `octo-*`/`mm-*` repository of the lane folder, the commits ahead of the target origin branch.
+- `-branch` (string): lane folder relative to `$rootPath`
+- `-targetBranch` (string): origin branch to compare against (default `main`)
+- `-Details` (switch): list the commits
+- `-Json` (switch)
 - **Safety:** Read-only
 
 ## NuGet Package Management

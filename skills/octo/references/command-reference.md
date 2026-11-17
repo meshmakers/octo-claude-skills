@@ -1209,7 +1209,7 @@ octo-cli -c ListBlueprints
 ```
 
 #### RefreshBlueprintCatalogs
-Refreshes the blueprint catalog caches at the asset repository (always forced, no service restart). `RefreshCatalogs` covers CK model catalogs only. Needs the tenant role `DataModelManagement`. A catalog that fails is reported as Failed without aborting the others; the command then exits non-zero.
+Refreshes the blueprint catalog caches at the asset repository (always forced, no service restart). `RefreshCatalogs` covers CK model catalogs only. Needs the tenant role `DataModelManagement`. A catalog that fails is reported as Failed without aborting the others; the command then exits non-zero. MCP tool: `refresh_blueprint_catalogs` (optional `catalogName`; returns the result per catalog, `isSuccess: false` when one failed, `errorCode: CatalogNotFound` for an unknown name).
 ```
 octo-cli -c RefreshBlueprintCatalogs [-cn <catalogName>]
 ```
