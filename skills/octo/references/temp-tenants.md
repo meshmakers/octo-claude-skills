@@ -50,7 +50,7 @@ octo-cli -c LogInClientCredentials --context $AGENT_CTX
 
 # 2. Create the scratch tenant — the client becomes its administrator (no -np needed: --scratch provisions no user)
 octo-cli -c Create -tid tmp-<purpose> -db tmp-<purpose> --scratch --context $AGENT_CTX
-#    wait until GetTenantLifecycle -tid tmp-<purpose> reports Active (about a minute)
+#    wait until GetTenantLifecycle -tid tmp-<purpose> --context $AGENT_CTX reports Active (about a minute)
 
 # 3. Context for the scratch tenant + login as the mirror (same credentials)
 octo-cli -c AddContext -n local_tmp-<purpose> \

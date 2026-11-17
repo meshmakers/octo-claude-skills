@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Fixed
+
+- **`octo`** — the scratch-tenant lifecycle polls `GetTenantLifecycle` with the agent's own system-tenant context (`--context <octosystem-ctx>` in `SKILL.md`, `--context $AGENT_CTX` in `references/temp-tenants.md`), like the `Create` before it; without it the poll used the persisted active context, which may address another installation (CodeRabbit on octo-ai-services#58, AB#9174).
+
 ## [0.28.13] — 2026-11-17
 
 ### Fixed
