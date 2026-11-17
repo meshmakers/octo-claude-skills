@@ -2,12 +2,18 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Changed
+
+- **`octo-devtools`** — pre-release 0.x lines follow the octo-tools rule of AB#9259: without `-branch`, `New-TestBranch`, `Sync-TestBranch` and `Remove-TestBranch` use the directory `<parent of rootPath>/0.<n>-<description>` (e.g. `meshmakers/0.3-demo`, created with `Invoke-CloneMainRepos -branch ../0.3-demo`); an explicit `-branch` still names the folder (existing lines such as `dev`, `demo`). `New-TestBranch` fetches and branches explicitly from `origin/main`, lists a repository with uncommitted changes with its reason instead of branching it and exits non-zero. All three cover the repositories of `Invoke-CloneMainRepos` (`mm-common` included). `SKILL.md`, `references/workflows.md` section 5 and `references/command-reference.md` describe only this behaviour.
+
 ## [0.28.14] — 2026-11-17
 
 ### Changed
 
 - **`octo-deploy`, `octo`** — the blueprint catalog refresh names its MCP tool `refresh_blueprint_catalogs` (AB#9182, Feature AB#8777): `octo-deploy` step 4 and pitfall row 1, the `octo` quick lookup and the command reference entry of `RefreshBlueprintCatalogs`. `octo-deploy` step 4 also says that a refresh reaches only one asset-repository replica on multi-replica installations (bug AB#9169), so refresh again when the version is still missing.
-- **`octo-devtools`** — pre-release 0.x lines documented once (AB#9258): branch `test/0.<n>-<word>` (e.g. `test/0.2-dev`, `test/0.3-demo`), one checkout directory per line next to the main checkout (e.g. `../dev`, `../demo`; the cmdlets take it as `-branch`, they do not derive it from the branch name), branched from the main repositories. `references/workflows.md` section 5 gives the procedure with `Invoke-CloneMainRepos`, `New-TestBranch`, `Sync-TestBranch`, `Compare-BranchStatus` and `Remove-TestBranch`, and names two limits of the cmdlets: `New-TestBranch` branches from whatever each repository has checked out without fetching, and the three test-branch cmdlets touch only `octo-*` folders (pitfall: put every repository on a fresh `main` before `New-TestBranch`). The rule decided by Gerald for octo-tools is marked as planned (AB#9259): directory `0.<n>-<description>` by default, `New-TestBranch` branches from `origin/main`, the cmdlets cover all repositories of `Invoke-CloneMainRepos`. How to check whether a line is active: `git ls-remote --heads origin test/0.<n>-<word>` (`Get-BranchAvailability` reads possibly stale remote-tracking refs of `$rootPath` only). Concrete `-branch` example (`-branch ../dev` from the main checkout's profile); the fresh-main step names `Invoke-SwitchAllBranches -Name main` and `Sync-AllGitRepos` with `-branch <line dir>`; `Invoke-SwitchAllBranches -Push` is listed as remote-mutating.
+- **`octo-devtools`** — pre-release 0.x lines documented once (AB#9258): branch `test/0.<n>-<word>` (e.g. `test/0.2-dev`, `test/0.3-demo`), one checkout directory per line next to the main checkout, branched from the main repositories. `references/workflows.md` section 5 gives the procedure with `Invoke-CloneMainRepos`, `New-TestBranch`, `Sync-TestBranch`, `Compare-BranchStatus` and `Remove-TestBranch`. How to check whether a line is active: `git ls-remote --heads origin test/0.<n>-<word>` (`Get-BranchAvailability` reads possibly stale remote-tracking refs of `$rootPath` only). Concrete `-branch` example (`-branch ../dev` from the main checkout's profile); `Invoke-SwitchAllBranches -Push` is listed as remote-mutating.
 
 ### Fixed
 
