@@ -64,10 +64,10 @@ octo-cli -c LogInClientCredentials --context local_tmp-<purpose>
 #    octo-cli -c EnableStreamData --context local_tmp-<purpose>
 #    For the ck_explorer/rt_explorer scripts: export OCTO_CLI_CONTEXT=local_tmp-<purpose>
 
-# 5. Tear down: disables whatever is still enabled, then deletes
-octo-cli -c Delete -tid tmp-<purpose> --disable-features -y --context $AGENT_CTX
-octo-cli -c RemoveContext -n local_tmp-<purpose>
-octo-cli -c RemoveContext -n $AGENT_CTX   # when the lane is done
+# 5. Tear down: disables whatever is still enabled, then deletes; keep the contexts if Delete fails (retry needs them)
+octo-cli -c Delete -tid tmp-<purpose> --disable-features -y --context $AGENT_CTX \
+  && octo-cli -c RemoveContext -n local_tmp-<purpose>
+octo-cli -c RemoveContext -n $AGENT_CTX   # only when the lane is done and every scratch tenant is deleted
 ```
 
 For non-local environments substitute the service URLs from `references/environments.md`.

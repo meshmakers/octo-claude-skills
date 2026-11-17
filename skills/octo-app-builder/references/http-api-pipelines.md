@@ -172,8 +172,11 @@ never print it.
 Ingress class, certificate issuer and TLS are settings of the cluster, not of the
 adapter.
 
-**Without an ingress**, test a pipeline with `ExecutePipeline -id <pipelineRtId>
--f <input.json>` (MCP `execute_pipeline`).
+**Without an ingress**, add `- type: FromExecutePipelineCommand@1` to the pipeline's
+`triggers` beside `FromHttpRequest@2` (the pipeline must belong to a DataFlow), then
+test it with `ExecutePipeline -id <pipelineRtId> -f <input.json>` (MCP
+`execute_pipeline`). The run does not go through the route, so it tests the pipeline
+logic, not the route's authorization.
 
 ## Pattern 1 — create an entity (`POST /tickets` → `{ ticketId }`)
 

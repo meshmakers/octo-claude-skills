@@ -87,7 +87,7 @@ must be in a catalog the target asset repository reads.
 
 ### 2. Register the test-2 context + authenticate
 
-```bash
+```powershell
 Register-OctoCliContext -Installation test-2 -TenantId <tenantId>   # octo-tools cmdlet
 ```
 
@@ -128,7 +128,7 @@ silently lost (the workload sits in `Pending` forever, no error):
 
 ```bash
 octo-cli -c DeployDeploymentSite -id 670000000000000000000001
-octo-cli -c GetDeploymentSites -j    # expect CommunicationState Online, DeploymentState Deployed
+octo-cli -c GetDeploymentSites -j    # repeat until CommunicationState Online, DeploymentState Deployed
 ```
 
 Then bring up the Mesh Adapter and wait for it:

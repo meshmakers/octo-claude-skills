@@ -19,6 +19,7 @@ All notable changes to the octo-claude-skills plugin. Format loosely follows [Ke
   - GitHub tokens of `octo-ckc`/`octo-bpm` go into their settings files instead of `-gt` on the command line; octo-deploy eval expects `RefreshBlueprintCatalogs`.
   - context-name and tenant examples are neutral (`local_mytenant`, `staging_…`, `production_…`, `<root-context>`, `tenant-a,tenant-b,tenant-c`); the environment detection table names `staging`/`production` and keeps the Meshmakers installations in a developer-machine note; octo-deploy no longer names the internal catalog repositories or CI templates in tenant-facing sections, and `test-2-environment.md` § *Creating a tenant on test-2* is renamed *Creating a tenant* (page-plan key).
   - batch review: the `octo` command reference and quick lookup have a `RefreshBlueprintCatalogs` entry and say that `RefreshCatalogs` covers CK model catalogs only; octo-deploy eval 0 expects both refreshes, and the octo-app-builder eval accepts `GetPipelineExecutions` / debug points for the route check and names the stripped request envelope.
+  - CodeRabbit round 1: testing a route pipeline without an ingress needs `FromExecutePipelineCommand@1` beside `FromHttpRequest@2` (and tests the logic, not the route authorization); octo-deploy polls `GetDeploymentSites` until Deployed, marks `Register-OctoCliContext` as PowerShell; the temp-tenant teardown keeps the contexts when `Delete` fails; the octo routing row for octo-deploy names test-2 again (its workflow targets test-2 only).
 
 ## [0.28.11] — 2026-11-16
 
