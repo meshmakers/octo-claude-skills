@@ -52,9 +52,17 @@ asset repository, layout
 
 ```bash
 # one-time: GitHub token in ~/.octo-bpm/settings.json, same shape as for octo-ckc (not via -gt)
-octo-bpm -c publish -p ./blueprint/<Name>/<version> -c PrivateGitHubBlueprintCatalog -f   # -f = force/replace
+octo-bpm -c validateVersion -p ./blueprint/<Name>/<version> -cn PrivateGitHubBlueprintCatalog   # version honest?
+octo-bpm -c publish -p ./blueprint/<Name>/<version> -c PrivateGitHubBlueprintCatalog
 octo-bpm -c list                              # confirm the catalog entry
 ```
+
+**Published blueprint versions are immutable.** Every content change — seed data,
+`ValuesYaml`, `blueprint.yaml` — gets a new blueprint version; `validateVersion`
+fails with `OCTO-BP100` when the content under an already-published version differs.
+`publish` does not overwrite an existing version (it logs an error, see the
+soft-fail note below); its `-f` (force/replace) is only for a local developer
+catalog, never for a shared catalog that tenants install from.
 
 There is NO ImportCk-style shortcut for blueprints — `InstallBlueprint` only
 resolves from catalogs the asset-repo reads, so the blueprint must be published.
@@ -70,10 +78,10 @@ The refresh is always forced and needs no service restart (tenant role
 `DataModelManagement`). `RefreshCatalogs` refreshes CK MODEL catalogs only. Never restart the asset
 repository with kubectl on a shared cluster.
 
-Scope of the cache: the **index** (which blueprint ids/versions exist) only.
-Re-publishing changed CONTENT under an already-listed id+version needs no
-refresh — `InstallBlueprint -b <id> -f` fetches blueprint.yaml/seed-data live
-from GitHub Pages (≤1 min Pages deploy lag).
+Scope of the cache: the **index** (which blueprint ids/versions exist) only;
+`InstallBlueprint`/`UpdateBlueprint` fetch blueprint.yaml and seed data live from
+GitHub Pages (≤1 min Pages deploy lag). A content change is a new version, so it
+always needs the refresh before `UpdateBlueprint -tv <Name>-<NewVersion>`.
 
 ## App image → <registry>
 
