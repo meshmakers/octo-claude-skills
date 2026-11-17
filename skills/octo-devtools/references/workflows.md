@@ -112,7 +112,7 @@ A pre-release line holds work that is not ready for `main` (e.g. `0.2-dev`, `0.3
 7. Remove-TestBranch -MinorVersion 3 -Description demo -branch <line dir>  # when the line is merged or abandoned; -LocalOnly keeps origin
 ```
 
-**Planned (octo-tools story to follow, not in the cmdlets yet):** the checkout directory becomes `0.<n>-<description>` (e.g. `0.3-demo`) by default when `-branch` is not given, `New-TestBranch` fetches and branches explicitly from `origin/main`, and the test-branch cmdlets cover all repositories of `Invoke-CloneMainRepos` instead of only `octo-*`. Until that ships, follow the rules above. Existing lines keep their directories (e.g. `dev`, `demo`).
+**Planned (AB#9259, not in the cmdlets yet):** the checkout directory becomes `0.<n>-<description>` (e.g. `0.3-demo`) by default when `-branch` is not given, `New-TestBranch` fetches and branches explicitly from `origin/main`, and the test-branch cmdlets cover all repositories of `Invoke-CloneMainRepos` instead of only `octo-*`. Until that ships, follow the rules above. Existing lines keep their directories (e.g. `dev`, `demo`).
 
 Is a line active? `Get-BranchAvailability -targetBranch test/0.<n>-<word> [-Fetch]` lists the `octo-*`/`mm-*` repositories of `$rootPath` whose origin has the branch. Never assume a line's state from memory or from older notes: lines are created, merged into `main` and removed.
 
