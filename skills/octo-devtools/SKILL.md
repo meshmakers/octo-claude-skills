@@ -176,11 +176,13 @@ An alternative to the docker-compose infra: MongoDB / RabbitMQ / CrateDB, the CR
 
 | Cmdlet | Description | Safety |
 |---|---|---|
-| `New-TestBranch` | Create test branch across all repos | Mutating |
-| `Remove-TestBranch` | Delete test branch from all repos | **Destructive** |
-| `Sync-TestBranch` | Merge base into test branch | Mutating |
-| `Invoke-SwitchAllBranches` | Switch all repos to a branch | Mutating |
-| `Compare-BranchStatus` | Compare branch status | Read-only |
+| `New-TestBranch -MinorVersion <n> -Description <word> [-branch <lane>] [-NoPush]` | Create (or switch to) `test/0.<n>-<word>` in every `octo-*` repo of the lane, from what each repo has checked out; pushes unless `-NoPush` | Mutating (remote) |
+| `Sync-TestBranch -MinorVersion <n> -Description <word> [-branch <lane>] [-NoPush]` | Fetch and merge `origin/main` into the test branch of every `octo-*` repo; conflicts are aborted and listed | Mutating (remote) |
+| `Remove-TestBranch -MinorVersion <n> -Description <word> [-branch <lane>] [-LocalOnly]` | Delete the test branch locally and on origin (`-LocalOnly` keeps origin) | **Destructive** |
+| `Invoke-SwitchAllBranches -Name <branch> [-branch <lane>] [-Push] [-IncludeSubmodules]` | Switch all repos of the lane to a branch (creates it when origin has none) | Mutating |
+| `Compare-BranchStatus [-branch <lane>] [-targetBranch main] [-Details]` | Commits of each `octo-*`/`mm-*` repo ahead of `origin/<targetBranch>` | Read-only |
+
+**Pre-release 0.x lines.** Work that is not ready for `main` can run on a pre-release line: a branch `test/0.<n>-<word>` (e.g. `test/0.2-dev`, `test/0.3-demo`; `<n>` 2-999, `<word>` letters, digits and `_` only, no hyphen), usually in all repositories, branched from the main repositories. Each line has its own checkout directory next to the main checkout (e.g. `../dev` for 0.2-dev, `../demo` for 0.3-demo); the cmdlets do not derive it from the branch name, `-branch` names it. Put every repository on a fresh `main` before `New-TestBranch`: it branches from what each repository has checked out. Planned: directory `0.<n>-<description>` by default, branching from `origin/main` and all repositories (AB#9259). Check which lines exist (`Get-BranchAvailability -targetBranch test/0.<n>-<word>`) and what a line holds (`Compare-BranchStatus -branch <line dir>`) before you judge where a change lives. Procedure and limits: [workflows.md](references/workflows.md) section 5.
 
 ### NuGet Package Management
 
@@ -252,10 +254,10 @@ An alternative to the docker-compose infra: MongoDB / RabbitMQ / CrateDB, the CR
 `Get-AllGitRepStatus`, `Get-OctoInfrastructureStatus`, `Get-OctoKubernetesStatus`, `Get-OctoInfrastructureBackup`, `Find-AllGitRepos`, `Compare-BranchStatus`, `Compare-CkVersions`, `Compare-Pipelines`, `Get-BranchAvailability`, `Test-AspNetDeveloperCertificate`, `Get-AiBastionStatus`
 
 ### Mutating — local (execute with brief confirmation)
-`Invoke-BuildAll`, `Invoke-Build`, `Invoke-BuildFrontend`, `Invoke-Publish`, `Invoke-BuildZenonPlug`, `Start-OctoInfrastructure`, `Stop-OctoInfrastructure`, `Install-OctoInfrastructure`, `Backup-OctoInfrastructure`, `Install-OctoKubernetes`, `Deploy-OctoOperator`, `Import-OctoImageToKind`, `Add-OctoLocalCaTrust`, `Sync-AllGitRepos`, `Sync-GitRepo`, `Invoke-CloneMainRepos`, `Sync-AllSubmodules`, `New-TestBranch`, `Sync-TestBranch`, `Invoke-SwitchAllBranches`, `Copy-AllNuGetPackages`, `Copy-NuGetPackages`, `Sync-NuGetPackages`, `Register-OctoCliContext`, `Invoke-OctoCliLogin*`, `Invoke-OctoCliReconfigureLogLevel`, `Invoke-SetDebugConfiguration`, `New-RootCertificate`, `New-ServerCertificate`, `New-AspNetDeveloperCertificate`, `Join-KubeConfigs`, `Invoke-MongoPortForward`, `Sync-YamlTemplates`, `Update-MeshmakerVersion`, `Invoke-KillDotnet`, `Stop-Octo`
+`Invoke-BuildAll`, `Invoke-Build`, `Invoke-BuildFrontend`, `Invoke-Publish`, `Invoke-BuildZenonPlug`, `Start-OctoInfrastructure`, `Stop-OctoInfrastructure`, `Install-OctoInfrastructure`, `Backup-OctoInfrastructure`, `Install-OctoKubernetes`, `Deploy-OctoOperator`, `Import-OctoImageToKind`, `Add-OctoLocalCaTrust`, `Sync-AllGitRepos`, `Sync-GitRepo`, `Invoke-CloneMainRepos`, `Sync-AllSubmodules`, `New-TestBranch -NoPush`, `Sync-TestBranch -NoPush`, `Invoke-SwitchAllBranches`, `Copy-AllNuGetPackages`, `Copy-NuGetPackages`, `Sync-NuGetPackages`, `Register-OctoCliContext`, `Invoke-OctoCliLogin*`, `Invoke-OctoCliReconfigureLogLevel`, `Invoke-SetDebugConfiguration`, `New-RootCertificate`, `New-ServerCertificate`, `New-AspNetDeveloperCertificate`, `Join-KubeConfigs`, `Invoke-MongoPortForward`, `Sync-YamlTemplates`, `Update-MeshmakerVersion`, `Invoke-KillDotnet`, `Stop-Octo`
 
 ### Mutating — remote (confirm with emphasis)
-`Push-AllGitRepos`, `Push-GitRepo`, `Register-AiBastion` (writes a token to a remote tenant — see note below)
+`Push-AllGitRepos`, `Push-GitRepo`, `New-TestBranch` and `Sync-TestBranch` without `-NoPush` (push to origin), `Register-AiBastion` (writes a token to a remote tenant — see note below)
 
 ### Destructive (explicit confirmation + warning)
 `Remove-BinAndObjFolders`, `Remove-GlobalNuGetPackages`, `Invoke-CleanAllGitRepos`, `Uninstall-OctoInfrastructure`, `Restore-OctoInfrastructure`, `Remove-OctoInfrastructureBackup`, `Uninstall-OctoKubernetes`, `Remove-KubeConfig`, `Remove-TestBranch`, `Invoke-CleanupInfraContainerDisks`, `Remove-AspNetDeveloperCertificate`, `Remove-OctoLocalCaTrust`
