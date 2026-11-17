@@ -67,7 +67,12 @@ octo-cli -c LogInClientCredentials --context local_tmp-<purpose>
 # 5. Tear down: disables whatever is still enabled, then deletes; keep the contexts if Delete fails (retry needs them)
 octo-cli -c Delete -tid tmp-<purpose> --disable-features -y --context $AGENT_CTX \
   && octo-cli -c RemoveContext -n local_tmp-<purpose>
-octo-cli -c RemoveContext -n $AGENT_CTX   # only when the lane is done and every scratch tenant is deleted
+```
+
+When the lane is done and every scratch tenant is deleted, remove the agent context as a separate step:
+
+```bash
+octo-cli -c RemoveContext -n $AGENT_CTX
 ```
 
 For non-local environments substitute the service URLs from `references/environments.md`.
