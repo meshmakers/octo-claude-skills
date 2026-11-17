@@ -217,7 +217,7 @@ under `LoadedCkModels`, no warnings. A silent no-op with `WasSkipped` means the
 | 4 | Response contains lookup internals / secrets / intermediate values | No `Project@1 clear: true` at the end. The response is the final DataContext minus the request envelope, so everything a node wrote goes out. |
 | 5 | App pod `ImagePullBackOff` | Controller injected `<registry>` prefix and the image only exists under the plain name. Tag + `kind load` both names (or push to the registry). |
 | 6 | Install is a silent no-op | `requires:` gate mismatch (`WasSkipped: true`). Check `octo.environment`. |
-| 7 | `ImportRt` fails on re-run | Default mode is InsertOnly. Use `-r` for scratch iteration; blueprint re-apply (`InstallBlueprint -f`) upserts by itself. |
+| 7 | `ImportRt` fails on re-run | Default mode is InsertOnly. Use `-r` for scratch iteration; blueprint re-apply (`InstallBlueprint -f`, local catalog only) upserts by itself; from a shared catalog roll out a new blueprint version with `UpdateBlueprint`. |
 | 8 | Errors return HTTP 200 | By design — HTTP pipelines cannot set status codes (only the route authorization of `FromHttpRequest@2` answers `401`/`403`). Return `{ "error": ... }` payloads and make clients check for them. |
 | 9 | Route answers `401` / `403` | `401`: no or invalid access token. `403`: a token of another tenant, or none of the route's `requiredRoles`. Call with a token of the app's tenant; do not switch to `allowAnonymous` to make the error go away. |
 

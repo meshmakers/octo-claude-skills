@@ -141,5 +141,6 @@ CI-agent gotchas (cost a red build each, 2026-06-10):
 
 With CI in place, the manual lane reduces to: merge to main, wait for the
 pipeline, then on the tenant `RefreshCatalogs` (CK models) →
-`RefreshBlueprintCatalogs` if the blueprint id/version is NEW → `InstallBlueprint` →
-`DeployDataFlow` → `DeployWorkload`.
+`RefreshBlueprintCatalogs` (every content change is a new blueprint version) →
+`InstallBlueprint` (first install) or `UpdateBlueprint -tv <Name>-<NewVersion>`
+(existing install) → `DeployDataFlow` → `DeployWorkload`.

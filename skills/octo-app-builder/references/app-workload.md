@@ -217,7 +217,8 @@ From a shared catalog that is a content change, so raise the blueprint version,
 publish it, `RefreshBlueprintCatalogs`, `UpdateBlueprint -tv <Name>-<NewVersion>` and
 `DeployWorkload` again (published blueprint versions are immutable; on a local
 catalog `InstallBlueprint -b <id> -f` re-applies the edited seed). A push under the
-same tag does not restart the pod; `UndeployWorkload` + `DeployWorkload` also works. Never restart deployments with kubectl on a shared cluster.<!-- developer-machine -->
+same tag does not restart the pod; `UndeployWorkload` + `DeployWorkload` also works.
+Never restart deployments with kubectl on a shared cluster.<!-- developer-machine -->
 On a local kind cluster: rebuild the image, `kind load` both tags, then
 `kubectl rollout restart deploy/<release-name> -n octo` (release name =
 `{tenantId}-{applicationRtId}-<chartname>`).<!-- /developer-machine -->
