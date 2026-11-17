@@ -1,8 +1,54 @@
 # HTTP-API pipelines on the Mesh Adapter — verified patterns
 
-JSON HTTP APIs built purely from `FromHttpRequest@1` pipelines — no service code.
-All YAML below ran verbatim in production-shape on 2026-06-09 (one-time-ticket
-demo, System.Communication 3.22.0). Node property details → pipeline-expert skill.
+JSON HTTP APIs built purely from `FromHttpRequest@2` pipelines — no service code.
+The transformations below ran verbatim in production-shape on 2026-06-09 (a ticket
+demo with the CK model `Demo.Tickets`, then with the deprecated `FromHttpRequest@1`
+trigger); the triggers now use `FromHttpRequest@2`, which takes the same `method` and
+`path` and adds the route security. The role in Pattern 1 (`TicketIssuer`) is an
+example: use a role your app's blueprint or tenant defines. Node property details → pipeline-expert skill.
+
+## Route security (authenticated by default)
+
+`FromHttpRequest@2` authorizes every call before the pipeline runs:
+
+1. a bearer token issued by the tenant's identity service (signature, issuer, audience,
+   lifetime) — otherwise `401`;
+2. the token's tenant must be the tenant the adapter serves — otherwise `403` (also for
+   client-credentials tokens, unless an environment relaxes that to a warning with
+   `ServiceTokenEnforcement=Warn`);
+3. with `requiredRoles`, the caller must hold at least one of them — otherwise `403`;
+   without it any valid token of the tenant is enough.
+
+Use the defaults (`allowAnonymous` omitted = `false`) for every route of an app, and
+add `requiredRoles` with the app's roles for routes that change data. The caller's
+`Authorization` header never reaches the DataContext. A web app calls the routes with
+the signed-in user's access token; another service calls them with a client-credentials
+token of the same tenant.
+
+The roles in `requiredRoles` must exist in the tenant: seed them with the app's
+blueprint (`System.Identity/Role`, see blueprint-authoring.md §Seed data) and grant
+them after the install — users with `AddUserToRole` or a group, client-credentials
+clients with `AddClientToRole -id <clientId> -r <role>` (MCP `add_client_to_role`) or
+`AddClientToGroup`. The caller needs a new token after the grant.
+
+### Public routes (only on purpose)
+
+> **Warning — a public route can be called by anyone who knows the URL.** No token, no
+> tenant check, no role check, no caller identity: the pipeline runs with the adapter's
+> rights, and whatever it reads or returns is open to the internet. The adapter records
+> that the route exists (one event per deployment); single calls carry no caller identity
+> and, by default, leave only the pipeline execution row. Unintended public routes have been found on production tenants before.
+
+Make a route public only when its callers cannot have an account of the tenant, for
+example a webhook of an external service, a public form, or a one-time link sent to a
+person outside the tenant (Pattern 3). Then:
+
+- set `allowAnonymous: true` on `FromHttpRequest@2` explicitly and say why in a comment;
+- return only what an anonymous caller may see (`Project@1 clear: true`), never list or
+  search endpoints over tenant data, and verify the caller in the pipeline where possible
+  (a secret in the link, a signature of the webhook, a CAPTCHA with `VerifyCaptcha@1`);
+- never use `FromHttpRequest@1` for it: it is deprecated and always public, without a
+  visible marker in the YAML.
 
 ## Route + request/response semantics
 
@@ -12,20 +58,134 @@ demo, System.Communication 3.22.0). Node property details → pipeline-expert sk
   **200 with empty body in ~0.1 ms** — treat that symptom as "route missing".
 - Request context: `$.body` (parsed JSON body — POST/PUT only), `$.query.<param>`,
   `$.path`, `$.method`, `$.files[]`, `$.formData`.
-- **Response = the entire final DataContext serialized as JSON.** Always 200,
-  always `application/json` — no status-code or content-type control, and
-  `SetPipelineExecutionResult@1` does NOT shape the HTTP response. The ONLY
-  shaping tool is `Project@1` with `clear: true` as the last node. Without it the
-  response leaks `$.body` (the raw request!) and every lookup result.
+- **Response = the final data root serialized as JSON, minus the request envelope**
+  (`path`, `method`, `principal`, `headers`, `body`, `query`, `files`, `formData`, …
+  are removed by the adapter). A pipeline always answers 200 and
+  `application/json` — no status-code or content-type control (only the route
+  authorization answers `401`/`403`), and `SetPipelineExecutionResult@1` does NOT
+  shape the HTTP response. The ONLY shaping tool is `Project@1` with `clear: true`
+  as the last node. Without it every intermediate and lookup result leaks into the
+  response.
 - Errors: return `{ "error": "<code>" }` fields and let clients check for them.
+
+## Request validation and route addresses
+
+### Required body fields
+
+There is no schema validation of the body and no dedicated
+validation node; check the fields with `If@1` before anything is written. A missing
+field (or JSON `null`) reads as null, and `If@1` with `operator: Equal` and **no**
+`value` matches exactly that; an empty string needs a second check with `value: ""`.
+`If@1` has no else, so set `$.error` in the checks and guard the write with a final
+`If@1` on `$.error` (no `value` = "no error set"). Without the check,
+`CreateUpdateInfo@1` fails with `No value found at ValuePath` and the caller gets an
+empty answer instead of an error code:
+
+```yaml
+transformations:
+  - type: If@1                           # name missing or null
+    path: $.body.name
+    operator: Equal
+    valueType: String
+    transformations:
+      - type: SetPrimitiveValue@1
+        value: name_required
+        valueType: String
+        targetPath: $.error
+  - type: If@1                           # name empty
+    path: $.body.name
+    operator: Equal
+    value: ""
+    valueType: String
+    transformations:
+      - type: SetPrimitiveValue@1
+        value: name_required
+        valueType: String
+        targetPath: $.error
+  - type: If@1                           # valid: no error set
+    path: $.error
+    operator: Equal
+    valueType: String
+    transformations:                     # abridged write of Pattern 1, only for valid bodies
+      - type: CreateUpdateInfo@1
+        updateKind: Insert
+        ckTypeId: Demo.Tickets/Ticket
+        rtIdPath: $.newTicketRtId
+        generateRtId: true
+        targetPath: $.updates
+        targetValueWriteMode: Append
+        targetValueKind: Array
+        attributeUpdates:
+          - attributeName: Name
+            attributeValueType: String
+            valuePath: $.body.name
+      - type: ApplyChanges@2
+        entityUpdatesPath: $.updates
+      - type: SetPrimitiveValue@1
+        valuePath: $.updates[0].RtId
+        valueType: String
+        targetPath: $.ticketId
+  - type: Project@1
+    clear: true
+    fields:
+      - path: $.ticketId
+        inclusion: true
+      - path: $.error
+        inclusion: true
+```
+
+Format checks: `If@1` with `operator: RegexMatch` runs its children only on a match
+(never for a missing value) and has no negated form, so set a string flag on a match
+(`SetPrimitiveValue@1`, `value: ok`, `valueType: String`, `targetPath: $.nameValid`)
+and then set the error with an `If@1` on `$.nameValid` with `valueType: String` and
+no `value` (= flag not set).
+
+### Where a route is reachable
+
+**Inside the cluster** at
+`http://<tenantId>-<adapterRtId>.octo.svc.cluster.local:80/<tenantId><path>` (the
+Mesh Adapter's service; `<adapterRtId>` is `670000000000000000000002` for the
+default Mesh Adapter) — the address an operator-deployed web app uses
+(app-workload.md).
+
+**From outside the cluster** only when the adapter's ingress is switched on — an
+opt-in per workload. Set `IngressEnabled` to `true` on the Mesh Adapter entity
+(`670000000000000000000002`); `Hostname` defaults to `adapter.{{domain.default}}`, a
+custom host such as `<tenant>-adapter.<domain>` is optional. Set both with the MCP
+tool `update_entity` or a GraphQL update, then run
+`octo-cli -c DeployWorkload -id 670000000000000000000002` (MCP `deploy_workload`).
+The Communication Operator creates the ingress with the path `/<tenantId>`, a TLS
+certificate and the DNS entry. The route URL is then
+`https://<Hostname>/<tenantId><path>`, called with a token of the tenant (pass the
+header on stdin, never the token as an argument):
+
+```bash
+printf 'Authorization: Bearer %s\n' "$TOKEN" | curl -sS -H @- \
+  -H 'Content-Type: application/json' -d '{"name":"demo"}' \
+  "https://<Hostname>/<tenantId>/tickets"
+```
+
+`$TOKEN` is an access token issued for that tenant (for example a client-credentials
+token of a client of the tenant); never copy it out of the octo-cli context file and
+never print it.
+
+Ingress class, certificate issuer and TLS are settings of the cluster, not of the
+adapter.
+
+**Without an ingress**, add `- type: FromExecutePipelineCommand@1` to the pipeline's
+`triggers` beside `FromHttpRequest@2` (the pipeline must belong to a DataFlow), then
+test it with `ExecutePipeline -id <pipelineRtId> -f <input.json>` (MCP
+`execute_pipeline`). The run does not go through the route, so it tests the pipeline
+logic, not the route's authorization.
 
 ## Pattern 1 — create an entity (`POST /tickets` → `{ ticketId }`)
 
 ```yaml
 triggers:
-  - type: FromHttpRequest@1
+  - type: FromHttpRequest@2
     method: Post
     path: /tickets
+    requiredRoles: [TicketIssuer]          # any valid token of the tenant without it
 
 transformations:
   - type: CreateUpdateInfo@1
@@ -114,10 +274,22 @@ transformations:
 
 ## Pattern 3 — conditional read-and-update (`GET /redeem?id=` — reveal once)
 
+The recipient of a one-time link has no account of the tenant, so this is one of the
+few routes that is public on purpose (see §Public routes). The ticket id is the only
+check here, and an rtId is not a secret (ObjectIds are partly predictable): a production
+design puts a random token into the link and compares it in the pipeline. The response
+holds the secret once and nothing else.
+
 Branching: `If@1` has no else — use complementary conditions. Look up by rtId via
 fieldFilters (`attributePath` is PascalCase; system fields like `RtId` work):
 
 ```yaml
+triggers:
+  - type: FromHttpRequest@2
+    method: Get
+    path: /redeem
+    allowAnonymous: true                   # public on purpose: link recipients have no account
+
 transformations:
   - type: GetRtEntitiesByType@1
     ckTypeId: Demo.Tickets/Ticket
@@ -218,9 +390,12 @@ Acceptable for demos — say so explicitly when the use case is production-like.
 
 ## Debugging
 
-- Adapter log is the source of truth:
-  `kubectl logs -n octo deploy/<tenant>-<adapterRtId> --since=5m` — full pipeline
-  exceptions with failing node, request traces, route registrations.
+- Execution history first: `GetPipelineExecutions -id <pipelineRtId> -j`, then
+  `SetPipelineDebug -id <pipelineRtId> -e true` and `GetPipelineDebugPoints -id
+  <pipelineRtId> -eid <executionId> -j` for the node-by-node data of one run.
+- With read access to the cluster, the adapter log has the full pipeline exceptions
+  with failing node, request traces and route registrations (Mesh Adapter deployment
+  `<tenant>-<adapterRtId>` in namespace `octo`).
 - `No value found at ValuePath '$...'` → pattern-2 optional-attribute guard missing.
 - `GetLatestPipelineExecution --identifier <pipelineRtId> --json` may show
   `Status: null` for HTTP-triggered runs — verify against data/log instead.

@@ -6,7 +6,7 @@ Real-world annotated pipeline examples from OctoMesh deployments.
 
 Watches for new Alarm entities, navigates the association tree to find context (machine, department, plant), then sends a templated email notification.
 
-**Origin:** maco deployment (external — not in this monorepo)
+**Origin:** a manufacturing customer deployment (external — not in this monorepo; names anonymized)
 
 ```yaml
 triggers:
@@ -59,7 +59,7 @@ transformations:
 
       # Load email template
       - type: GetNotificationTemplate@1
-        notificationTemplateName: maco-alarm
+        notificationTemplateName: <alarm-template>
         targetPath: $.body
         subjectTargetPath: $.subject
 
@@ -112,7 +112,7 @@ transformations:
 
 Two-part DataFlow with cross-adapter communication: a pipeline on the Mesh Adapter watches for entity changes and sends data via the event hub; a pipeline on the Zenon Adapter receives it and writes to PLC variables. Both pipelines belong to the same DataFlow.
 
-**Origin:** maco deployment (external — not in this monorepo)
+**Origin:** a manufacturing customer deployment (external — not in this monorepo; names anonymized)
 
 ### Mesh Adapter Pipeline (sends data)
 
@@ -193,7 +193,7 @@ transformations:
 
 Cross-adapter DataFlow: one pipeline polls SAP for production orders, iterates with conditional processing, and sends data to a second pipeline that creates entities and associations.
 
-**Origin:** maco deployment (external — not in this monorepo)
+**Origin:** a manufacturing customer deployment (external — not in this monorepo; names anonymized)
 
 ### SAP Polling Pipeline (data extraction)
 
@@ -204,10 +204,10 @@ triggers:
 
 transformations:
   - type: SapLogin@1
-    sapConfiguration: maco-dev
+    sapConfiguration: <sap-configuration>
 
   - type: GetProductionOrderList@1
-    productionPlant: AT10
+    productionPlant: <plant>
     orderNumberStart: 3265680
     targetPath: "$.orders"
 
@@ -402,7 +402,7 @@ transformations:
 
 Receives Zenon variable data via inter-pipeline communication (DataFlow event hub), looks up each variable, switches on data type to create type-specific updates, saves to both a CrateDB archive and MongoDB.
 
-**Origin:** maco deployment (external — not in this monorepo)
+**Origin:** a manufacturing customer deployment (external — not in this monorepo; names anonymized)
 
 ```yaml
 triggers:
@@ -521,7 +521,9 @@ Complex billing calculation pipeline: loads config, queries data with joins, ite
 
 ```yaml
 triggers:
-  - type: FromHttpRequest@1
+  # The deployment used the deprecated FromHttpRequest@1, which is always public; @2 keeps the route
+  # authenticated (any valid token of the tenant; requiredRoles narrows it).
+  - type: FromHttpRequest@2
     path: /createBillingItems
     method: POST
 

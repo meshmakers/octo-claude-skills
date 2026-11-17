@@ -15,7 +15,7 @@ range-retaining successor for each failed model. **`FixAll` imports that success
 - Never forces: an update that would break an installed model (tenant upgrade guard) is skipped and listed with its blocker.
 - Models without a resolving successor stay `ResolveFailed` and are listed by `LibraryStatus` with their reason
   (`IncompatibilityReason`, `ResolveFailedReason`). Typical: a customer model with an exact pin of its own
-  (for example `Maco-1.0.0` pinned to `Industry.Basic-1.0.0`) — publish a successor, then run `FixAll` again.
+  (for example `<CustomerModel>-1.0.0` pinned to `Industry.Basic-1.0.0`) — publish a successor, then run `FixAll` again.
 - Needs octo-cli and services from 3.5.43 or newer (AB#7376 joint import, AB#7408 range-aware check).
 
 ## One tenant
@@ -44,7 +44,7 @@ The sweep prints one row per tenant (Ok / Denied + cause / Failed) and continues
 
 ## Rules
 
-- `FixAll` on staging-1, prod-1, prod-2 and customer clusters is a write: only with the developer's explicit go for that
-  cluster in the current session (agent-operating-rules §5.1).
+- `FixAll` on a shared or production cluster is a write: only with the explicit go of the person responsible for that
+  cluster in the current session (with octo-claude-pm installed: agent-operating-rules §5.1).
 - Do not use `ImportFromCatalog --force` to get past a skipped row; a skipped row means the guard found a real break.
 - After the sweep, check the models `FixAll` could not repair (no successor) and give them to the owner of the model.

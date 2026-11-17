@@ -27,7 +27,7 @@ octo-cli -c AddContext -n <name> [-isu <identityServicesUri>] [-asu <assetServic
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
-| `-n` | `name` | Name of the context (e.g. `local_meshtest`, `staging-1_customer1`) | Yes |
+| `-n` | `name` | Name of the context (e.g. `local_mytenant`, `staging_customer1`) | Yes |
 | `-isu` | `identityServicesUri` | URI of identity services (e.g. `https://<identity-host>/`) | No |
 | `-asu` | `assetServicesUri` | URI of asset repository services (e.g. `https://<asset-repo-host>/`) | No |
 | `-bsu` | `botServicesUri` | URI of bot services (e.g. `https://<bot-host>/`) | No |
@@ -35,9 +35,9 @@ octo-cli -c AddContext -n <name> [-isu <identityServicesUri>] [-asu <assetServic
 | `-rsu` | `reportingServicesUri` | URI of reporting services (e.g. `https://<reporting-host>/`) | No |
 | `-aisu` | `aiServicesUri` | URI of AI services (e.g. `https://<ai-host>/`) | No |
 | `-apu` | `adminPanelUri` | URI of admin panel (e.g. `https://<admin-panel-host>/`) | No |
-| `-tid` | `tenantId` | ID of tenant (e.g. `meshtest`) | No |
+| `-tid` | `tenantId` | ID of tenant (e.g. `mytenant`) | No |
 
-Context naming convention: `{installation}_{tenantId}` (e.g., `local_meshtest`, `staging-1_meshtest`, `prod-1_meshmakers`, `test-2_pr123_meshtest`).
+Context naming convention: `{installation}_{tenantId}` (e.g., `local_mytenant`, `staging_mytenant`, `production_mytenant`).
 
 If this is the first context or no active context is set, it is automatically activated. Each context stores its own authentication tokens independently. `AddContext` only creates/updates the stored context — to run against it without changing the active context, pass `--context <name>` (or set `OCTO_CLI_CONTEXT`) on subsequent commands instead of `UseContext`.<!-- developer-machine --> In the OctoMesh developer shell, `Register-OctoCliContext` wraps `AddContext` + `UseContext` + login for the known installations using the current cluster domains.<!-- /developer-machine -->
 
@@ -110,6 +110,9 @@ octo-cli -c LogInClientCredentials [-id <clientId>] [--secret-stdin]
 | `-id` | `clientId` | Client ID. Falls back to env var `OCTO_CLI_CLIENT_ID`. | No |
 | `-ss` | `secret-stdin` | Read the client secret from standard input. Without it: env var `OCTO_CLI_CLIENT_SECRET`, then a hidden prompt (terminal only). | No |
 | `-s` | `secret` | **Deprecated** — secret on the command line. Do not use. | No |
+| `-rl` | `replace-login` | Replace the context's login although it holds an interactive login or the `--context` name matched the stored one only by case (AB#9063). Without it the command refuses and changes nothing. | No |
+
+Refuses (exit `-5`, names the matched context) when the target context holds an interactive login (`LogIn`) or when the name given with `--context` / `OCTO_CLI_CONTEXT` matched the stored context only by case (names are matched case-insensitively). Agents use a context of their own for the client (e.g. `agent_<lane>_octosystem`), never a human's context such as `local_octosystem`.
 
 ### AuthStatus
 Gets authentication status. No arguments. For client_credentials tokens, the output shows an "Auth Method" line and omits the User Info section (there is no userinfo for these tokens).
@@ -237,6 +240,8 @@ octo-cli -c DeleteRole -n <name> [-y]
 | `-n` | `name` | Name of role | Yes |
 | `-y` | `yes` | Skip confirmation prompt | No |
 
+> **Roles for clients:** users get roles with `AddUserToRole`; client-credentials clients get them with `AddClientToRole -id <clientId> -r <role>` (MCP `add_client_to_role`) or through a group with `AddClientToGroup` (MCP `add_client_to_group`) — see *Client Roles and Groups* below. A role a blueprint seeds (for example for a pipeline's `requiredRoles`) is assigned the same way after the install.
+
 ### Clients
 
 #### GetClients
@@ -318,6 +323,28 @@ octo-cli -c AddScopeToClient -id <clientId> -n <name>
 |---|---|---|---|
 | `-id` | `clientId` | Client ID | Yes |
 | `-n` | `name` | Scope name | Yes |
+
+### Client Roles and Groups
+
+A client-credentials client gets its permissions from roles, exactly like a user: directly assigned roles plus the roles of the groups it belongs to. The roles appear in the client's next access token, so **log in again** (`LogInClientCredentials`) after a change. Typical case: a CI or agent client needs `DataModelManagement` to install blueprints, or an app role that a pipeline lists in `requiredRoles`.
+
+```bash
+octo-cli -c AddClientToRole -id ci-deploy -r DataModelManagement     # assign one role by name
+octo-cli -c RemoveClientFromRole -id ci-deploy -r DataModelManagement # remove it again (asks unless -y)
+octo-cli -c UpdateClientRoles -id ci-deploy -rids <roleId>,<roleId>   # replace ALL direct roles (role IDs, replace-all)
+octo-cli -c AddClientToGroup -id <groupRtId> -cid ci-deploy           # inherit the group's roles
+octo-cli -c RemoveClientFromGroup -id <groupRtId> -cid ci-deploy
+```
+
+| Command | Flags | MCP tool |
+|---|---|---|
+| `AddClientToRole` | `-id`/`clientId` client ID, `-r`/`role` existing role name (both required) | `add_client_to_role` |
+| `RemoveClientFromRole` | `-id`, `-r`, `-y` skip confirmation | `remove_client_from_role` (`confirm=true`) |
+| `UpdateClientRoles` | `-id`, `-rids`/`roleIds` comma-separated role IDs (replace-all; `GetRoles` lists the IDs) | `update_client_roles` |
+| `AddClientToGroup` | `-id`/`identifier` group runtime ID (`GetGroups`), `-cid`/`clientId` | `add_client_to_group` |
+| `RemoveClientFromGroup` | `-id` group runtime ID, `-cid` client ID | `remove_client_from_group` |
+
+To read the roles a client has directly, use the MCP tool `get_client_roles` (role IDs, without the roles inherited from groups); `GetClient` does not list roles. Only an administrator of the tenant can assign roles; a client never grants roles to itself.
 
 ### Client Mirror Management
 
@@ -933,7 +960,7 @@ Sends one GraphQL query or mutation to `tenants/<tenant>/GraphQL` with the token
 ```
 octo-cli -c GraphQl -tid <tenant> -q "{ constructionKit { models(first:1) { totalCount } } }"
 octo-cli -c GraphQl -tid <tenant> -f query.graphql -vars @vars.json -on MyQuery
-cat query.graphql | octo-cli --context test-2_octosystem -c GraphQl -tid <tenant> -si | jq .data
+cat query.graphql | octo-cli --context <root-context> -c GraphQl -tid <tenant> -si | jq .data
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
@@ -976,7 +1003,7 @@ The import file uses a specific YAML structure.<!-- developer-machine --> Use `c
 ```yaml
 $schema: https://schemas.meshmakers.cloud/runtime-model.schema.json
 dependencies:
-  - <ModelName-[major.minor,next-major)>        # e.g. System.Communication-[3.0,4.0)
+  - <ModelName-[major.minor,next-major)>        # e.g. System.Communication-[4.0,5.0)
 entities:
   - rtId: <24-hex-character-id>                 # exactly 24 hex chars [0-9a-fA-F]
     ckTypeId: <Model/TypeName-TypeVersion>       # import format (see rules below)
@@ -1011,7 +1038,7 @@ All IDs in ImportRt YAML (ckTypeId, attribute id, roleId, targetCkTypeId) use th
 ```yaml
 $schema: https://schemas.meshmakers.cloud/runtime-model.schema.json
 dependencies:
-  - System.Communication-[3.0,4.0)
+  - System.Communication-[4.0,5.0)
 entities:
   - rtId: aaa000000000000000000001
     ckTypeId: System.Communication/DataFlow-1
@@ -1153,7 +1180,7 @@ octo-cli -c ImportFromCatalog -cn PublicGitHubCatalog -m Basic-2.5.0,Industry.Ba
 The CLI sends one `ResolveDependenciesBatch` and one `ImportFromCatalogBatch` (one job) and orders the set by dependency itself, whatever the order of the list. A blocked single import prints a ready-to-run joint command (requested models + the `suggestedDependentUpdate` of the blockers) — run that instead of `-f`; `-f` is not a safe workaround (a failing forced job can leave models `ResolveFailed`).
 
 #### RefreshCatalogs
-Refreshes CK model catalog caches.
+Refreshes CK model catalog caches (blueprint catalogs: `RefreshBlueprintCatalogs`).
 ```
 octo-cli -c RefreshCatalogs [-cn <catalogName>]
 ```
@@ -1180,6 +1207,15 @@ Lists blueprints available across configured catalogs. No arguments.
 ```
 octo-cli -c ListBlueprints
 ```
+
+#### RefreshBlueprintCatalogs
+Refreshes the blueprint catalog caches at the asset repository (always forced, no service restart). `RefreshCatalogs` covers CK model catalogs only. Needs the tenant role `DataModelManagement`. A catalog that fails is reported as Failed without aborting the others; the command then exits non-zero.
+```
+octo-cli -c RefreshBlueprintCatalogs [-cn <catalogName>]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-cn` | `catalogName` | Blueprint catalog to refresh, e.g. `LocalFileSystemBlueprintCatalog` (refreshes all if omitted) | No |
 
 #### ListBlueprintInstallations
 Lists blueprints currently installed on the active tenant (distinct from the catalog list above). No arguments.
@@ -1456,7 +1492,7 @@ octo-cli -c RunFixupScripts [-w]
 
 ## Communication Services
 
-All communication commands accept plain runtime object IDs — the SDK handles composite RtEntityId construction internally. Most flags have a short form (shown in the tables); `--json` is `-j`, `--identifier` is `-id`. `GetAdapters` / `GetPools` return human-readable enum names (e.g. `Online`, `Offline`), not integers.
+All communication commands accept plain runtime object IDs — the SDK handles composite RtEntityId construction internally. Most flags have a short form (shown in the tables); `--json` is `-j`, `--identifier` is `-id`. `GetAdapters` / `GetDeploymentSites` return human-readable enum names (e.g. `Online`, `Offline`), not integers.
 
 #### EnableCommunication
 Enables communication controller for current tenant. No arguments.
@@ -1510,29 +1546,37 @@ octo-cli -c GetPipelineSchema -aid <rtId> [-o <path>]
 | `-aid` | `adapterId` | Runtime object ID of the adapter | Yes |
 | `-o` | `outputFile` | File path to write the schema to | No |
 
-#### GetPools
-Gets all pools for the current tenant.
+#### GetDeploymentSites
+Gets all deployment sites (formerly "pools") of the current tenant. Renamed from `GetPools` (AB#4924).
 ```
-octo-cli -c GetPools [-j]
+octo-cli -c GetDeploymentSites [-j]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-j` | `json` | Output as raw JSON | No |
 
-> **Note:** There is no manual adapter-deploy command. The legacy `DeployAdapter`, `GetPool`, `DeployPoolAdapters`, and `UndeployPoolAdapters` were removed (2026-05-13); adapters are Helm-deployed by the Communication Operator when a pool is deployed. Use the **Workloads** commands below to (re)deploy adapter/application workloads.
+> **Note:** There is no manual adapter-deploy command. The legacy `DeployAdapter`, `GetPool`, `DeployPoolAdapters`, and `UndeployPoolAdapters` were removed (2026-05-13); adapters are Helm-deployed by the Communication Operator when a deployment site is deployed. Use the **Workloads** commands below to (re)deploy adapter/application workloads.
 
-#### Deploying / undeploying a pool (REST only — no octo-cli command)
-
-```powershell
-# PoolController: POST {tenantId}/v1/Pool/deploy?poolRtId=<rtId>  (undeploy analogous)
-# $token = an access token issued for {tenantId} itself (the signed-in per-tenant context of that tenant),
-# never one of another tenant (denied by the tenant gate); never echo or log it. No CLI command exists yet.
-Invoke-WebRequest -Method POST -Headers @{Authorization="Bearer $token"} `
-  -Uri "{CommunicationServiceUrl}{tenantId}/v1/Pool/deploy?poolRtId=670000000000000000000001"
-# 204 No Content on success; GetPools -j then shows Online/Deployed
+#### DeployDeploymentSite
+Triggers the deploy of a deployment site. The Communication Operator creates the deployment site resources; workloads are deployed separately with `DeployWorkload`.
 ```
+octo-cli -c DeployDeploymentSite -id <deploymentSiteRtId>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `deploymentSiteRtId` | Runtime object ID of the deployment site | Yes |
 
-> **Order matters (live-verified 2026-06-10):** on a freshly comm-enabled tenant the pool starts `Undeployed`. `DeployWorkload` triggers fired while the pool is undeployed are **silently lost** — the workload's DeploymentState sits in `Pending` forever with no pod and no error. Deploy the pool first, then (re-)run `DeployWorkload -id <adapterRtId>`.
+#### UndeployDeploymentSite
+Undeploys a deployment site; the operator removes its resources once nothing runs in it. Asks for confirmation unless `-y` is given.
+```
+octo-cli -c UndeployDeploymentSite -id <deploymentSiteRtId> [-y]
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `deploymentSiteRtId` | Runtime object ID of the deployment site | Yes |
+| `-y` | `yes` | Skip the confirmation prompt | No |
+
+> **Order matters (live-verified 2026-06-10):** on a freshly comm-enabled tenant the deployment site starts `Undeployed`. `DeployWorkload` triggers fired while the deployment site is undeployed are **silently lost** — the workload's DeploymentState sits in `Pending` forever with no pod and no error. Deploy the deployment site first (`DeployDeploymentSite -id <deploymentSiteRtId>`, the default site of a new tenant is `670000000000000000000001`; `GetDeploymentSites -j` then shows `Online`/`Deployed`), then (re-)run `DeployWorkload -id <adapterRtId>`.
 
 ### Pipelines
 

@@ -190,7 +190,7 @@ Each tenant database contains these CK-related collections:
 | `CkEnum` | Enumeration definitions |
 | `CkAssociation` | Relationship definitions between types |
 
-The `octosystem` database contains the system tenant's CK data. Regular tenant databases (e.g., `meshtest`, `maco`) contain tenant-specific CK data.
+The `octosystem` database contains the system tenant's CK data. Regular tenant databases (e.g., `meshtest`, `<tenant>`) contain tenant-specific CK data.
 
 ### Model States
 

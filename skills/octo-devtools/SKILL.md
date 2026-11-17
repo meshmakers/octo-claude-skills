@@ -284,7 +284,7 @@ Interactive blocking applies to `Start-Octo` (without `-nonInteractive $true`) a
 > **Warning:** This command will block the current session until you press a key to stop the services. The session will not be available for other commands while services are running.
 
 ### AI Bastion secret handling
-`Register-AiBastion` drives the Anthropic device-code OAuth flow and POSTs the token to the AI Adapter's `POST /{tenantId}/v1/credentials/register`. The bearer token comes from `-BearerToken` or `$env:OCTO_BASTION_TOKEN`; token material is held in memory only and zeroed in a `finally` block. Never echo, log, or persist the bearer token or the device-code output.
+`Register-AiBastion` drives the Anthropic device-code OAuth flow and POSTs the token to the AI Adapter's `POST /{tenantId}/v1/credentials/register`. The bearer token comes from `$env:OCTO_BASTION_TOKEN` (preferred) or `-BearerToken` (avoid: it puts the token on the command line); token material is held in memory only and zeroed in a `finally` block. Never echo, log, or persist the bearer token or the device-code output.
 
 ## Smart Behaviors
 
