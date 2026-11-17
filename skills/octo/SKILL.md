@@ -176,7 +176,7 @@ Changing the data model requires scope `octo_api` **and** the tenant role **Data
 |---|---|---|
 | `ListBlueprints` | List blueprints across catalogs | Read-only |
 | `ListBlueprintInstallations` | List blueprints installed on the active tenant | Read-only |
-| `RefreshBlueprintCatalogs` | Refresh blueprint catalog caches, forced (`-cn` optional) | Mutating |
+| `RefreshBlueprintCatalogs` | Refresh blueprint catalog caches, forced (`-cn` optional; MCP `refresh_blueprint_catalogs`) | Mutating |
 | `ListBlueprintBackups` | List pre-update tenant backups | Read-only |
 | `GetBlueprintHistory` | Blueprint application history for the tenant | Read-only |
 | `PreviewBlueprintUpdate` | Preview an update without applying (`-tv`, `-m`) | Read-only |

@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Changed
+
+- **`octo-deploy`, `octo`** — the blueprint catalog refresh names its MCP tool `refresh_blueprint_catalogs` (AB#9182, Feature AB#8777): `octo-deploy` step 4 and pitfall row 1, the `octo` quick lookup and the command reference entry of `RefreshBlueprintCatalogs`. `octo-deploy` step 4 also says that a refresh reaches only one asset-repository replica on multi-replica installations (bug AB#9169), so refresh again when the version is still missing.
+
 ## [0.28.13] — 2026-11-17
 
 ### Fixed
