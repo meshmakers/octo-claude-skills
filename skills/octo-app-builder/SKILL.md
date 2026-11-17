@@ -185,7 +185,7 @@ The catalog index is cached; refresh it after every new blueprint or version (pi
 ### 5. Install + deploy
 
 ```bash
-octo-cli -c InstallBlueprint -b <Name>-<Version>       # -f to force re-apply after seed edits
+octo-cli -c InstallBlueprint -b <Name>-<Version>       # -f re-applies seed edits (local catalog only)
 octo-cli -c DeployDataFlow --identifier <dataflowRtId>
 octo-cli -c DeployWorkload -id <applicationRtId>       # only if there is an app
 ```

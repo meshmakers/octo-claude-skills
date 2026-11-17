@@ -242,7 +242,7 @@ blueprints get published.
 
 ```bash
 octo-cli -c ListBlueprints                              # all catalogs
-octo-cli -c InstallBlueprint -b <Name>-<Version>        # -f = force re-apply (upserts seed)
+octo-cli -c InstallBlueprint -b <Name>-<Version>        # -f = force re-apply (upserts seed; local catalog only)
 octo-cli -c ListBlueprintInstallations
 octo-cli -c GetBlueprintHistory
 octo-cli -c PreviewBlueprintUpdate -tv <Name>-<Version> [-m Safe|Merge|Full|Migration]

@@ -68,6 +68,7 @@ this order; each has a checkable outcome.
 octo-ckc -c Publish -f ./ck/out/ck-<name>.yaml -c PrivateGitHubCatalog -r
 
 # Blueprint -> shared blueprint catalog (one-time: GitHub token in ~/.octo-bpm/settings.json)
+octo-bpm -c validateVersion -p ./blueprint/<Name>/<version> -cn PrivateGitHubBlueprintCatalog
 octo-bpm -c publish -p ./blueprint/<Name>/<version> -c PrivateGitHubBlueprintCatalog
 
 # App image -> the registry (must be reachable from your network, see pitfall 4)
