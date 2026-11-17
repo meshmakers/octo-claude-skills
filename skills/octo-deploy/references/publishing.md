@@ -60,6 +60,9 @@ octo-bpm -c list                              # confirm the catalog entry
 **Published blueprint versions are immutable.** Every content change — seed data,
 `ValuesYaml`, `blueprint.yaml` — gets a new blueprint version; `validateVersion`
 fails with `OCTO-BP100` when the content under an already-published version differs.
+It cannot see a file that was deleted locally (a file that exists only in the published
+version), so removing a file needs the version bump by your own discipline; a renamed
+file shows up under its new name and is detected.
 `publish` does not overwrite an existing version (it logs an error, see the
 soft-fail note below); its `-f` (force/replace) is only for a local developer
 catalog, never for a shared catalog that tenants install from.
@@ -68,7 +71,10 @@ There is NO ImportCk-style shortcut for blueprints — `InstallBlueprint` only
 resolves from catalogs the asset-repo reads, so the blueprint must be published.
 
 After publishing a **new blueprint id/version**, refresh the server-side blueprint
-catalog index of the target asset repository:
+catalog index of the target asset repository. The index is read from GitHub Pages, so
+wait until the Pages deployment of the publish has finished (about a minute) — a refresh
+before that caches the old index. If `ListBlueprints` still lacks the new version,
+refresh again:
 
 ```bash
 octo-cli -c RefreshBlueprintCatalogs -cn PrivateGitHubBlueprintCatalog   # omit -cn for all catalogs

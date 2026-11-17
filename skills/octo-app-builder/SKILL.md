@@ -106,8 +106,11 @@ read-and-update — are in
 YAML. Three rules that are not obvious and break things silently:
 
 1. **The HTTP response is the final DataContext minus the request envelope.** The
-   adapter strips `body`, `query`, `headers`, `principal` and the other request
-   fields, but everything a pipeline wrote keeps going out. End every pipeline with
+   adapter removes the reserved keys `path`, `method`, `principal`, `headers`, `body`,
+   `bodyEncoding`, `query`, `files`, `formData`, `contentType` and `contentLength` from
+   the top level of the response, even when a pipeline wrote them (so never use these
+   names for response fields), and any whole copy of the request `headers` or
+   `principal` object. Everything else a pipeline wrote keeps going out. End every pipeline with
    `Project@1` + `clear: true` listing only the response fields — otherwise lookup
    results and intermediate values (including any secrets) leak into the response.
 2. **`SetPrimitiveValue@1` fails the whole pipeline on a missing source path** —
@@ -211,10 +214,10 @@ under `LoadedCkModels`, no warnings. A silent no-op with `WasSkipped` means the
 
 | # | Symptom | Cause / fix |
 |---|---|---|
-| 1 | New blueprint missing from `ListBlueprints` | The blueprint catalog index is cached. `octo-cli -c RefreshBlueprintCatalogs [-cn <catalog>]` refreshes it without a restart (forced; needs the tenant role `DataModelManagement`).<!-- developer-machine --> Older local builds rebuild the local cache only when `~/.octo/blueprint-catalog/cache/local-blueprint-catalog-cache.json` is missing — delete it.<!-- /developer-machine --> |
+| 1 | New blueprint missing from `ListBlueprints` | The blueprint catalog index is cached. `octo-cli -c RefreshBlueprintCatalogs [-cn <catalog>]` refreshes it without a restart (forced; needs the tenant role `DataModelManagement`). The index comes from GitHub Pages: refresh after the Pages deployment of the publish has finished (about a minute) and again if the version is still missing.<!-- developer-machine --> Older local builds rebuild the local cache only when `~/.octo/blueprint-catalog/cache/local-blueprint-catalog-cache.json` is missing — delete it.<!-- /developer-machine --> |
 | 2 | Endpoint answers 200 with empty body in ~0.1 ms | Route's method not registered (path-only fallback). After `ImportRt -r` on a live dataflow, each `DeployDataFlow` can remove an unchanged pipeline while re-registering a changed one. Re-run `DeployDataFlow` and re-test ALL routes; fresh install + single deploy is reliable. |
 | 3 | Pipeline 500s only for some entities | `SetPrimitiveValue@1` on an optional attribute that is unset. Guard with `If@1`. |
-| 4 | Response contains lookup internals / secrets / intermediate values | No `Project@1 clear: true` at the end. The response is the final DataContext minus the request envelope, so everything a node wrote goes out. |
+| 4 | Response contains lookup internals / secrets / intermediate values | No `Project@1 clear: true` at the end. The response is the final DataContext minus the reserved request keys of rule 1, so every other value a node wrote goes out. |
 | 5 | App pod `ImagePullBackOff` | Controller injected `<registry>` prefix and the image only exists under the plain name. Tag + `kind load` both names (or push to the registry). |
 | 6 | Install is a silent no-op | `requires:` gate mismatch (`WasSkipped: true`). Check `octo.environment`. |
 | 7 | `ImportRt` fails on re-run | Default mode is InsertOnly. Use `-r` for scratch iteration; blueprint re-apply (`InstallBlueprint -f`, local catalog only) upserts by itself; from a shared catalog roll out a new blueprint version with `UpdateBlueprint`. |

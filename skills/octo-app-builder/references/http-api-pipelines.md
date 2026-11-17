@@ -59,8 +59,11 @@ person outside the tenant (Pattern 3). Then:
 - Request context: `$.body` (parsed JSON body — POST/PUT only), `$.query.<param>`,
   `$.path`, `$.method`, `$.files[]`, `$.formData`.
 - **Response = the final data root serialized as JSON, minus the request envelope**
-  (`path`, `method`, `principal`, `headers`, `body`, `query`, `files`, `formData`, …
-  are removed by the adapter). A pipeline always answers 200 and
+  (the adapter removes the reserved keys `path`, `method`, `principal`, `headers`,
+  `body`, `bodyEncoding`, `query`, `files`, `formData`, `contentType` and
+  `contentLength` from the top level, even when a pipeline wrote them — never use
+  these names for response fields — and any whole copy of the request `headers` or
+  `principal` object). A pipeline always answers 200 and
   `application/json` — no status-code or content-type control (only the route
   authorization answers `401`/`403`), and `SetPipelineExecutionResult@1` does NOT
   shape the HTTP response. The ONLY shaping tool is `Project@1` with `clear: true`

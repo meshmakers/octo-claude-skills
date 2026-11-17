@@ -144,14 +144,16 @@ octo-cli -c GetAdapters -j                                # poll until Communica
 ```bash
 octo-cli -c RefreshCatalogs                       # CK MODEL catalogs
 octo-cli -c RefreshBlueprintCatalogs              # blueprint catalogs (-cn <catalog> for one)
-octo-cli -c ListBlueprints                        # your blueprint must appear (CatalogName: PrivateGitHubBlueprintCatalog)
+octo-cli -c ListBlueprints                        # your blueprint must appear (CatalogName: PrivateGitHubBlueprintCatalog); if not, refresh again
 octo-cli -c InstallBlueprint -b <Name>-<Version>
 ```
 
 The asset repository caches the catalog **index**: a **newly published** blueprint
 id/version stays invisible to `ListBlueprints`/`InstallBlueprint` until
 `RefreshBlueprintCatalogs` runs (always forced, no service restart; `-cn
-PrivateGitHubBlueprintCatalog` refreshes one catalog). Both refresh commands need the
+PrivateGitHubBlueprintCatalog` refreshes one catalog). The index comes from GitHub
+Pages: refresh only after the Pages deployment of the publish has finished (about a
+minute), otherwise the refresh caches the old index. Both refresh commands need the
 tenant role `DataModelManagement`. Published blueprint versions are immutable: every
 content change (seed data, `ValuesYaml`, `blueprint.yaml`) gets a new version, which is
 published, refreshed and rolled out with `UpdateBlueprint -tv <Name>-<NewVersion>`.
