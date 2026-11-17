@@ -68,7 +68,7 @@ this order; each has a checkable outcome.
 octo-ckc -c Publish -f ./ck/out/ck-<name>.yaml -c PrivateGitHubCatalog -r
 
 # Blueprint -> shared blueprint catalog (one-time: GitHub token in ~/.octo-bpm/settings.json)
-octo-bpm -c publish -p ./blueprint/<Name>/<version> -c PrivateGitHubBlueprintCatalog -f
+octo-bpm -c publish -p ./blueprint/<Name>/<version> -c PrivateGitHubBlueprintCatalog
 
 # App image -> the registry (must be reachable from your network, see pitfall 4)
 docker push <registry>/meshmakers/<app>:<tag>
@@ -151,8 +151,10 @@ The asset repository caches the catalog **index**: a **newly published** bluepri
 id/version stays invisible to `ListBlueprints`/`InstallBlueprint` until
 `RefreshBlueprintCatalogs` runs (always forced, no service restart; `-cn
 PrivateGitHubBlueprintCatalog` refreshes one catalog). Both refresh commands need the
-tenant role `DataModelManagement`. Re-publishing new CONTENT under an already-listed
-id+version needs no refresh; `InstallBlueprint -b <id> -f` fetches the seed live.
+tenant role `DataModelManagement`. Published blueprint versions are immutable: every
+content change (seed data, `ValuesYaml`, `blueprint.yaml`) gets a new version, which is
+published, refreshed and rolled out with `UpdateBlueprint -tv <Name>-<NewVersion>`.
+`octo-bpm -c validateVersion` reports changed content under a published version as `OCTO-BP100`.
 
 Confirm: `Success: true`, your CK model in `LoadedCkModels`, no warnings.
 `WasSkipped: true` means the `requires:` gate didn't match — see the
@@ -195,7 +197,7 @@ no leaked fields) against the hosts of the target cluster, then the browser flow
 | 5 | Install is a silent no-op (`WasSkipped: true`) | `requires: octo.environment` gate mismatch. Use `[dev, test]` (covers both readings of a test cluster's configuration) and re-check. |
 | 6 | Mutating the wrong environment | Context confusion. `AuthStatus` before every mutating step; the context name (`<cluster>_<tenant>` vs `local_<tenant>`) is the tell. |
 | 7 | Adapter stuck `Unregistered`/`Pending` forever, no pod, no error | The parent **deployment site is Undeployed** — workload deploy triggers fired before it is up are silently lost. Deploy it first (`DeployDeploymentSite -id 670…001`), then re-run `DeployWorkload -id 670…002`. |
-| 8 | Wrong tag deployed after a new image push | Same-tag pushes don't restart pods. Either bump the tag (seed + push + `InstallBlueprint -f` + `DeployWorkload`) or undeploy/redeploy the workload. |
+| 8 | Wrong tag deployed after a new image push | Same-tag pushes don't restart pods. Either bump the tag (new tag in the seed + new blueprint version + push + publish + `RefreshBlueprintCatalogs` + `UpdateBlueprint` + `DeployWorkload`) or undeploy/redeploy the workload. |
 
 ## References
 
