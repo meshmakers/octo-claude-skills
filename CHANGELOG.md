@@ -2,6 +2,14 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.28.13] — 2026-11-17
+
+### Fixed
+
+- **`octo-deploy`, `octo-app-builder`, `pipeline-expert`** — example fixes from the CodeRabbit review of octo-ai-services#55 (AB#9174, Feature AB#8777): `test-2-environment.md` § *Creating a tenant* steps 4 and 5 run `GetDeploymentSites`, `DeployWorkload` and `GetAdapters` with `--context <tenant-context>`; the minimal CK model in `blueprint-authoring.md` declares the attribute `TicketName` its `Ticket` type references (the example now compiles with `octo-ckc Compile`, before it failed with "CkAttributeId … TicketName-1 does not exist"); the SAP order pipeline in `pipeline-examples.md` keeps `Operation.SequenceNumber` in its `Project@1`, which the receiving pipeline needs for the `orderItemId` key and `ItemNumber`.
+- **`octo-app-builder`** — rule 1 and pitfall row 4 of `SKILL.md` now match `http-api-pipelines.md`: the HTTP response is the final DataContext minus the request envelope (the adapter removes the eleven reserved request keys, now listed in rule 1 and in `http-api-pipelines.md`, even when a pipeline wrote them, plus whole copies of `headers`/`principal`), so what leaks without a final `Project@1 clear: true` is lookup results and intermediate values, not the raw request body; eval 1 of `evals/evals.json` is reworded to match (AB#9174).
+- **`octo-deploy`** — published blueprint versions are immutable: `SKILL.md` and `references/publishing.md` no longer publish with `octo-bpm … -f` or re-publish changed content under the same version; every content change gets a new blueprint version (`validateVersion` reports `OCTO-BP100` otherwise), rolled out with `RefreshBlueprintCatalogs` + `UpdateBlueprint`. `-f` is named only for a local developer catalog. Pitfall row 8 (new image tag) and the new-image step of `octo-app-builder` `app-workload.md` follow the same path; `octo-app-builder` (install block, pitfall row 7, `blueprint-authoring.md`) describes `InstallBlueprint -f` like the command reference: it re-applies the installed version's seed from any catalog (recovery), and edited seed reaches it only from a local catalog. The CI-lane summary in `publishing.md` always refreshes and rolls out with `UpdateBlueprint`. `publishing.md` names the limit of `validateVersion` (a locally deleted file is not detected, so removing a file needs the bump by discipline), and both files (and pitfall row 1 of `octo-app-builder`, which also names the local-catalog path without Pages) say to refresh a shared catalog only after the GitHub Pages deployment of the publish has finished, refreshing again when `ListBlueprints` lacks the version (AB#9174).
+
 ## [0.28.12] — 2026-11-16
 
 ### Changed

@@ -30,6 +30,9 @@ String|Boolean|DateTime|Int|Double|… :
 ```yaml
 $schema: https://schemas.meshmakers.cloud/construction-kit-elements.schema.json
 attributes:
+- id: TicketName
+  description: Display name of the ticket.
+  valueType: String
 - id: TicketSecret
   description: The secret delivered on a successful redeem. Cleared after redemption.
   valueType: String
@@ -239,7 +242,7 @@ blueprints get published.
 
 ```bash
 octo-cli -c ListBlueprints                              # all catalogs
-octo-cli -c InstallBlueprint -b <Name>-<Version>        # -f = force re-apply (upserts seed)
+octo-cli -c InstallBlueprint -b <Name>-<Version>        # -f = re-apply the version's seed (upsert, recovery); edited seed only from a local catalog
 octo-cli -c ListBlueprintInstallations
 octo-cli -c GetBlueprintHistory
 octo-cli -c PreviewBlueprintUpdate -tv <Name>-<Version> [-m Safe|Merge|Full|Migration]

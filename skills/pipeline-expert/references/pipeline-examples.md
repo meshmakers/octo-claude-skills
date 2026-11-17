@@ -232,7 +232,8 @@ transformations:
             readOperations: true
             targetPath: $.key.result
 
-          # Keep only needed fields
+          # Keep only needed fields (SequenceNumber builds the orderItemId
+          # key and ItemNumber in the entity-creation pipeline below)
           - type: Project@1
             clear: true
             fields:
@@ -241,6 +242,8 @@ transformations:
               - path: $.key.result.Header.Material
                 inclusion: true
               - path: $.key.result.Header.SystemStatus
+                inclusion: true
+              - path: $.key.result.Operation.SequenceNumber
                 inclusion: true
               - path: $.key.result.Operation.WorkCenter
                 inclusion: true

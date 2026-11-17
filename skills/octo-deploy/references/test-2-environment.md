@@ -115,9 +115,11 @@ Notes:
 4. **Deploy the deployment site** (live-verified 2026-06-10: nothing rolls out
    while it is `Undeployed`, and deploy triggers fired in that state are silently
    lost): `octo-cli -c DeployDeploymentSite -id 670000000000000000000001 --context
-   <tenant-context>`, then `GetDeploymentSites -j` → `Online`/`Deployed`.
-5. `octo-cli -c DeployWorkload -id 670000000000000000000002` (re-trigger after
-   the deployment site is up), then `octo-cli -c GetAdapters -j` until the Mesh Adapter
+   <tenant-context>`, then `GetDeploymentSites -j --context <tenant-context>` →
+   `Online`/`Deployed`.
+5. `octo-cli -c DeployWorkload -id 670000000000000000000002 --context
+   <tenant-context>` (re-trigger after the deployment site is up), then
+   `octo-cli -c GetAdapters -j --context <tenant-context>` until the Mesh Adapter
    shows Online (~1 min: operator provisions the CommunicationPool CR, then
    Helm-installs the adapter pod `<tenantId>-670…002-…`).
 

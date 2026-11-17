@@ -212,10 +212,13 @@ show the result; the ingress host from `{{domain.default}}` must answer.<!-- dev
 On a local kind cluster `kubectl get pods -n octo` / `kubectl get ingress -n octo` show the
 pod (`<tenant>-<appRtId>-<chart>-…`) and the resolved host.<!-- /developer-machine -->
 
-New image after app changes: push a **new tag**, set it in the seed's `ValuesYaml`,
-`InstallBlueprint -b <id> -f` (or `UpdateBlueprint`) and `DeployWorkload` again — a
-push under the same tag does not restart the pod; `UndeployWorkload` + `DeployWorkload`
-also works. Never restart deployments with kubectl on a shared cluster.<!-- developer-machine -->
+New image after app changes: push a **new tag** and set it in the seed's `ValuesYaml`.
+From a shared catalog that is a content change, so raise the blueprint version,
+publish it, `RefreshBlueprintCatalogs`, `UpdateBlueprint -tv <Name>-<NewVersion>` and
+`DeployWorkload` again (published blueprint versions are immutable; on a local
+catalog `InstallBlueprint -b <id> -f` re-applies the edited seed). A push under the
+same tag does not restart the pod; `UndeployWorkload` + `DeployWorkload` also works.
+Never restart deployments with kubectl on a shared cluster.<!-- developer-machine -->
 On a local kind cluster: rebuild the image, `kind load` both tags, then
 `kubectl rollout restart deploy/<release-name> -n octo` (release name =
 `{tenantId}-{applicationRtId}-<chartname>`).<!-- /developer-machine -->
