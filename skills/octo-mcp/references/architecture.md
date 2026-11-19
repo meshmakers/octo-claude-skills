@@ -118,7 +118,7 @@ src/McpServices/
 │   ├── DynamicToolService.cs / ToolExecutionService.cs             # legacy family-2 discovery/stats
 ├── Routing/
 │   ├── TenantIdRouteConstraint.cs                                   # {tenantId:tenantId}
-│   └── FileTransferController.cs                                    # PUT/GET /file-transfer/{upload,download}/{id}
+│   └── FileTransferController.cs                                    # PUT/GET /file-transfer/{upload,download}, id in X-Transfer-Id
 ├── Resources/                          # [McpServerResourceType] — CkSchemaResources, KnowledgeResources
 └── Tools/                              # ~36 tool classes (181 [McpServerTool] methods)
 tests/McpServices.Tests/

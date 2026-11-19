@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Changed
+
+- **`octo-mcp`** — section *File-Transfer Architecture* describes the hardened channel of octo-mcp-service (AB#9374, Bug AB#6988): routes `/file-transfer/upload` and `/file-transfer/download` with the id in the `X-Transfer-Id` header (old routes with the id in the path answer 404), the one-time transfer key of the tool result (`transferKey`, `transferKeyHeader` `X-Transfer-Key`, `transferKeyExpiresAtUtc`; `Mcp:FileTransferKeyLifetime` 5 min default, at most 10; once; bound to creator, tenant, transfer and direction) or the creator's bearer token, 401 with one identical body for every key failure, a new tool call after a failed transfer, `FileTransferHandout` as the only way to hand out a transfer, and a curl example with placeholders. The pointer moved from `CLAUDE.md` to `docs/file-transfer.md`. `references/architecture.md` names the new routes.
+
 ## [0.28.14] — 2026-11-17
 
 ### Changed

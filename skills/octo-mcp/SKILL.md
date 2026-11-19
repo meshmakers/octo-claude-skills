@@ -202,21 +202,32 @@ public class MyToolsTests : ToolTestBase
 
 ## File-Transfer Architecture
 
-Binary payloads do **not** go through tool parameters — a separate HTTP channel does. The JSON-RPC tool call coordinates an opaque transfer id; bytes flow through `FileTransferController` at `/file-transfer/{upload,download}/{id}`.
+Binary payloads do **not** go through tool parameters — a separate HTTP channel does. The JSON-RPC tool call hands out an opaque transfer id plus a one-time transfer key; bytes flow through `FileTransferController` (`src/McpServices/Routing/`) at `/file-transfer/upload` and `/file-transfer/download`. The id travels only in the `X-Transfer-Id` header — never in the path or query (the old `/file-transfer/{upload,download}/{id}` routes answer 404).
 
-- `IFileTransferStore` / `FileTransferStore` — disk-backed buffers under `Path.GetTempPath()/octo-mcp-file-transfer/<random>/`; ids are random 128-bit GUIDs that expire in 30 min.
+- `IFileTransferStore` / `FileTransferStore` — disk-backed buffers under `Path.GetTempPath()/octo-mcp-file-transfer/<random>/`; ids are random 128-bit GUIDs that expire in 30 min. Keeps only the SHA-256 hash of each live key.
+- `FileTransferHandout` — the one way a tool hands out a transfer: `ReserveUpload` / `RegisterDownload` register it for the caller (`McpSessionContext.GetFileTransferOwner(server)`) and issue its key. A new tool that creates a transfer goes through it, never through the store directly.
 - `FileTransferSweeper` — `BackgroundService` purging expired entries every 5 min.
-- `FileTransferController` — `PUT .../upload/{id}` (5 GiB cap, streaming) and `GET .../download/{id}` (range support).
+- `FileTransferController` — `PUT /file-transfer/upload` (5 GiB cap, streaming, `Content-Type` header required) and `GET /file-transfer/download` (range support, single-use).
+
+**Request authentication — id plus key or token:**
+
+- **One-time key** — every transfer-creating tool returns `transferKey`, `transferKeyHeader` (`X-Transfer-Key`) and `transferKeyExpiresAtUtc`. Lifetime `Mcp:FileTransferKeyLifetime` (default 5 min, > 0 and at most 10 min, validated at start, never longer than the transfer). Works **once**, bound to creator principal, tenant, transfer and direction (an upload key does not open a download).
+- **Or the creator's bearer token** (`Authorization: Bearer <token>`, transport policy checked in the service). Another principal or tenant gets **404**, like an unknown id. The token also works after the key expired or was used (resume of an aborted download).
+- **Every key failure gets 401 with one identical body** (missing, wrong, expired, used, foreign, wrong direction, foreign token). Never add a distinguishing error.
+- **A failed transfer needs a new tool call**: an accepted key stays spent even if the PUT/GET then fails; a failed PUT also ends the reservation.
+- Never put id or key into a URL, log, span or error body; the tool `Message` names the header, never the key. Examples use placeholders only.
 
 Upload-then-import flow (URL built from `McpServiceOptions.PublicUrl`, default `https://localhost:5017`):
 
 ```
-prepare_file_upload(fileName) → { transferId, uploadUrlPath }
-HTTP PUT to <publicUrl>/file-transfer/upload/{transferId}
-import_ck_model(transferId, tenantId) → store.GetUpload(transferId, McpSessionContext.GetCallerLabel(server)) gives the disk path (only for the session that reserved the upload; a foreign id answers like an unknown id) → SDK import → store.DeleteUpload
+prepare_file_upload(fileName) → { transferId, uploadUrlPath: "/file-transfer/upload", transferIdHeader: "X-Transfer-Id",
+                                  transferKey, transferKeyHeader: "X-Transfer-Key", transferKeyExpiresAtUtc }
+curl -X PUT "<publicUrl>/file-transfer/upload" -H "X-Transfer-Id: <transferId>" -H "X-Transfer-Key: <transferKey>" \
+     -H "Content-Type: application/octet-stream" --data-binary @model.yaml
+import_ck_model(transferId, tenantId) → store.GetUpload(transferId, McpSessionContext.GetFileTransferOwner(server)) gives the disk path (only for the owner that reserved the upload; a foreign id answers like an unknown id) → SDK import → store.DeleteUpload
 ```
 
-Export-then-download mirrors it: `export_runtime_model_by_query` runs an asset job, downloads to a temp file, `store.RegisterDownload(...)`, returns a `downloadUrlPath`; the download is single-use (deleted after the first complete GET). Details: `octo-mcp-service/CLAUDE.md`, section *File I/O Architecture → Security* (AB#6989).
+Export-then-download mirrors it: `export_runtime_model_by_query` runs an asset job, downloads to a temp file, `FileTransferHandout.RegisterDownload(...)`, returns `downloadUrlPath` (`/file-transfer/download`) with the same id/key fields; the client GETs with `X-Transfer-Id` + `X-Transfer-Key` (or the bearer token); the download is single-use (deleted after the first complete GET). Details, invariant and abuse-case tests: `octo-mcp-service/docs/file-transfer.md` (section *Security*) and the README section *File I/O Flow*.
 
 **CRITICAL: do NOT add base64-in-tool-parameter as an alternative.** The file-transfer endpoints are the only sanctioned mechanism — base64 in JSON-RPC blows up token budgets and memory.
 
