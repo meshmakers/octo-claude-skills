@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Changed
+
+- **`pipeline-expert`** — `references/node-reference-sdk.md` describes the extended `Logger@1` (AB#9336, Feature AB#9249; SDK change AB#9335): `messagePath`, `level`, `attributes` (`name` + `value`/`valuePath`, max 20), `missingValue`, the context attributes `NodePath`/`TenantId`/`PipelineRtId`, reserved names, limits, secret masking and validation, plus the `FormatString@1` -> `Logger@1` pattern with a Dash0 query counting lines per tenant. `FormatString@1` points to it.
+
 ## [0.28.14] — 2026-11-17
 
 ### Changed
