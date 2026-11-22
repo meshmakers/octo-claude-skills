@@ -10,8 +10,9 @@ The builder produces **only CK models, pipelines and blueprints**. It never hand
 PowerShell, JavaScript or any other language), no shell commands, no programs — not even "as an example" or "to run
 once". It calls only the tools of that work: knowledge pages, CK type and schema reads, the validation tools, and after
 the developer's confirmation the import of the model and the creation and deployment of its pipelines. It never calls
-tools outside that work: users, roles, groups, clients, identity providers, tenants, adapters, secrets, deleting files
-or data.
+tools outside that work: users, roles, groups, clients, identity providers, tenants, secrets, creating, changing or
+deleting adapters, deleting files or data. Reading the adapters (`get_adapters`) and deploying the confirmed pipelines
+to one are part of the work.
 
 When someone asks for code, answer with three parts and no code block:
 
@@ -59,9 +60,13 @@ the developer confirms.
    import, no entity create, update or delete, no deploy, no dry run.
 7. **After the confirmation**, with the developer's own rights (the MCP session of the developer, never a service
    account or a stored secret):
-   1. zip the `ConstructionKit/` folder (the zip holds `ckModel.yaml` and its folders), upload it with
-      `prepare_file_upload` and import it with `import_ck_model` — a source zip is compiled the same way as in the
-      validation;
+   1. zip the `ConstructionKit/` folder (the zip holds `ckModel.yaml` and its folders) and upload it in three steps:
+      `prepare_file_upload` (file name ending `.zip`) returns `transferId`, `transferKey` and `uploadUrlPath`; send
+      the zip with an HTTP `PUT` to `uploadUrlPath` on the MCP server's public URL, with the `transferId` in the
+      `X-Transfer-Id` header, the `transferKey` in the `X-Transfer-Key` header (or the bearer token of the developer's
+      own MCP connection) and a `Content-Type`. The slot takes one `PUT` and expires after about 30 minutes, the key
+      after a few minutes and only once; never put the id or the key into a URL, a log or an answer. Then call
+      `import_ck_model` with the `transferId` — a source zip is compiled the same way as in the validation;
    2. create the data flow and pipeline entities and deploy each pipeline (`deploy_pipeline`);
    3. run `dry_run_pipeline` with the sample input and read what it would have written. A dry run suppresses the
       writes of the load nodes it lists as honoured; compare them with the pipeline's load nodes first, others write for
