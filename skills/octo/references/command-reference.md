@@ -900,14 +900,15 @@ octo-cli -c GetTenants
 #### Create
 Creates a new tenant and automatically provisions the current user as admin.
 ```
-octo-cli -c Create -tid <tenantId> -db <database> [-np] [--scratch]
+octo-cli -c Create -tid <tenantId> [-db <database>] [-np] [--scratch] [--blueprint <Name>-<version>]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-tid` | `tenantId` | Tenant ID | Yes |
-| `-db` | `database` | Database name | Yes |
+| `-db` | `database` | Database name; without it the service names the database after the tenant id (with the instance's tenant-database prefix, if configured). Older services require it | No |
 | `-np` | `no-provision` | Skip admin provisioning of the current user (flag, no value) | No |
 | `-sc` | `scratch` | Scratch tenant: the client-credentials client of the parent that runs the command becomes administrator (`TenantOwners`) of the new tenant; skips user provisioning. HTTP 403 for a user token or without `TenantManagement`; the client must be flagged `-apic` | No |
+| `-b` | `blueprint` | Catalog blueprint applied while the tenant is created (`<Name>-<version>`, ids from `ListBlueprints`). One transaction: an unknown or failing blueprint ends the command with exit `-3` and the service's message ("Blueprint application failed: ..."), no tenant is left behind and no user is provisioned. Combines with `-db`, `--scratch`, `-np`; needs octo-cli with this option (SDK `IAssetServicesClient.CreateTenantAsync(child, db, scratch, blueprintId)`) | No |
 
 #### Clean
 Resets tenant to factory defaults by deleting CK and RT model.

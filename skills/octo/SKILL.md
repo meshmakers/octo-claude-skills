@@ -138,7 +138,7 @@ Command-name + one-line purpose + safety type only. **For full flag detail, read
 | Command | Purpose | Type |
 |---|---|---|
 | `GetTenants` | List all child tenants | Read-only |
-| `Create` | Create a new tenant + provision current user (`-tid`, `-db`, `-np` to skip; `--scratch` for agents: the client-credentials caller becomes the tenant's administrator, no user provisioning) | Mutating |
+| `Create` | Create a new tenant + provision current user (`-tid`, `-db`, `-np` to skip; `--scratch` for agents: the client-credentials caller becomes the tenant's administrator, no user provisioning; `--blueprint <Name>-<version>` applies a catalog blueprint in the same transaction, a failing blueprint leaves no tenant) | Mutating |
 | `Clean` | Reset tenant to factory defaults (deletes CK + RT model) | Destructive |
 | `Attach` | Attach an existing database to a tenant | Mutating |
 | `Delete` | Delete a tenant | Destructive |
