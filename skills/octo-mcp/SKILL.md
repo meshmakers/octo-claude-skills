@@ -200,6 +200,37 @@ public class MyToolsTests : ToolTestBase
 
 **CI runs the suite in `Release`** (not `DebugL`) against published NuGet packages. When you suspect a config-sensitive break, mirror it locally with `dotnet test Octo.McpServices.sln -c Release`. Real-service tests go in a separate `*SystemTests` project (the CI glob excludes `*SystemTests.csproj`).
 
+## Generic CK Method Tool — `invoke_ck_method`
+
+`invoke_ck_method(ckTypeId, methodId, rtId?, parameters?, idempotencyKey?, tenantId?)` (`Tools/CkMethodTools.cs`) calls one
+method of a CK type that has no dedicated tool, typically an app method such as a booking. It is a Family-1 tool: one
+GraphQL method mutation on the tenant's asset repository (`runtime.<type>s.<method>`), sent with the caller's own
+tenant-aware token through `IOctoServiceClientFactory.CreateTenantClient` and an SDK `CkMethodClientBase`. The asset
+repository's method gateway authorizes the call (method roles, `allowSelf`, scopes, target, parameter validation) exactly as
+for a GraphQL caller.
+
+- **Invariant:** never more than the same caller could do with one GraphQL method call on the same tenant — no engine,
+  dispatcher or bus access, no service identity, no retry with another token. Narrower than GraphQL is allowed, wider never.
+- **Document:** built like the generated SDK method clients (`MethodClientCodeGenerator`); every name comes from the resolved
+  CK definition and is checked against the GraphQL name pattern, while `rtId`, the parameters (one JSON object, at most
+  256 KiB) and the idempotency key go only into the variables.
+- **Refused before any call** (decided from the resolved definition, fail closed): methods of System models (model name of
+  the concrete or declaring type starts with `System`, any case, also when inherited — they have dedicated tools with their
+  own risk class and confirm gate), knowledge page types and types derived from them (only the knowledge tools write
+  them), methods with a `sensitive` result or parameter, abstract or unknown types and methods, a missing or superfluous
+  `rtId`, malformed or oversized parameters.
+- **Result:** success → `invocationId` plus `result` (raw JSON) or the `operation` handle of an asynchronous method (no MCP
+  tool reads operation results yet; read them through GraphQL). A refusal
+  of the server → `methodError` with `code`, `parameters` and `details` exactly as in the GraphQL error's `extensions`, plus
+  `declared` (the method lists the code in its `errors`). So an agent sees the same declared code as a GraphQL caller.
+- **`CONCURRENT_CHANGE`** is the recommended code a method declares when its conditional write lost against a concurrent
+  call (e.g. a slot booked twice: unique index plus `ApplyChanges@2` with `onDuplicateKey: Report`). It is a declared method
+  code, not a platform constant.
+- **Risk:** `[McpRisk(Medium)]`, the class of the generic CRUD write tools. Tests (`CkMethodToolsTests`) compare the declared
+  code with the GraphQL wire answer of the same refused call and cover one abuse case each (other tenant, method without
+  rights, undeclared method, oversized and malformed parameters, injection, System methods, sensitive result,
+  unauthenticated, undeclared codes). Details: `octo-mcp-service/docs/ck-method-clients.md`.
+
 ## File-Transfer Architecture
 
 Binary payloads do **not** go through tool parameters — a separate HTTP channel does. The JSON-RPC tool call hands out an opaque transfer id plus a one-time transfer key; bytes flow through `FileTransferController` (`src/McpServices/Routing/`) at `/file-transfer/upload` and `/file-transfer/download`. The id travels only in the `X-Transfer-Id` header — never in the path or query (the old `/file-transfer/{upload,download}/{id}` routes answer 404).
