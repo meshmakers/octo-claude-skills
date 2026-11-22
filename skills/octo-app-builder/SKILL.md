@@ -69,6 +69,11 @@ Work in a dedicated repo folder: `ck/ConstructionKit/`, `blueprint/<Name>/<versi
 `app/`, `test/`. The blueprint seed is the single source of truth; anything used
 for iteration is scratch.
 
+Building from a short brief? Draft the CK model and pipelines, validate and fix them
+(at most 3 iterations) and propose only green drafts; nothing is written before the
+developer confirms. Never hand out scripts or shell commands instead of a model:
+[references/draft-and-validate.md](references/draft-and-validate.md).
+
 ### 1. CK model → CK catalog
 
 Author a minimal model (one folder, three files — full syntax in
@@ -242,3 +247,5 @@ under `LoadedCkModels`, no warnings. A silent no-op with `WasSkipped` means the
   pipeline YAML for create/list/conditional-update APIs, response shaping, debugging.
 - [references/app-workload.md](references/app-workload.md) — Application entity,
   property-walker chart contract, proxy server pattern, image + deploy loop.
+- [references/draft-and-validate.md](references/draft-and-validate.md) — mandate
+  (models and pipelines, never free code), the generate-and-validate loop, confirm before import.

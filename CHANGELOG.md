@@ -2,6 +2,16 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added
+
+- **`octo-app-builder`** — new `references/draft-and-validate.md` (AB#8493, AB#8494, Feature AB#8451): the builder's mandate (only CK models, pipelines and blueprints; never scripts, shell commands or programs, never tools outside that work; a request for code gets a refusal, the reason "model over code" and a model-based alternative such as a CSV import or clean-up pipeline) and the generate-and-validate loop: plan, draft, validate in the order `validate_ck_model` → `validate_pipeline_definition` → `dry_run_pipeline`, fix from the error text with at most 3 iterations, report a draft that still fails (artefact, tool, errors, never imported), propose only green drafts and write nothing before the developer confirms; after the confirmation import the zipped source `ConstructionKit/` folder with `import_ck_model`, deploy, then dry-run the deployed pipeline, all with the developer's own rights. `SKILL.md` points to it from the build sequence and the references. The file becomes a knowledge page of System.Ai.Builder (octo-ai-services page plan).
+
+### Changed
+
+- **`pipeline-expert`** — § *Pipeline Validation*: `dry_run_pipeline` runs only a deployed pipeline (with a sample input); fix a draft from the error text (node path and message); drafting a whole app from a brief follows the app builder's draft loop (AB#8493).
+
 ## [0.28.14] — 2026-11-17
 
 ### Changed
