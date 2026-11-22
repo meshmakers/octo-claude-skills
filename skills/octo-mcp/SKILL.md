@@ -200,23 +200,65 @@ public class MyToolsTests : ToolTestBase
 
 **CI runs the suite in `Release`** (not `DebugL`) against published NuGet packages. When you suspect a config-sensitive break, mirror it locally with `dotnet test Octo.McpServices.sln -c Release`. Real-service tests go in a separate `*SystemTests` project (the CI glob excludes `*SystemTests.csproj`).
 
+## Generic CK Method Tool — `invoke_ck_method`
+
+`invoke_ck_method(ckTypeId, methodId, rtId?, parameters?, idempotencyKey?, tenantId?)` (`Tools/CkMethodTools.cs`) calls one
+method of a CK type that has no dedicated tool, typically an app method such as a booking. It is a Family-1 tool: one
+GraphQL method mutation on the tenant's asset repository (`runtime.<type>s.<method>`), sent with the caller's own
+tenant-aware token through `IOctoServiceClientFactory.CreateTenantClient` and an SDK `CkMethodClientBase`. The asset
+repository's method gateway authorizes the call (method roles, `allowSelf`, scopes, target, parameter validation) exactly as
+for a GraphQL caller.
+
+- **Invariant:** never more than the same caller could do with one GraphQL method call on the same tenant — no engine,
+  dispatcher or bus access, no service identity, no retry with another token. Narrower than GraphQL is allowed, wider never.
+- **Document:** built like the generated SDK method clients (`MethodClientCodeGenerator`); every name comes from the resolved
+  CK definition and is checked against the GraphQL name pattern, while `rtId`, the parameters (one JSON object, at most
+  256 KiB) and the idempotency key go only into the variables.
+- **Refused before any call** (decided from the resolved definition, fail closed): methods of System models (model name of
+  the concrete or declaring type starts with `System`, any case, also when inherited — they have dedicated tools with their
+  own risk class and confirm gate), knowledge page types and types derived from them (only the knowledge tools write
+  them), methods with a `sensitive` result or parameter, abstract or unknown types and methods, a missing or superfluous
+  `rtId`, malformed or oversized parameters.
+- **Result:** success → `invocationId` plus `result` (raw JSON) or the `operation` handle of an asynchronous method (no MCP
+  tool reads operation results yet; read them through GraphQL). A refusal
+  of the server → `methodError` with `code`, `parameters` and `details` exactly as in the GraphQL error's `extensions`, plus
+  `declared` (the method lists the code in its `errors`). So an agent sees the same declared code as a GraphQL caller.
+- **`CONCURRENT_CHANGE`** is the recommended code a method declares when its conditional write lost against a concurrent
+  call (e.g. a slot booked twice: unique index plus `ApplyChanges@2` with `onDuplicateKey: Report`). It is a declared method
+  code, not a platform constant.
+- **Risk:** `[McpRisk(Medium)]`, the class of the generic CRUD write tools. Tests (`CkMethodToolsTests`) compare the declared
+  code with the GraphQL wire answer of the same refused call and cover one abuse case each (other tenant, method without
+  rights, undeclared method, oversized and malformed parameters, injection, System methods, sensitive result,
+  unauthenticated, undeclared codes). Details: `octo-mcp-service/docs/ck-method-clients.md`.
+
 ## File-Transfer Architecture
 
-Binary payloads do **not** go through tool parameters — a separate HTTP channel does. The JSON-RPC tool call coordinates an opaque transfer id; bytes flow through `FileTransferController` at `/file-transfer/{upload,download}/{id}`.
+Binary payloads do **not** go through tool parameters — a separate HTTP channel does. The JSON-RPC tool call hands out an opaque transfer id plus a one-time transfer key; bytes flow through `FileTransferController` (`src/McpServices/Routing/`) at `/file-transfer/upload` and `/file-transfer/download`. The id travels only in the `X-Transfer-Id` header — never in the path or query (the old `/file-transfer/{upload,download}/{id}` routes answer 404).
 
-- `IFileTransferStore` / `FileTransferStore` — disk-backed buffers under `Path.GetTempPath()/octo-mcp-file-transfer/<random>/`; ids are random 128-bit GUIDs that expire in 30 min.
+- `IFileTransferStore` / `FileTransferStore` — disk-backed buffers under `Path.GetTempPath()/octo-mcp-file-transfer/<random>/`; ids are random 128-bit GUIDs that expire in 30 min. Keeps only the SHA-256 hash of each live key.
+- `FileTransferHandout` — the one way a tool hands out a transfer: `ReserveUpload` / `RegisterDownload` register it for the caller (`McpSessionContext.GetFileTransferOwner(server)`) and issue its key. A new tool that creates a transfer goes through it, never through the store directly.
 - `FileTransferSweeper` — `BackgroundService` purging expired entries every 5 min.
-- `FileTransferController` — `PUT .../upload/{id}` (5 GiB cap, streaming) and `GET .../download/{id}` (range support).
+- `FileTransferController` — `PUT /file-transfer/upload` (5 GiB cap, streaming, `Content-Type` header required) and `GET /file-transfer/download` (range support, single-use).
+
+**Request authentication — id plus key or token:**
+
+- **One-time key** — every transfer-creating tool returns `transferKey`, `transferKeyHeader` (`X-Transfer-Key`) and `transferKeyExpiresAtUtc`. Lifetime `Mcp:FileTransferKeyLifetime` (default 5 min, > 0 and at most 10 min, validated at start, never longer than the transfer). Works **once**, bound to creator principal, tenant, transfer and direction (an upload key does not open a download).
+- **Or the creator's bearer token** (`Authorization: Bearer <token>`, transport policy checked in the service). Another principal or tenant gets **404**, like an unknown id. The token also works after the key expired or was used (resume of an aborted download).
+- **Every key failure gets 401 with one identical body** (missing, wrong, expired, used, foreign, wrong direction, foreign token). Never add a distinguishing error.
+- **A failed transfer needs a new tool call**: an accepted key stays spent even if the PUT/GET then fails; a failed PUT also ends the reservation.
+- Never put id or key into a URL, log, span or error body; the tool `Message` names the header, never the key. Examples use placeholders only.
 
 Upload-then-import flow (URL built from `McpServiceOptions.PublicUrl`, default `https://localhost:5017`):
 
 ```
-prepare_file_upload(fileName) → { transferId, uploadUrlPath }
-HTTP PUT to <publicUrl>/file-transfer/upload/{transferId}
-import_ck_model(transferId, tenantId) → store.GetUpload(transferId, McpSessionContext.GetCallerLabel(server)) gives the disk path (only for the session that reserved the upload; a foreign id answers like an unknown id) → SDK import → store.DeleteUpload
+prepare_file_upload(fileName) → { transferId, uploadUrlPath: "/file-transfer/upload", transferIdHeader: "X-Transfer-Id",
+                                  transferKey, transferKeyHeader: "X-Transfer-Key", transferKeyExpiresAtUtc }
+curl -X PUT "<publicUrl>/file-transfer/upload" -H "X-Transfer-Id: <transferId>" -H "X-Transfer-Key: <transferKey>" \
+     -H "Content-Type: application/octet-stream" --data-binary @model.yaml
+import_ck_model(transferId, tenantId) → store.GetUpload(transferId, McpSessionContext.GetFileTransferOwner(server)) gives the disk path (only for the owner that reserved the upload; a foreign id answers like an unknown id) → SDK import → store.DeleteUpload
 ```
 
-Export-then-download mirrors it: `export_runtime_model_by_query` runs an asset job, downloads to a temp file, `store.RegisterDownload(...)`, returns a `downloadUrlPath`; the download is single-use (deleted after the first complete GET). Details: `octo-mcp-service/CLAUDE.md`, section *File I/O Architecture → Security* (AB#6989).
+Export-then-download mirrors it: `export_runtime_model_by_query` runs an asset job, downloads to a temp file, `FileTransferHandout.RegisterDownload(...)`, returns `downloadUrlPath` (`/file-transfer/download`) with the same id/key fields; the client GETs with `X-Transfer-Id` + `X-Transfer-Key` (or the bearer token); the download is single-use (deleted after the first complete GET). Details, invariant and abuse-case tests: `octo-mcp-service/docs/file-transfer.md` (section *Security*) and the README section *File I/O Flow*.
 
 **CRITICAL: do NOT add base64-in-tool-parameter as an alternative.** The file-transfer endpoints are the only sanctioned mechanism — base64 in JSON-RPC blows up token budgets and memory.
 

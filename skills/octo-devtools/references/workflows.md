@@ -95,24 +95,26 @@ Invoke-BuildAll -configuration DebugL -excludeFrontend $true
 
 ## 5. Pre-release 0.x line (test branch)
 
+> **Not released yet:** Until octo-tools PR #61 (AB#9259) is merged, `New-TestBranch`, `Sync-TestBranch` and `Remove-TestBranch` behave as before: without `-branch` they work on `$rootPath` itself (not on `<parent of rootPath>/0.<n>-<word>`), they cover only the `octo-*` folders, and `New-TestBranch` does not fetch and branches from whatever each repository has checked out. Until then always pass `-branch <line dir>`, put every repository of the line folder on a fresh `main` first (`Invoke-SwitchAllBranches -Name main -branch <line dir>`, `Sync-AllGitRepos -branch <line dir>`, check with `Get-AllGitRepStatus -branch <line dir>`) and branch non-`octo-*` repositories by hand. Check whether #61 is merged before you rely on the behaviour described here.
+
 A pre-release line holds work that is not ready for `main` (e.g. `0.2-dev`, `0.3-demo`). Rules:
 
 - **Branch name** `test/0.<n>-<word>`: `-MinorVersion <n>` (integer 2-999, the major version is always 0) and `-Description <word>` (letters, digits and `_` only; no spaces, no hyphens). `0.2-dev` is `-MinorVersion 2 -Description dev`.
-- **Checkout directory**: each line has its own folder next to the main checkout, e.g. `../dev` for 0.2-dev and `../demo` for 0.3-demo. The cmdlets do not derive the folder from the branch name: `-branch` is a folder joined to `$rootPath` (the folder that holds the `octo-tools` checkout the profile was loaded from); without `-branch` they work on `$rootPath` itself. Example: with the profile loaded from the main checkout's `octo-tools` (`$rootPath` = the main checkout), the 0.2-dev line is `-branch ../dev`; `Invoke-CloneMainRepos -branch ../dev` creates that folder when it is missing.
-- **Branched from main**: the line starts from the main repositories. **Pitfall today:** `New-TestBranch` runs `git checkout -b` on whatever each repository has checked out and does not fetch, so a repository on a feature branch or an old `main` puts that state into the line. Put every repository on a fresh `main` first: clone the folder fresh (`Invoke-CloneMainRepos -branch <line dir>`), or in an existing folder switch every repository to `main` (`Invoke-SwitchAllBranches -Name main -branch <line dir>`) and pull (`Sync-AllGitRepos -branch <line dir>`), then check with `Get-AllGitRepStatus -branch <line dir>`.
-- **Scope**: `New-TestBranch`, `Sync-TestBranch` and `Remove-TestBranch` touch only the `octo-*` folders of the line directory. Repositories with other names (e.g. `mm-*` or app repositories) are branched by hand or with `Invoke-SwitchAllBranches -Name test/0.<n>-<word> -branch <line dir>` (all git repositories of the folder).
+- **Checkout directory**: each line has its own folder next to the main checkout. Without `-branch` the cmdlets use `<parent of rootPath>/0.<n>-<description>` (`$rootPath` is the folder that holds the `octo-tools` checkout the profile was loaded from): with `$rootPath` = `meshmakers/main`, `-MinorVersion 3 -Description demo` is `meshmakers/0.3-demo`; `Invoke-CloneMainRepos -branch ../0.3-demo` creates it. An explicit `-branch` is a folder joined to `$rootPath` and overrides the rule, so existing lines keep their directories (e.g. `-branch ../dev`, `-branch ../demo`).
+- **Branched from fresh main**: `New-TestBranch` runs `git fetch origin` in every repository and branches explicitly from `origin/main`, whatever the repository has checked out. A repository with uncommitted changes to tracked files is not branched: it is listed with its reason (console and `-Json`, `status: Dirty`) and the exit code is non-zero; commit or stash there and run the cmdlet again. A branch that already exists is switched to.
+- **Scope**: `New-TestBranch`, `Sync-TestBranch` and `Remove-TestBranch` cover exactly the repositories of `Invoke-CloneMainRepos` (one shared list, `mm-common` and the other non-`octo-*` repositories included); a repository the line folder does not hold is skipped. Other repositories (e.g. app repositories) are branched by hand or with `Invoke-SwitchAllBranches -Name test/0.<n>-<word> -branch <line dir>`.
 
 ```
-1. Invoke-CloneMainRepos -branch <line dir>                                # e.g. -branch ../dev; existing folder: Invoke-SwitchAllBranches -Name main -branch <line dir>, then Sync-AllGitRepos -branch <line dir>
-2. Get-AllGitRepStatus -branch <line dir>                                  # clean state, all repos on an up-to-date main
-3. New-TestBranch -MinorVersion 3 -Description demo -branch <line dir>     # test/0.3-demo in all octo-* repos, pushed (-NoPush: local only)
+1. Invoke-CloneMainRepos -branch ../0.3-demo                               # the line folder, <parent of rootPath>/0.3-demo
+2. Get-AllGitRepStatus -branch ../0.3-demo                                 # clean state (a dirty repo is not branched)
+3. New-TestBranch -MinorVersion 3 -Description demo                        # test/0.3-demo from origin/main in all repos of Invoke-CloneMainRepos, pushed (-NoPush: local only)
 4. # ... work on the line ...
-5. Sync-TestBranch -MinorVersion 3 -Description demo -branch <line dir>    # merge origin/main into the line; conflicts are listed, not resolved
-6. Compare-BranchStatus -branch <line dir>                                 # what the line holds compared with main
-7. Remove-TestBranch -MinorVersion 3 -Description demo -branch <line dir>  # when the line is merged or abandoned; -LocalOnly keeps origin
+5. Sync-TestBranch -MinorVersion 3 -Description demo                       # merge origin/main into the line; conflicts are listed, not resolved
+6. Compare-BranchStatus -branch ../0.3-demo                                # what the line holds compared with main
+7. Remove-TestBranch -MinorVersion 3 -Description demo                     # when the line is merged or abandoned; -LocalOnly keeps origin
 ```
 
-**Planned (AB#9259, not in the cmdlets yet):** the checkout directory becomes `0.<n>-<description>` (e.g. `0.3-demo`) by default when `-branch` is not given, `New-TestBranch` fetches and branches explicitly from `origin/main`, and the test-branch cmdlets cover all repositories of `Invoke-CloneMainRepos` instead of only `octo-*`. Until that ships, follow the rules above. Existing lines keep their directories (e.g. `dev`, `demo`).
+For an existing line in another folder add `-branch <line dir>` to every call (e.g. `-branch ../dev`).
 
 Is a line active? Ask origin: `git ls-remote --heads origin test/0.<n>-<word>` in a repository (empty output = the line does not exist there). `Get-BranchAvailability -targetBranch test/0.<n>-<word> [-Fetch]` is only a rough overview: it scans the `octo-*`/`mm-*` repositories of `$rootPath` only, reads the local remote-tracking refs (without `-Fetch` they can be old) and does not prune, so a removed line can still show up. Never assume a line's state from memory or from older notes: lines are created, merged into `main` and removed.
 

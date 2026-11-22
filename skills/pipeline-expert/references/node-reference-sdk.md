@@ -430,6 +430,8 @@ Format string with JSONPath placeholders.
   format: "Order {$.key.OrderNumber} has {$.key.ItemCount} items"
   targetPath: $.key.summary
 ```
+To log such a text, pass `targetPath` to `messagePath` of `Logger@1` (pattern under Logger@1 below).
+
 
 ### TransformString@1
 
@@ -725,11 +727,39 @@ Each aggregation item:
 
 ### Logger@1
 
-Log a message.
+Write one log line per execution: static or DataContext message, chosen level, structured attributes (Dash0 can filter, count and group them, e.g. per tenant).
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `message` | string | required | Message to log |
+| `message` | string | - | Static message, logged verbatim (`{0}`, `{name}` are not placeholders). Exactly one of `message`/`messagePath` |
+| `messagePath` | string (JSONPath) | - | Message from the DataContext (e.g. a `FormatString@1` result); non-strings as compact JSON |
+| `level` | enum | Information | Debug, Information, Warning, Error |
+| `attributes` | list | - | At most 20 entries `{ name, value }` or `{ name, valuePath }` (`valuePath` wins); names unique, ignoring case |
+| `missingValue` | string | `<missing>` | Logged for a missing or null message or attribute value |
+
+- Body stays `<nodePath>: <message>` (start the message with a stable marker for queries). Every line carries the attribute `NodePath`; `TenantId` and `PipelineRtId` when the execution's `IEtlContext` resolves (always in the mesh adapter and the SDK adapter host). In the JSON log line each attribute is a top-level field.
+- Reserved attribute names: `TenantId`, `PipelineRtId`, `NodePath`, `timestamp`, `level`, `logger`, `callsite`, `message`, `trace_id`, `span_id`, `exception.type`, `exception.message`, `exception.stacktrace`, names starting with `{`.
+- Missing data never fails the node. Limits: message 2048, attribute value 256 characters (cut text ends with `...[truncated]`). Registered secrets are masked (values, attribute names, JSON property names); other personal data is not, so do not log it.
+- Invalid configuration (none/both of `message`/`messagePath`, more than 20 attributes, missing/duplicate/reserved name, attribute without `value`/`valuePath`, unknown level) fails the execution with `PipelineConfigurationException` naming the node path (callers see it wrapped in `DataPipelineException`).
+- Existing configurations with only `message` keep body and level `Information`; they now also carry the context attributes.
+
+Pattern FormatString@1 -> Logger@1 (per-item warning, counted per tenant):
+
+```yaml
+- type: FormatString@1
+  targetPath: $.logText
+  format: "EDA_SKIPPED metering point {$.meteringPoint} not found, message {$.messageId}"
+- type: Logger@1
+  messagePath: $.logText
+  level: Warning
+  attributes:
+    - name: Reason
+      value: UnknownMeteringPoint
+    - name: MeteringPoint
+      valuePath: $.meteringPoint
+```
+
+Dash0 (D0QL): `SELECT attributes['TenantId'] AS tenant, count() AS lines FROM logs WHERE body LIKE '%: EDA_SKIPPED %' GROUP BY tenant ORDER BY lines DESC`.
 
 ### PrintDebug@1
 

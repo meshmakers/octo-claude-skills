@@ -229,7 +229,7 @@ Pipeline execution output is **only** stored when the pipeline includes `SetPipe
 
 ## Pipeline as a CK method handler (`execution.handler: pipeline`)
 
-A CK method declared `execution.handler: pipeline` is implemented by a pipeline (binding by `rtWellKnownName` = qualified method id, trigger `FromExecutePipelineCommand@1` with `callerBinding: BindingRequired`, input under `$.parameters`/`$.target`/`$.method`, result via `SetPipelineExecutionResult@1`). **Insert rule:** a new entity of a type whose method has `replacesGenericCreate` may be inserted only in the method's own run; every other insert (manual execute, chained pipeline) is refused with `GENERIC_CREATE_REPLACED_BY_METHOD`. For the full contract, error handling, limits and this rule, read `references/method-handler-pipelines.md`. **Attribute access (AB#7768):** pipelines never read or filter on a `Hidden` attribute (extract nodes drop the value, a filter/sort on it fails with `RT_ATTRIBUTE_HIDDEN`), never write `Hidden` or `ReadOnly`, and write a `MethodOnly` attribute only in the method run of the entity's type (`RT_ATTRIBUTE_WRITE_RESTRICTED` otherwise; also in dry runs); details in `references/method-handler-pipelines.md`.
+A CK method declared `execution.handler: pipeline` is implemented by a pipeline (binding by `rtWellKnownName` = qualified method id, trigger `FromExecutePipelineCommand@1` with `callerBinding: BindingRequired`, input under `$.parameters`/`$.target`/`$.method`, result via `SetPipelineExecutionResult@1`). **Insert rule:** a new entity of a type whose method has `replacesGenericCreate` may be inserted only in the method's own run; every other insert (manual execute, chained pipeline) is refused with `GENERIC_CREATE_REPLACED_BY_METHOD`. For the full contract, error handling, limits and this rule, read `references/method-handler-pipelines.md`. **Booking without double booking** (slot key with a `UniqueNotDeleted` index, `ApplyChanges@2` `onDuplicateKey: Report`, declared error `CONCURRENT_CHANGE`): same file, section "Booking a slot without double booking". **Attribute access (AB#7768):** pipelines never read or filter on a `Hidden` attribute (extract nodes drop the value, a filter/sort on it fails with `RT_ATTRIBUTE_HIDDEN`), never write `Hidden` or `ReadOnly`, and write a `MethodOnly` attribute only in the method run of the entity's type (`RT_ATTRIBUTE_WRITE_RESTRICTED` otherwise; also in dry runs); details in `references/method-handler-pipelines.md`.
 
 ## RT Entity Data Structures
 
@@ -387,7 +387,7 @@ Save high-frequency data to both a CrateDB archive and the entity store. `SaveSt
 
 When validating a pipeline YAML (user-written or generated), validate it against the JSON Schema of the adapter that will run it. Every OctoMesh adapter generates its own `pipeline-schema.json`, containing all nodes it supports (SDK nodes + adapter-specific nodes).
 
-**On a tenant:** validate with the MCP tool `validate_pipeline_definition` (and try it with `dry_run_pipeline`), or fetch the schema of the running adapter with `octo-cli -c GetPipelineSchema --adapterId <rtId>` (MCP `get_pipeline_schema`) — it lists exactly the nodes that adapter loaded.
+**On a tenant:** validate with the MCP tool `validate_pipeline_definition` (once deployed, try it with `dry_run_pipeline` and a sample input; it runs only a deployed pipeline), or fetch the schema of the running adapter with `octo-cli -c GetPipelineSchema --adapterId <rtId>` (MCP `get_pipeline_schema`) — it lists exactly the nodes that adapter loaded.
 
 <!-- developer-machine -->**On a developer machine** the build-time schema is the authoritative source. Schema locations (relative to monorepo root):
 
@@ -400,6 +400,8 @@ When validating a pipeline YAML (user-written or generated), validate it against
 **Which schema to use:** Pick the adapter that will execute the pipeline (Mesh Adapter has the richest node set). If it hasn't been built locally, fall back to the node reference docs.<!-- /developer-machine -->
 
 **Validation:** look up each node by its `type` const in `$defs.TriggerNode.oneOf` / `$defs.TransformationNode.oneOf`, then verify all `required` keys are present, every property exists in the node's `properties`, and enum values match. For the extraction commands and fallback rules, read `references/pipeline-schema-guide.md`.
+
+**Fix from the error text:** every finding names the node path (e.g. `/transformations/2`) and what is wrong; change the draft there and validate again. Drafting a whole app from a brief (validation order, at most 3 fix iterations, confirm before deploy): [the app builder's draft loop](../octo-app-builder/references/draft-and-validate.md).
 
 ## Pipeline Creation Workflow
 
