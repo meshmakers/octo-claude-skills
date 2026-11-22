@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added
+
+- **`octo-mcp`** — new section on the generic CK method tool `invoke_ck_method` (AB#9467, Feature AB#9435): one GraphQL method mutation with the caller's own token, so the asset repository's method gateway decides as for a GraphQL caller; refusals return `methodError` with the same `code`/`parameters`/`details` as `extensions` plus `declared`; System model methods, knowledge page types and methods with sensitive results or parameters are refused before any call; risk Medium; no MCP tool reads asynchronous operation results yet. `CONCURRENT_CHANGE` is documented as the recommended declared code for a lost conditional write (not a platform constant).
+
 ## [0.28.14] — 2026-11-17
 
 ### Changed
