@@ -16,7 +16,7 @@ A CK method declared `execution.handler: pipeline` is implemented by a pipeline;
 
 Pattern for an appointment or reservation method that must stay correct when several callers book the same slot at the same time (octo-mesh-adapter AB#9466, spike AB#9465). The unique index is the only check that holds against concurrent calls: a pipeline's own "is the slot free" lookup reads before it writes, so two callers both pass it. Sample: `docs/examples/slot-booking-method.yaml` in octo-mesh-adapter; its integration test `SlotBookingConflictTests` runs that file against MongoDB (12 parallel bookings of one slot: 1 booked, 11 `CONCURRENT_CHANGE`; 10 parallel moves into one slot: 1 success, 9 conflicts; a second adapter replica that holds, commits or rolls back the slot).
 
-**1. Model: a slot key with a unique index, from the type's first version.** The booking type carries a key that names exactly one slot (`<resourceRtId>|<slotStartUtc>`) and a `UniqueNotDeleted` index on it. The method declares `CONCURRENT_CHANGE` in its `errors`.
+**1. Model: a slot key with a unique index, from the type's first version.** The booking type carries a key that names exactly one slot (`<resourceRtId>|<slotStartUtc>`) and a `UniqueNotDeleted` index on it. The method declares `CONCURRENT_CHANGE` in its `errors`. The key must be **canonical**: the index compares strings, so `2026-12-11T09:00:00Z`, `2026-12-11T09:00:00.000Z` and `2026-12-11T10:00:00+01:00` are three keys for one slot and all three bookings would be stored. Require one fixed UTC format aligned to the slot grid and refuse any other input with `METHOD_VALIDATION_FAILED` (parameter `field`): a pipeline does not stop after a branch, so a non-canonical value must never reach the insert. `If@1` has `RegexMatch` but no negated form: set a flag `$.validSlot` = `false` (`SetPrimitiveValue@1`), let an `If@1` with `operator: RegexMatch` set it to `true`, then nest the insert and its two result branches in an `If@1` on `$.validSlot` equal `true` and write the validation error in the complementary `If@1` on `false`.
 
 ```yaml
 # Sample.Booking: attributes/booking.yaml
@@ -103,9 +103,9 @@ What `ApplyChanges@2` writes to `duplicateKeyTargetPath` with `onDuplicateKey: R
 |-----------|------|--------|
 | Write stored | `false` | yes |
 | Unique index refused it (duplicate key) | `true` | no, rolled back |
-| MongoDB WriteConflict (112) with a second adapter replica | retried up to six times (about 0.4-0.8 s), then `false` or `true` as above; a conflict that outlasts the retries is `true` | never a silent success |
+| MongoDB WriteConflict (112) with a second adapter replica | up to six attempts (waits of about 0.4-0.8 s in total), then `false` or `true` as above; a conflict that outlasts the retries is `true` | never a silent success |
 | Engine validation error in the operation result | **not written** (logged as error, rolled back, pipeline continues) | no |
-| Any other exception | pipeline fails (`METHOD_HANDLER_FAILED`) | no |
+| Any other exception | pipeline fails (`METHOD_HANDLER_FAILED`, or `METHOD_OUTCOME_UNKNOWN` for a write the database did not acknowledge) | no, or unknown |
 
 Read only an explicit `false` as "booked": the two `If@1` branches above answer neither when the flag is absent, so the method returns no result and the caller gets `METHOD_HANDLER_FAILED` instead of a false success. Without Report (default `Throw`) the duplicate fails the pipeline and the caller sees `METHOD_HANDLER_FAILED`, not the declared conflict.
 
@@ -114,7 +114,7 @@ Read only an explicit `false` as "booked": the two `If@1` branches above answer 
 **4. How a caller handles the conflict.**
 
 - **GraphQL:** the method is the mutation `runtime { sampleBookingSlotBookings { book(input: { resourceRtId: "…", slotStartUtc: "…", bookedBy: "…" }) { invocationId result } } }` (type field = model and type in camelCase plus `s`; static method: no `rtId`). A conflict is one GraphQL error with `extensions.code = "CONCURRENT_CHANGE"` and `extensions.parameters.reason = "slot-taken"`; the field data is `null`. Show "slot no longer available", reload the free slots and let the user pick another; do not retry the same slot.
-- **MCP `invoke_ck_method`** (octo-mcp-service, AB#9467): `ckTypeId` `Sample.Booking/SlotBooking`, `methodId` `Book` (or `Book-1`), no `rtId` for the static method, `parameters` as one JSON object (`{"resourceRtId": "…", "slotStartUtc": "…", "bookedBy": "…"}`), optional `idempotencyKey`. It calls the same GraphQL mutation with the caller's token. A conflict comes back with `isSuccess: false` and `methodError` `{ code: "CONCURRENT_CHANGE", declared: true, parameters: { reason: "slot-taken" } }`; `declared: false` marks platform codes such as `METHOD_FORBIDDEN`. An agent treats `declared: true` + `CONCURRENT_CHANGE` as "pick another slot", never as a fault to retry.
+- **MCP `invoke_ck_method`** (octo-mcp-service, AB#9467): `ckTypeId` `Sample.Booking/SlotBooking`, `methodId` `Book-1` exactly as the type declares it (or the qualified `Sample.Booking/SlotBooking.Book-1`; the tool does not strip the version, so `Book` is refused), no `rtId` for the static method, `parameters` as one JSON object (`{"resourceRtId": "…", "slotStartUtc": "…", "bookedBy": "…"}`), optional `idempotencyKey`. It calls the same GraphQL mutation with the caller's token. A conflict comes back with `isSuccess: false` and `methodError` `{ code: "CONCURRENT_CHANGE", declared: true, parameters: { reason: "slot-taken" } }`; `declared: false` marks platform codes such as `METHOD_FORBIDDEN`. An agent treats `declared: true` + `CONCURRENT_CHANGE` as "pick another slot", never as a fault to retry.
 - An `idempotencyKey` makes a repeated call of the same caller with the same parameters return the first answer (for example after a network error), it does not replace the unique index.
 
 **Limits of the pattern.**
