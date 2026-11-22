@@ -95,6 +95,8 @@ Invoke-BuildAll -configuration DebugL -excludeFrontend $true
 
 ## 5. Pre-release 0.x line (test branch)
 
+> **Not released yet:** Until octo-tools PR #61 (AB#9259) is merged, `New-TestBranch`, `Sync-TestBranch` and `Remove-TestBranch` behave as before: without `-branch` they work on `$rootPath` itself (not on `<parent of rootPath>/0.<n>-<word>`), they cover only the `octo-*` folders, and `New-TestBranch` does not fetch and branches from whatever each repository has checked out. Until then always pass `-branch <line dir>`, put every repository of the line folder on a fresh `main` first (`Invoke-SwitchAllBranches -Name main -branch <line dir>`, `Sync-AllGitRepos -branch <line dir>`, check with `Get-AllGitRepStatus -branch <line dir>`) and branch non-`octo-*` repositories by hand. Check whether #61 is merged before you rely on the behaviour described here.
+
 A pre-release line holds work that is not ready for `main` (e.g. `0.2-dev`, `0.3-demo`). Rules:
 
 - **Branch name** `test/0.<n>-<word>`: `-MinorVersion <n>` (integer 2-999, the major version is always 0) and `-Description <word>` (letters, digits and `_` only; no spaces, no hyphens). `0.2-dev` is `-MinorVersion 2 -Description dev`.
