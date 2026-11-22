@@ -7,6 +7,7 @@ All notable changes to the octo-claude-skills plugin. Format loosely follows [Ke
 ### Changed
 
 - **`octo-devtools`** — pre-release 0.x lines follow the octo-tools rule of AB#9259: without `-branch`, `New-TestBranch`, `Sync-TestBranch` and `Remove-TestBranch` use the directory `<parent of rootPath>/0.<n>-<description>` (e.g. `meshmakers/0.3-demo`, created with `Invoke-CloneMainRepos -branch ../0.3-demo`); an explicit `-branch` still names the folder (existing lines such as `dev`, `demo`). `New-TestBranch` fetches and branches explicitly from `origin/main`, lists a repository with uncommitted changes with its reason instead of branching it and exits non-zero. All three cover the repositories of `Invoke-CloneMainRepos` (`mm-common` included). `SKILL.md`, `references/workflows.md` section 5 and `references/command-reference.md` describe only this behaviour.
+- **`pipeline-expert`** — `references/node-reference-sdk.md` describes the extended `Logger@1` (AB#9336, Feature AB#9249; SDK change AB#9335): `messagePath`, `level`, `attributes` (`name` + `value`/`valuePath`, max 20), `missingValue`, the context attributes `NodePath`/`TenantId`/`PipelineRtId`, reserved names, limits, secret masking and validation, plus the `FormatString@1` -> `Logger@1` pattern with a Dash0 query counting lines per tenant. `FormatString@1` points to it.
 
 ## [0.28.14] — 2026-11-17
 
