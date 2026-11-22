@@ -387,7 +387,7 @@ Save high-frequency data to both a CrateDB archive and the entity store. `SaveSt
 
 When validating a pipeline YAML (user-written or generated), validate it against the JSON Schema of the adapter that will run it. Every OctoMesh adapter generates its own `pipeline-schema.json`, containing all nodes it supports (SDK nodes + adapter-specific nodes).
 
-**On a tenant:** validate with the MCP tool `validate_pipeline_definition` (and try it with `dry_run_pipeline`), or fetch the schema of the running adapter with `octo-cli -c GetPipelineSchema --adapterId <rtId>` (MCP `get_pipeline_schema`) — it lists exactly the nodes that adapter loaded.
+**On a tenant:** validate with the MCP tool `validate_pipeline_definition` (once deployed, try it with `dry_run_pipeline` and a sample input; it runs only a deployed pipeline), or fetch the schema of the running adapter with `octo-cli -c GetPipelineSchema --adapterId <rtId>` (MCP `get_pipeline_schema`) — it lists exactly the nodes that adapter loaded.
 
 <!-- developer-machine -->**On a developer machine** the build-time schema is the authoritative source. Schema locations (relative to monorepo root):
 
@@ -400,6 +400,8 @@ When validating a pipeline YAML (user-written or generated), validate it against
 **Which schema to use:** Pick the adapter that will execute the pipeline (Mesh Adapter has the richest node set). If it hasn't been built locally, fall back to the node reference docs.<!-- /developer-machine -->
 
 **Validation:** look up each node by its `type` const in `$defs.TriggerNode.oneOf` / `$defs.TransformationNode.oneOf`, then verify all `required` keys are present, every property exists in the node's `properties`, and enum values match. For the extraction commands and fallback rules, read `references/pipeline-schema-guide.md`.
+
+**Fix from the error text:** every finding names the node path (e.g. `/transformations/2`) and what is wrong; change the draft there and validate again. Drafting a whole app from a brief (validation order, at most 3 fix iterations, confirm before deploy): [the app builder's draft loop](../octo-app-builder/references/draft-and-validate.md).
 
 ## Pipeline Creation Workflow
 

@@ -15,6 +15,13 @@ All notable changes to the octo-claude-skills plugin. Format loosely follows [Ke
 ### Added
 
 - **`pipeline-expert`** — `references/method-handler-pipelines.md` gains the section "Booking a slot without double booking" (AB#9468, Feature AB#9435): slot key with a `UniqueNotDeleted` index declared from the type's first version, booking as insert and move as update of the key, `ApplyChanges@2` with `onDuplicateKey: Report` (flag table incl. the WriteConflict retry of AB#9466 and the validation case that writes no flag), two `If@1` branches and `SetPipelineExecutionResult@1` returning the declared `CONCURRENT_CHANGE`, how a caller handles it over GraphQL and over the MCP tool `invoke_ck_method` (AB#9467), and the limits (cancel must delete = archive, capacity above 1 or variable durations need one claim entity per slot unit in the same batch, a unique index added to a type with data is a Major change, AB#5347). The example is the one octo-mesh-adapter's `SlotBookingConflictTests` runs (`docs/examples/slot-booking-method.yaml`). New `##` heading: the System.Ai.Builder page plan must place it in the next sync.
+### Added
+
+- **`octo-app-builder`** — new `references/draft-and-validate.md` (AB#8493, AB#8494, Feature AB#8451): the builder's mandate (only CK models, pipelines and blueprints; never scripts, shell commands or programs, never tools outside that work; a request for code gets a refusal, the reason "model over code" and a model-based alternative such as a CSV import or clean-up pipeline) and the generate-and-validate loop: plan, draft, validate in the order `validate_ck_model` → `validate_pipeline_definition` → `dry_run_pipeline`, fix from the error text with at most 3 iterations, report a draft that still fails (artefact, tool, errors, never imported), propose only green drafts and write nothing before the developer confirms; after the confirmation import the zipped source `ConstructionKit/` folder with `import_ck_model`, deploy, then dry-run the deployed pipeline, all with the developer's own rights. `SKILL.md` points to it from the build sequence and the references. The file becomes a knowledge page of System.Ai.Builder (octo-ai-services page plan).
+
+### Changed
+
+- **`pipeline-expert`** — § *Pipeline Validation*: `dry_run_pipeline` runs only a deployed pipeline (with a sample input); fix a draft from the error text (node path and message); drafting a whole app from a brief follows the app builder's draft loop (AB#8493).
 
 ## [0.28.14] — 2026-11-17
 
