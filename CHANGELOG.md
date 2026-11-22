@@ -12,6 +12,9 @@ All notable changes to the octo-claude-skills plugin. Format loosely follows [Ke
 ### Added
 
 - **`octo-mcp`** — new section on the generic CK method tool `invoke_ck_method` (AB#9467, Feature AB#9435): one GraphQL method mutation with the caller's own token, so the asset repository's method gateway decides as for a GraphQL caller; refusals return `methodError` with the same `code`/`parameters`/`details` as `extensions` plus `declared`; System model methods, knowledge page types and methods with sensitive results or parameters are refused before any call; risk Medium; no MCP tool reads asynchronous operation results yet. `CONCURRENT_CHANGE` is documented as the recommended declared code for a lost conditional write (not a platform constant).
+### Added
+
+- **`pipeline-expert`** — `references/method-handler-pipelines.md` gains the section "Booking a slot without double booking" (AB#9468, Feature AB#9435): slot key with a `UniqueNotDeleted` index declared from the type's first version, booking as insert and move as update of the key, `ApplyChanges@2` with `onDuplicateKey: Report` (flag table incl. the WriteConflict retry of AB#9466 and the validation case that writes no flag), two `If@1` branches and `SetPipelineExecutionResult@1` returning the declared `CONCURRENT_CHANGE`, how a caller handles it over GraphQL and over the MCP tool `invoke_ck_method` (AB#9467), and the limits (cancel must delete = archive, capacity above 1 or variable durations need one claim entity per slot unit in the same batch, a unique index added to a type with data is a Major change, AB#5347). The example is the one octo-mesh-adapter's `SlotBookingConflictTests` runs (`docs/examples/slot-booking-method.yaml`). New `##` heading: the System.Ai.Builder page plan must place it in the next sync.
 
 ## [0.28.14] — 2026-11-17
 
