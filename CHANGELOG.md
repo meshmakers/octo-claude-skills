@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Changed
+
+- **`octo-app-builder`** — `references/draft-and-validate.md` step 7.3: `dry_run_pipeline` returns the execution id and the honoured load nodes; the builder reads what the pipeline would have written with `get_pipeline_debug_points` once the execution has finished. The page names the honoured load nodes of an app (`ApplyChanges@1`/`@2`, `SaveStreamDataInArchive@1`, `SaveTimeRangeStreamDataInArchive@1`, `SendEMail@1`, `SftpUpload@1`, `ToDiscord@1`, `DeployPipeline@1`) and says that every other node acts for real (e.g. `GenerateAndStoreReport@1`, `MakeHttpRequest@1`): such nodes are named in the proposal and dry-run only with the developer's confirmation. The mandate lists the dry run with its debug points among the tools after the confirmation (AB#8493).
+
 ## [0.28.15] — 2026-11-22
 
 ### Changed
