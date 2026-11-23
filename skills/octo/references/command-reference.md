@@ -900,14 +900,15 @@ octo-cli -c GetTenants
 #### Create
 Creates a new tenant and automatically provisions the current user as admin.
 ```
-octo-cli -c Create -tid <tenantId> -db <database> [-np] [--scratch]
+octo-cli -c Create -tid <tenantId> [-db <database>] [-np] [--scratch] [--blueprint <Name>-<version>]
 ```
 | Flag | Long | Description | Required |
 |---|---|---|---|
 | `-tid` | `tenantId` | Tenant ID | Yes |
-| `-db` | `database` | Database name | Yes |
+| `-db` | `database` | Database name; without it the service names the database after the tenant id (with the instance's tenant-database prefix, if configured). Older services require it | No |
 | `-np` | `no-provision` | Skip admin provisioning of the current user (flag, no value) | No |
 | `-sc` | `scratch` | Scratch tenant: the client-credentials client of the parent that runs the command becomes administrator (`TenantOwners`) of the new tenant; skips user provisioning. HTTP 403 for a user token or without `TenantManagement`; the client must be flagged `-apic` | No |
+| `-b` | `blueprint` | Catalog blueprint applied while the tenant is created (`<Name>-<version>`, ids from `ListBlueprints`). One transaction: an unknown or failing blueprint ends the command with exit `-3` and the service's message ("Blueprint application failed: ..."), no tenant is left behind and no user is provisioned. Combines with `-db`, `--scratch`, `-np`; needs octo-cli with this option (SDK `IAssetServicesClient.CreateTenantAsync(child, db, scratch, blueprintId)`) | No |
 
 #### Clean
 Resets tenant to factory defaults by deleting CK and RT model.
@@ -1782,6 +1783,8 @@ octo-cli -c UndeployWorkload -id <rtId> [-y]
 ## AI Services
 
 The AI Adapter is managed per tenant. **`EnableAi` requires the communication controller to be enabled first** (run `EnableCommunication`; the server returns HTTP 409 otherwise), and the active context must have an AI service URL set via `-aisu` on `Config`/`AddContext`<!-- developer-machine --> (local default `https://localhost:5019/`)<!-- /developer-machine -->.
+
+A blueprint whose `ckModelDependencies` list `System.Communication` or `System.Ai` gets Communication (and for `System.Ai` also AI) enabled by the platform on `Create --blueprint` (API `blueprintId`), `InstallBlueprint`, force re-apply and `UpdateBlueprint` — only for that tenant, only when that blueprint version is installed at the time of the event, never for the system tenant, never disabled; CK-to-CK dependencies are not followed (AB#9578). This needs services with AB#9578 (an older asset repository sends no dependencies, and nothing is enabled). After the operation wait a few minutes (AI waits for Communication, up to about 4 minutes, and stays off with a warning if Communication does not come in time), check with `GetTenantFeatures` and enable by hand what is still off. `EnableCommunication` / `EnableAi` also remain for tenants without such a blueprint and after a manual `Disable*`.
 
 #### EnableAi
 Enables the AI Adapter for the current tenant. No arguments.

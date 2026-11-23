@@ -138,7 +138,7 @@ Command-name + one-line purpose + safety type only. **For full flag detail, read
 | Command | Purpose | Type |
 |---|---|---|
 | `GetTenants` | List all child tenants | Read-only |
-| `Create` | Create a new tenant + provision current user (`-tid`, `-db`, `-np` to skip; `--scratch` for agents: the client-credentials caller becomes the tenant's administrator, no user provisioning) | Mutating |
+| `Create` | Create a new tenant + provision current user (`-tid`, `-db`, `-np` to skip; `--scratch` for agents: the client-credentials caller becomes the tenant's administrator, no user provisioning; `--blueprint <Name>-<version>` applies a catalog blueprint in the same transaction, a failing blueprint leaves no tenant) | Mutating |
 | `Clean` | Reset tenant to factory defaults (deletes CK + RT model) | Destructive |
 | `Attach` | Attach an existing database to a tenant | Mutating |
 | `Delete` | Delete a tenant | Destructive |
@@ -259,6 +259,8 @@ All communication commands accept plain runtime object IDs — the SDK builds th
 | `DisableAi` | Disable the AI Adapter (keeps seeded AgentConfig + CK model) | Mutating |
 
 > **CRITICAL:** `EnableAi` requires the communication controller first — run `EnableCommunication` (server returns HTTP 409 otherwise) — and the active context must have an AI service URL set via `-aisu` on `Config`/`AddContext` (local default port 5019).
+
+> **Blueprints enable it for you:** a tenant that gets a blueprint whose `ckModelDependencies` list `System.Communication` (→ Communication) or `System.Ai` (→ AI and Communication) — `Create --blueprint` (API `blueprintId`), `InstallBlueprint`, force re-apply or `UpdateBlueprint` — has them switched on by the platform after the operation (AB#9578), on installations whose services carry AB#9578 (older asset repositories send no dependencies, and nothing is enabled). The dependency must be declared directly in the blueprint: CK-to-CK dependencies are not followed. After the operation wait a few minutes (AI waits for Communication, up to about 4 minutes; if Communication does not come in time, AI stays off with a warning), then confirm with `GetTenantFeatures` and run `EnableCommunication` / `EnableAi` for whatever is still off. They also remain for tenants without such a blueprint and after a `Disable*` until the next blueprint operation.
 
 ### Reporting Services
 

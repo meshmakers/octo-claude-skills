@@ -9,7 +9,8 @@ prove them with the validation tools, and change the tenant only after the devel
 The builder produces **only CK models, pipelines and blueprints**. It never hands out free code — no scripts (Python,
 PowerShell, JavaScript or any other language), no shell commands, no programs — not even "as an example" or "to run
 once". It calls only the tools of that work: knowledge pages, CK type and schema reads, the validation tools, and after
-the developer's confirmation the import of the model and the creation and deployment of its pipelines. It never calls
+the developer's confirmation the import of the model, the creation and deployment of its pipelines and their dry run
+(with its debug points). It never calls
 tools outside that work: users, roles, groups, clients, identity providers, tenants, secrets, creating, changing or
 deleting adapters, deleting files or data. Reading the adapters (`get_adapters`) and deploying the confirmed pipelines
 to one are part of the work.
@@ -56,21 +57,32 @@ the developer confirms.
    as it stands, marked "not imported". A failed draft is never imported, deployed or presented as finished.
 6. **Propose.** Propose only drafts whose validations are all green: the files, the result of each validation, and
    what the confirmation will do (CK model id and version to import, the data flow and pipelines to create, the adapter
-   they deploy to). Then ask the developer to confirm. **Before the confirmation, call no tool that writes**: no
-   import, no entity create, update or delete, no deploy, no dry run.
+   they deploy to, and the nodes outside the honoured load nodes of step 7, which act for real in a dry run). Then ask
+   the developer to confirm. **Before the confirmation, call no tool that writes**: no import, no entity create, update
+   or delete, no deploy, no dry run.
 7. **After the confirmation**, with the developer's own rights (the MCP session of the developer, never a service
    account or a stored secret):
-   1. zip the `ConstructionKit/` folder (the zip holds `ckModel.yaml` and its folders) and upload it in three steps:
-      `prepare_file_upload` (file name ending `.zip`) returns `transferId`, `transferKey` and `uploadUrlPath`; send
-      the zip with an HTTP `PUT` to `uploadUrlPath` on the MCP server's public URL, with the `transferId` in the
-      `X-Transfer-Id` header, the `transferKey` in the `X-Transfer-Key` header (or the bearer token of the developer's
-      own MCP connection) and a `Content-Type`. The slot takes one `PUT` and expires after about 30 minutes, the key
-      after a few minutes and only once; never put the id or the key into a URL, a log or an answer. Then call
-      `import_ck_model` with the `transferId` — a source zip is compiled the same way as in the validation;
+   1. import the CK model with `import_ck_model`, passing the draft the same way as to `validate_ck_model`:
+      **inline by default** — the same `files` (name/content pairs relative to `ConstructionKit/`) that passed the
+      validation. This is the path for an agent without an HTTP client and needs no upload. The source is compiled the
+      same way as in the validation; a compile error fails the call before anything is imported, with
+      `errorCode` `CK_MODEL_COMPILE_FAILED` and the findings in `errors` (file, element path, message): go back to
+      step 4. Inline drafts are limited to 1 MiB of file content and 2000 files (`InlineDraftTooLarge`, message
+      9005). **A larger draft goes through an upload** in three steps: zip the `ConstructionKit/` folder (the zip
+      holds `ckModel.yaml` and its folders); `prepare_file_upload` (file name ending `.zip`) returns `transferId`,
+      `transferKey` and `uploadUrlPath`; send the zip with an HTTP `PUT` to `uploadUrlPath` on the MCP server's public
+      URL, with the `transferId` in the `X-Transfer-Id` header, the `transferKey` in the `X-Transfer-Key` header (or
+      the bearer token of the developer's own MCP connection) and a `Content-Type`. The slot takes one `PUT` and
+      expires after about 30 minutes, the key after a few minutes and only once; never put the id or the key into a
+      URL, a log or an answer. Then call `import_ck_model` with the `transferId` instead of `files`;
    2. create the data flow and pipeline entities and deploy each pipeline (`deploy_pipeline`);
-   3. run `dry_run_pipeline` with the sample input and read what it would have written. A dry run suppresses the
-      writes of the load nodes it lists as honoured; compare them with the pipeline's load nodes first, others write for
-      real.
+   3. run `dry_run_pipeline` with the sample input. It returns the execution id and the honoured load nodes; read what
+      the pipeline would have written with `get_pipeline_debug_points` once the execution has finished. A dry run
+      suppresses only the writes of honoured load nodes — among the nodes of an app `ApplyChanges@1`/`@2`,
+      `SaveStreamDataInArchive@1`, `SaveTimeRangeStreamDataInArchive@1`, `SendEMail@1`, `SftpUpload@1`, `ToDiscord@1`
+      and `DeployPipeline@1`. Every other node acts for real, for example `GenerateAndStoreReport@1` stores its report
+      and `MakeHttpRequest@1` calls the external endpoint: name such nodes in the proposal (step 6) and dry-run a
+      pipeline with them only when the developer confirmed that too.
    A dry-run finding goes through step 4 like any other; a fixed pipeline is deployed again only after the developer
    confirms that change. A call that fails for missing rights stops the loop: report it, never retry with other
    credentials.

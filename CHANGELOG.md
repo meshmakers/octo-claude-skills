@@ -2,6 +2,15 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.28.16] — 2026-11-23
+
+### Changed
+
+- **`octo-app-builder`** — `references/draft-and-validate.md` step 7.3: `dry_run_pipeline` returns the execution id and the honoured load nodes; the builder reads what the pipeline would have written with `get_pipeline_debug_points` once the execution has finished. The page names the honoured load nodes of an app (`ApplyChanges@1`/`@2`, `SaveStreamDataInArchive@1`, `SaveTimeRangeStreamDataInArchive@1`, `SendEMail@1`, `SftpUpload@1`, `ToDiscord@1`, `DeployPipeline@1`) and says that every other node acts for real (e.g. `GenerateAndStoreReport@1`, `MakeHttpRequest@1`): such nodes are named in the proposal and dry-run only with the developer's confirmation. The mandate lists the dry run with its debug points among the tools after the confirmation (AB#8493).
+- **`octo-app-builder`** — `references/draft-and-validate.md` step 7: `import_ck_model` takes the draft inline like `validate_ck_model` (the same `files` that passed the validation; AB#9643, Feature AB#8451), the default for agents without an HTTP client; a compile error returns `CK_MODEL_COMPILE_FAILED` with the findings in `errors` and goes back to the fix step; the zip upload (`prepare_file_upload`, HTTP `PUT`, `transferId`) stays the path for drafts over the inline limit (1 MiB, 2000 files, `InlineDraftTooLarge` / 9005). Needs octo-mcp-service with the inline import.
+- **`octo`** — `Create` gains `--blueprint` (`-b`, AB#9577, Feature AB#6633): a catalog blueprint (`<Name>-<version>`) applied while the tenant is created, in one transaction; an unknown or failing blueprint ends the command with exit `-3` and the service's message and leaves no tenant behind. `SKILL.md` (command table) and `references/command-reference.md` describe it; the reference also marks `-db` as optional (the service derives the name since AB#8797).
+- **`octo`** — `SKILL.md` (AI Services) and `references/command-reference.md` say when `EnableCommunication` / `EnableAi` are still needed (AB#9578, Feature AB#6633): a blueprint whose `ckModelDependencies` list `System.Communication` (Communication) or `System.Ai` (AI and Communication) gets them enabled by the platform on `Create --blueprint` (API `blueprintId`), `InstallBlueprint`, force re-apply and `UpdateBlueprint`, on installations whose services carry AB#9578; after the operation wait a few minutes (AI waits up to about 4 minutes for Communication and stays off with a warning otherwise), confirm with `GetTenantFeatures` and enable by hand what is still off; by hand also for tenants without such a blueprint or after a manual `Disable*`; CK-to-CK dependencies are not followed. `octo-app-builder` step 6 names the nodes that act for real in a dry run in the proposal.
+
 ## [0.28.15] — 2026-11-22
 
 ### Changed
