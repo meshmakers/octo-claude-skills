@@ -260,6 +260,8 @@ All communication commands accept plain runtime object IDs — the SDK builds th
 
 > **CRITICAL:** `EnableAi` requires the communication controller first — run `EnableCommunication` (server returns HTTP 409 otherwise) — and the active context must have an AI service URL set via `-aisu` on `Config`/`AddContext` (local default port 5019).
 
+> **Blueprints enable it for you:** a tenant that gets a blueprint whose `ckModelDependencies` list `System.Communication` (→ Communication) or `System.Ai` (→ AI and Communication) — tenant created with `blueprintId`, `InstallBlueprint`, force re-apply or `UpdateBlueprint` — has them switched on by the platform shortly after the operation (AB#9578). Run `EnableCommunication` / `EnableAi` only for tenants without such a blueprint, or after a `Disable*` until the next blueprint operation. The dependency must be declared directly in the blueprint: CK-to-CK dependencies are not followed. Check with `GetTenantFeatures` before enabling by hand.
+
 ### Reporting Services
 
 | Command | Purpose | Type |

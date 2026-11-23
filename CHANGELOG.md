@@ -7,6 +7,7 @@ All notable changes to the octo-claude-skills plugin. Format loosely follows [Ke
 ### Changed
 
 - **`octo`** — `Create` gains `--blueprint` (`-b`, AB#9577, Feature AB#6633): a catalog blueprint (`<Name>-<version>`) applied while the tenant is created, in one transaction; an unknown or failing blueprint ends the command with exit `-3` and the service's message and leaves no tenant behind. `SKILL.md` (command table) and `references/command-reference.md` describe it; the reference also marks `-db` as optional (the service derives the name since AB#8797).
+- **`octo`** — `SKILL.md` (AI Services) and `references/command-reference.md` say when `EnableCommunication` / `EnableAi` are still needed (AB#9578, Feature AB#6633): a blueprint whose `ckModelDependencies` list `System.Communication` (Communication) or `System.Ai` (AI and Communication) gets them enabled by the platform on tenant create with `blueprintId`, `InstallBlueprint`, force re-apply and `UpdateBlueprint`; by hand only for tenants without such a blueprint or after a manual `Disable*`; CK-to-CK dependencies are not followed.
 
 ## [0.28.15] — 2026-11-22
 

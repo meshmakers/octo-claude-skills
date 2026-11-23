@@ -1784,6 +1784,8 @@ octo-cli -c UndeployWorkload -id <rtId> [-y]
 
 The AI Adapter is managed per tenant. **`EnableAi` requires the communication controller to be enabled first** (run `EnableCommunication`; the server returns HTTP 409 otherwise), and the active context must have an AI service URL set via `-aisu` on `Config`/`AddContext`<!-- developer-machine --> (local default `https://localhost:5019/`)<!-- /developer-machine -->.
 
+A blueprint whose `ckModelDependencies` list `System.Communication` or `System.Ai` gets Communication (and for `System.Ai` also AI) enabled by the platform on tenant create with `blueprintId`, `InstallBlueprint`, force re-apply and `UpdateBlueprint` — only for that tenant, only while that blueprint version is installed, never for the system tenant, never disabled; CK-to-CK dependencies are not followed (AB#9578). `EnableCommunication` / `EnableAi` remain for tenants without such a blueprint and after a manual `Disable*`.
+
 #### EnableAi
 Enables the AI Adapter for the current tenant. No arguments.
 ```
