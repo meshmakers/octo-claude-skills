@@ -57,8 +57,9 @@ the developer confirms.
    as it stands, marked "not imported". A failed draft is never imported, deployed or presented as finished.
 6. **Propose.** Propose only drafts whose validations are all green: the files, the result of each validation, and
    what the confirmation will do (CK model id and version to import, the data flow and pipelines to create, the adapter
-   they deploy to). Then ask the developer to confirm. **Before the confirmation, call no tool that writes**: no
-   import, no entity create, update or delete, no deploy, no dry run.
+   they deploy to, and the nodes outside the honoured load nodes of step 7, which act for real in a dry run). Then ask
+   the developer to confirm. **Before the confirmation, call no tool that writes**: no import, no entity create, update
+   or delete, no deploy, no dry run.
 7. **After the confirmation**, with the developer's own rights (the MCP session of the developer, never a service
    account or a stored secret):
    1. import the CK model with `import_ck_model`, passing the draft the same way as to `validate_ck_model`:
