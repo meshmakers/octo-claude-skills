@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added
+
+- **`pipeline-expert`** — `DetectStreamDataGaps@1` (Mesh Adapter, AB#9590, Feature AB#9586) in the Extract table of `SKILL.md` and as a short section in `references/node-reference-mesh.md`: missing ranges and slot counts per series of one windowed archive over `[from, to)`, no row limit, the offset of `from`/`to` as day boundary, optional validity periods. The section points to the documentation page `DetectStreamDataGaps@1` for the full contract instead of copying it.
+
 ## [0.28.16] — 2026-11-23
 
 ### Changed

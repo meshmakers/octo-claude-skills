@@ -181,6 +181,7 @@ This is an operational overview of the **most-used** nodes. The full property ta
 | `GetNotificationTemplate@1` | Load notification template (subject + body) |
 | `RevealSecret@1` (Mesh) | Plaintext of a `Secret` attribute into the data context (masked in logs/debug); refused for the platform-only `System.Communication/SecretDefault` |
 | `BackfillFromRtEntity@1` | Backfill missing attributes from MongoDB using a CkArchive's column spec (replaces removed `EnrichWithMongoData@1`); sits before `SaveStreamDataInArchive@1` |
+| `DetectStreamDataGaps@1` (Mesh) | Missing ranges + missing slot count per series of one windowed archive over `[from, to)`, no row limit, optional validity periods per series; see `node-reference-mesh.md` |
 
 ### Transform
 
