@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Changed
+
+- **`octo`** — `Create` gains `--blueprint` (`-b`, AB#9577, Feature AB#6633): a catalog blueprint (`<Name>-<version>`) applied while the tenant is created, in one transaction; an unknown or failing blueprint ends the command with exit `-3` and the service's message and leaves no tenant behind. `SKILL.md` (command table) and `references/command-reference.md` describe it; the reference also marks `-db` as optional (the service derives the name since AB#8797).
+
 ## [0.28.15] — 2026-11-22
 
 ### Changed
