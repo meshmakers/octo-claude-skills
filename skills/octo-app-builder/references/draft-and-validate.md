@@ -61,13 +61,19 @@ the developer confirms.
    import, no entity create, update or delete, no deploy, no dry run.
 7. **After the confirmation**, with the developer's own rights (the MCP session of the developer, never a service
    account or a stored secret):
-   1. zip the `ConstructionKit/` folder (the zip holds `ckModel.yaml` and its folders) and upload it in three steps:
-      `prepare_file_upload` (file name ending `.zip`) returns `transferId`, `transferKey` and `uploadUrlPath`; send
-      the zip with an HTTP `PUT` to `uploadUrlPath` on the MCP server's public URL, with the `transferId` in the
-      `X-Transfer-Id` header, the `transferKey` in the `X-Transfer-Key` header (or the bearer token of the developer's
-      own MCP connection) and a `Content-Type`. The slot takes one `PUT` and expires after about 30 minutes, the key
-      after a few minutes and only once; never put the id or the key into a URL, a log or an answer. Then call
-      `import_ck_model` with the `transferId` — a source zip is compiled the same way as in the validation;
+   1. import the CK model with `import_ck_model`, passing the draft the same way as to `validate_ck_model`:
+      **inline by default** — the same `files` (name/content pairs relative to `ConstructionKit/`) that passed the
+      validation. This is the path for an agent without an HTTP client and needs no upload. The source is compiled the
+      same way as in the validation; a compile error fails the call before anything is imported, with
+      `errorCode` `CK_MODEL_COMPILE_FAILED` and the findings in `errors` (file, element path, message): go back to
+      step 4. Inline drafts are limited to 1 MiB of file content and 2000 files (`InlineDraftTooLarge`, message
+      9005). **A larger draft goes through an upload** in three steps: zip the `ConstructionKit/` folder (the zip
+      holds `ckModel.yaml` and its folders); `prepare_file_upload` (file name ending `.zip`) returns `transferId`,
+      `transferKey` and `uploadUrlPath`; send the zip with an HTTP `PUT` to `uploadUrlPath` on the MCP server's public
+      URL, with the `transferId` in the `X-Transfer-Id` header, the `transferKey` in the `X-Transfer-Key` header (or
+      the bearer token of the developer's own MCP connection) and a `Content-Type`. The slot takes one `PUT` and
+      expires after about 30 minutes, the key after a few minutes and only once; never put the id or the key into a
+      URL, a log or an answer. Then call `import_ck_model` with the `transferId` instead of `files`;
    2. create the data flow and pipeline entities and deploy each pipeline (`deploy_pipeline`);
    3. run `dry_run_pipeline` with the sample input. It returns the execution id and the honoured load nodes; read what
       the pipeline would have written with `get_pipeline_debug_points` once the execution has finished. A dry run

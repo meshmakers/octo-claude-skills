@@ -13,6 +13,7 @@ All notable changes to the octo-claude-skills plugin. Format loosely follows [Ke
 ### Changed
 
 - **`octo-app-builder`** — `references/draft-and-validate.md` step 7.3: `dry_run_pipeline` returns the execution id and the honoured load nodes; the builder reads what the pipeline would have written with `get_pipeline_debug_points` once the execution has finished. The page names the honoured load nodes of an app (`ApplyChanges@1`/`@2`, `SaveStreamDataInArchive@1`, `SaveTimeRangeStreamDataInArchive@1`, `SendEMail@1`, `SftpUpload@1`, `ToDiscord@1`, `DeployPipeline@1`) and says that every other node acts for real (e.g. `GenerateAndStoreReport@1`, `MakeHttpRequest@1`): such nodes are named in the proposal and dry-run only with the developer's confirmation. The mandate lists the dry run with its debug points among the tools after the confirmation (AB#8493).
+- **`octo-app-builder`** — `references/draft-and-validate.md` step 7: `import_ck_model` takes the draft inline like `validate_ck_model` (the same `files` that passed the validation; AB#9643, Feature AB#8451), the default for agents without an HTTP client; a compile error returns `CK_MODEL_COMPILE_FAILED` with the findings in `errors` and goes back to the fix step; the zip upload (`prepare_file_upload`, HTTP `PUT`, `transferId`) stays the path for drafts over the inline limit (1 MiB, 2000 files, `InlineDraftTooLarge` / 9005). Needs octo-mcp-service with the inline import.
 
 ## [0.28.15] — 2026-11-22
 
