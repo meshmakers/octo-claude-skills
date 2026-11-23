@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Changed
+
+- **`octo-commit`** — the pointer to `octo-claude-pm` `agent-operating-rules` §2.3 no longer names a CoreDev review for larger changes: there is no human code review, agents never add human reviewers and name a larger change in the merge request and the test request instead (AB#9691, Gerald 2026-11-23).
+
 ## [0.28.16] — 2026-11-23
 
 ### Changed

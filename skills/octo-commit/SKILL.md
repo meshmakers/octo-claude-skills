@@ -364,7 +364,7 @@ az repos pr create \
 
 Report the PR URL(s) to the user when done.
 
-**After the PR is open: review and merge.** If the plugin `octo-claude-pm` is installed, its `agent-operating-rules` §2.3 apply and this skill does not restate them: the CodeRabbit review rounds, which findings to collect and how to answer them, when a PR is ready, queuing it with `request_merge`, asking the developer to test it, and the CoreDev review for larger changes. The developer merges, never the agent.
+**After the PR is open: review and merge.** If the plugin `octo-claude-pm` is installed, its `agent-operating-rules` §2.3 apply and this skill does not restate them: the CodeRabbit review rounds, which findings to collect and how to answer them, when a PR is ready, queuing it with `request_merge`, asking the developer to test it, and naming a larger change in the merge request and the test request (there is no human code review; agents never add human reviewers). The developer merges, never the agent.
 
 Without `octo-claude-pm` (GitHub repos; `$repo_slug` as for `gh pr create`):
 
