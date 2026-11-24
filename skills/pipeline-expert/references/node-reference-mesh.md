@@ -271,6 +271,23 @@ Backfill missing attributes on a list of `EntityUpdateInfo<RtEntity>` items from
   archiveRtId: cc0000000000000000000aa1
 ```
 
+### DetectStreamDataGaps@1
+
+Finds, per series of one windowed stream data archive (time-range or rollup; a raw archive fails the node), the missing ranges `[start, end)` and the missing slot count over the half-open period `[from, to)`, without a row limit for the caller. Reads only the given archive. The UTC offset of `from`/`to` sets the day boundary (no time zone option): local July 2026 is `2026-07-01T00:00:00+02:00` .. `2026-08-01T00:00:00+02:00`. Optional validity periods per series (`validityPeriods` / `validityPeriodsPath`, `[{ rtId, from, to? }]`, half-open) restrict the check and cut the ranges at their boundaries, so one range per series can be re-requested in one request.
+
+The full contract (every property with default and errors, the result shape, the storage limits it handles internally, and an example with metering points) is on the documentation page **DetectStreamDataGaps@1** (Technology Guide > Communication > Data Flows > Nodes > Extract, https://docs.meshmakers.cloud/docs/technologyGuide/communication/dataFlows/nodes/extract/detectStreamDataGaps_1) — read it there instead of copying it here; the source of truth is `DetectStreamDataGapsNodeConfiguration.cs` (see "Source Code Research" in `SKILL.md`).
+
+```yaml
+- type: DetectStreamDataGaps@1
+  archiveRtId: cc0000000000000000000aa1
+  rtIdsPath: $.participations[*].rtId
+  from: 2026-07-01T00:00:00+02:00
+  to:   2026-08-01T00:00:00+02:00
+  expectedInterval: 00:15:00          # default: the archive's period
+  validityPeriodsPath: $.participations
+  targetPath: $.gaps                  # series[].ranges[] with start, end, missingCount
+```
+
 ---
 
 ## Transform Nodes
@@ -897,6 +914,8 @@ Generate reports via reporting service and store to file system.
 
 ### AnthropicAiQuery@1
 
+**Deprecated** for new pipelines — keeps running unchanged, use `LlmQuery@1` for new pipelines; no removal date.
+
 Query Claude AI for document analysis, information extraction, and (optionally) live OctoMesh data queries via MCP.
 
 **Required: a question** — either `question` inline or a `promptTemplateName` whose template has a `UserTemplate`. **An API key must resolve** — the node fails before the API call without one. It comes from `apiKeyConfigurationName` (preferred: references an `AiConfiguration` CK entity; the key is never exposed in the pipeline data context) or from the inline `apiKey`; each of the two properties is optional on its own. **There is no default model**: set `aiModel` on the AiConfiguration (recommended), `DefaultModelId` on the prompt template, or `model` on the node — otherwise the node fails with "AI model is required".
@@ -1005,9 +1024,95 @@ A generation node and a verification node with different system prompts (differe
   targetPath: $.check
 ```
 
+### LlmQuery@1
+
+One LLM query node for two provider APIs: `provider: Anthropic` (default; the Anthropic Messages API, directly or through a compatible endpoint such as Claude on Microsoft Foundry) and `provider: OpenAiCompatible` (the OpenAI Chat Completions API: OpenAI, Azure OpenAI, Ollama, vLLM, LiteLLM — any endpoint that serves `{baseUrl}/chat/completions`). Prompt, prompt template, MCP tools, guaranteed JSON, usage and secret masking work as for `AnthropicAiQuery@1`. `AnthropicAiQuery@1` is deprecated for new pipelines — keeps running unchanged, use `LlmQuery@1` for new pipelines; no removal date.
+
+**Required:** a question (`question`, or a `promptTemplateName` whose template has a `UserTemplate`) and a model — there is no default model: set `aiModel` on the AiConfiguration (recommended), `DefaultModelId` on the prompt template, or `model` on the node, otherwise the node fails with "AI model is required". The key comes **only** from the `AiConfiguration` named by `apiKeyConfigurationName` (the pipeline needs a `Uses` association to it); there is no inline `apiKey`, so set `apiKeyConfigurationName` in every `LlmQuery@1` node.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `provider` | enum | `Anthropic` | `Anthropic` or `OpenAiCompatible`. `OpenAiCompatible` needs the `providerEndpoint` of the AiConfiguration (below) |
+| `apiKeyConfigurationName` | string | required in practice | Without it the node has no key and no `providerEndpoint`. With `provider: OpenAiCompatible` (also a keyless Ollama) it fails before any request with "LlmQuery@1 with provider OpenAiCompatible needs the providerEndpoint of AiConfiguration ''. No request was sent.", whatever `continueOnError` says. With `provider: Anthropic` it fails with "API key is required. Set 'apiKeyConfigurationName' to an AiConfiguration that holds an 'apiKey' or a 'providerEndpoint'."; with `continueOnError: true` that error is only logged and the data goes on. Well-known name of the `AiConfiguration` with `apiKey` and/or the sealed `providerEndpoint`; its `aiModel`, `maxTokens`, `temperature`, `mcpServerUrl` win over the node's values |
+| `model` | string | none | Model id as the provider expects it; on Microsoft Foundry and Azure OpenAI the **deployment name**. Order: template → AiConfiguration `aiModel` → `model` |
+| `promptTemplateName` | string | optional | Well-known name of a `System.Ai/AiPromptTemplate` (system prompt, question, model, temperature, maxTokens); needs a `Uses` association like the AiConfiguration |
+| `question` | string | optional* | Task for the model. *Required unless the template supplies one; overrides the template's text |
+| `systemPrompt` | string | (built-in default) | Overrides the template's text. Unset without a template = built-in default; empty string = no system prompt |
+| `path` | string | `$` | Main content (inherited) |
+| `dataPaths` | string[] | optional | Further paths appended to the prompt as context |
+| `conversationHistoryPath` | string | optional | Array of `{role, content}` entries sent as earlier messages |
+| `maxTokens` | int | 4096 | Max response tokens. Order: template → AiConfiguration → node |
+| `temperature` | double | unset | 0.0-1.0; unset = not sent, the model's default applies. Order: template → AiConfiguration → node. See *Temperature* |
+| `responseFormat` | string | `json` | `json` or `text`; any other value is refused when the definition is read |
+| `jsonFormatSample` | string | empty | Optional example JSON appended to the prompt (not used with `jsonSchema`) |
+| `jsonSchema` | string | optional | JSON Schema the answer must satisfy (provider structured outputs, then validation) — as for `AnthropicAiQuery@1` |
+| `maxJsonRepairAttempts` | int | 1 | Repair calls for a schema-invalid answer (cap 2, `0` = none) |
+| `includeRawResponse` / `rawResponseOutputPath` | bool / string | false / unset | Also write the raw model answer |
+| `usageOutputPath` | string | optional | Summed token usage of every call (tool rounds and repairs included) plus `estimatedCostUsd` |
+| `cacheSource` | bool | false | Main content as its own block with a prompt-cache breakpoint. **Anthropic only**; no effect with `OpenAiCompatible` |
+| `mcpServerUrl` | string | optional | MCP server base URL (`{url}/{tenantId}/mcp`); the AiConfiguration's `mcpServerUrl` wins |
+| `mcpServiceAccountConfigName` | string | optional | `ServiceAccountConfiguration` the MCP calls authenticate with. Without an identity no MCP call is made (warning, query runs without tools) |
+| `identity` | enum | `ServiceAccount` | `ServiceAccount` or `Caller` (MCP on the calling user's delegated token; fail-closed; needs a trigger with a caller token such as `FromHttpRequest@2`) |
+| `mcpToolNames` | string[] | all tools | Tool allowlist; it also limits which tools the model may call |
+| `maxToolRounds` | int | 10 | Tool rounds before the query fails |
+| `maxToolResultChars` | int | 50000 | Max characters of one tool result passed to the model (at least 1); longer results are cut and marked |
+| `continueOnError` | bool | false | Continue the pipeline when the query fails (not for an invalid or missing `providerEndpoint`, see below) |
+| `targetPath` | string | required | Where the answer is written (inherited) |
+
+```yaml
+- type: LlmQuery@1
+  provider: OpenAiCompatible          # default Anthropic
+  apiKeyConfigurationName: azure-openai   # AiConfiguration with providerEndpoint (and aiModel)
+  question: "Summarise the document in three sentences."
+  path: $.document.text
+  responseFormat: text
+  targetPath: $.ai.summary
+```
+
+#### The provider endpoint (`providerEndpoint` of the AiConfiguration)
+
+Where the request goes is **not a node setting**. It is the optional attribute `ProviderEndpoint` of `System.Communication/AiConfiguration` (System.Communication 4.20.0), a **Secret** holding the endpoint and the key issued for it as one JSON text:
+
+```json
+{"baseUrl":"https://<resource>.services.ai.azure.com/anthropic","apiKey":"<key>"}
+```
+
+- **Set either `ApiKey` or `ProviderEndpoint`.** With `providerEndpoint` set, the AiConfiguration's `apiKey` is **never** used — not even for a keyless endpoint — so a key never travels to a URL it was not configured for. `apiKey` absent or empty in the JSON = keyless endpoint (no key header).
+- **`Anthropic`** without `providerEndpoint` sends `apiKey` to `https://api.anthropic.com`; with it, requests go to `{baseUrl}/v1/messages` (key as `x-api-key`).
+- **`OpenAiCompatible`** requires `providerEndpoint`; requests go to `{baseUrl}/chat/completions` (key as `Authorization: Bearer`, keyless = no header). Without it the node fails before any request.
+- **`baseUrl` rules:** absolute; `https`, plain `http` only on a loopback address; no user info, no query, no fragment.
+- **Strict parsing:** a JSON object with `baseUrl` (text) and optional `apiKey` (text), nothing else. Not JSON, another shape, an unknown or repeated member or a `baseUrl` that breaks the rules **fails the node before any request, whatever `continueOnError` says**; the message names the AiConfiguration and the rule, never the value. The URL is logged, the key never. Blueprints and seeds must omit it (a secret is not exported); set it on the tenant's AiConfiguration.
+
+| Target | `provider` | `baseUrl` | `model` |
+|--------|------------|-----------|---------|
+| Anthropic direct | `Anthropic` | none (`apiKey` on the AiConfiguration) | Claude model id |
+| Claude on Microsoft Foundry | `Anthropic` | `https://<resource>.services.ai.azure.com/anthropic` | deployment name |
+| OpenAI | `OpenAiCompatible` | `https://api.openai.com/v1` | OpenAI model id |
+| Azure OpenAI (v1 API) | `OpenAiCompatible` | `https://<resource>.openai.azure.com/openai/v1` | deployment name |
+| Ollama (local, keyless) | `OpenAiCompatible` | `http://127.0.0.1:11434/v1` (no `apiKey`) | e.g. `qwen2.5:7b-instruct` |
+
+Plain `http` works for loopback only, so an Ollama in the cluster needs https. `AnthropicAiQuery@1` does not read `providerEndpoint`.
+
+#### Precedence, temperature and limits
+
+- **Settings:** model, `maxTokens` and `temperature` resolve prompt template → AiConfiguration → node; `mcpServerUrl` AiConfiguration → node. An AiConfiguration carries the CK defaults `MaxTokens` 4000 and `Temperature` 0.1, and these **win over the node's `maxTokens` and `temperature`**: with `apiKeyConfigurationName` set, 4000 / 0.1 apply unless the template or the AiConfiguration says otherwise. To change them, change the AiConfiguration (or use a prompt template).
+- **Temperature refused:** when the provider answers HTTP 400 naming the temperature (newer models accept none or only their default), the node asks **once more without it**, logs one warning and keeps it off for the rest of the run; a second refusal fails the query. The refused request is not counted in `usageOutputPath`.
+- **Guaranteed JSON with `OpenAiCompatible`:** the schema goes out as `json_schema`, `strict` only when the schema meets OpenAI strict-mode rules (every property in `required`, `additionalProperties: false`, no `allOf`/`oneOf`/`not`/conditionals); the node validates and repairs the answer either way.
+- **Cost:** `estimatedCostUsd` comes from the built-in Anthropic price list by model name, so it is `null` (with a warning) for OpenAI, Azure OpenAI and local models.
+- **Ollama ignores the token limit** the node sends (`max_completion_tokens`): `maxTokens` and the truncation error are not enforced there. Small local models are weak at tool calls; thinking models spend output tokens before answering, so keep `maxTokens` generous.
+
+#### Migrating from AnthropicAiQuery@1
+
+Change `type: AnthropicAiQuery@1` to `type: LlmQuery@1`; `provider` defaults to `Anthropic`, so nothing else is needed for the provider. Check the differences:
+
+- **No inline `apiKey`** — move the key to an AiConfiguration and set `apiKeyConfigurationName`.
+- **`identity: Caller`** instead of `mcpDelegateToCaller: true`.
+- **Other node defaults:** `temperature` unset (was 0.1), `maxTokens` 4096 (was 1000), `jsonFormatSample` empty (was a built-in sample). Values from a template or an AiConfiguration win as before.
+- New: `provider`, the AiConfiguration's `providerEndpoint`, `maxToolResultChars`. The MCP client name in the handshake is `OctoMesh-LlmQueryNode`.
+
 ### McpToolCall@1
 
-Calls **one allowlisted tool** on the tenant's OctoMesh MCP service, deterministically — no model decides — as a configured **service account**. Use it for the write after an AI step: `AnthropicAiQuery@1` reads (optionally with MCP tools) and returns schema-valid JSON, then `McpToolCall@1` writes it through e.g. `knowledge_upsert_page`, so the tool's content guard and versioning apply.
+Calls **one allowlisted tool** on the tenant's OctoMesh MCP service, deterministically — no model decides — as a configured **service account**. Use it for the write after an AI step: `LlmQuery@1` reads (optionally with MCP tools) and returns schema-valid JSON, then `McpToolCall@1` writes it through e.g. `knowledge_upsert_page`, so the tool's content guard and versioning apply.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -1024,7 +1129,7 @@ Calls **one allowlisted tool** on the tenant's OctoMesh MCP service, determinist
 | `continueOnError` | bool | false | Continue when the **call** fails. Never applies to configuration errors or allowlist violations |
 
 ```yaml
-- type: AnthropicAiQuery@1
+- type: LlmQuery@1
   description: Generate the page as JSON (read-only tools)
   apiKeyConfigurationName: AiConfig
   promptTemplateName: knowledge-ingest
