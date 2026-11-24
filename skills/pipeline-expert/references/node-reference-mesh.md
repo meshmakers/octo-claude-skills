@@ -914,6 +914,8 @@ Generate reports via reporting service and store to file system.
 
 ### AnthropicAiQuery@1
 
+**Deprecated** for new pipelines — keeps running unchanged, use `LlmQuery@1` for new pipelines; no removal date.
+
 Query Claude AI for document analysis, information extraction, and (optionally) live OctoMesh data queries via MCP.
 
 **Required: a question** — either `question` inline or a `promptTemplateName` whose template has a `UserTemplate`. **An API key must resolve** — the node fails before the API call without one. It comes from `apiKeyConfigurationName` (preferred: references an `AiConfiguration` CK entity; the key is never exposed in the pipeline data context) or from the inline `apiKey`; each of the two properties is optional on its own. **There is no default model**: set `aiModel` on the AiConfiguration (recommended), `DefaultModelId` on the prompt template, or `model` on the node — otherwise the node fails with "AI model is required".
@@ -1024,14 +1026,14 @@ A generation node and a verification node with different system prompts (differe
 
 ### LlmQuery@1
 
-One LLM query node for two provider APIs: `provider: Anthropic` (default; the Anthropic Messages API, directly or through a compatible endpoint such as Claude on Microsoft Foundry) and `provider: OpenAiCompatible` (the OpenAI Chat Completions API: OpenAI, Azure OpenAI, Ollama, vLLM, LiteLLM — any endpoint that serves `{baseUrl}/chat/completions`). Prompt, prompt template, MCP tools, guaranteed JSON, usage and secret masking work as for `AnthropicAiQuery@1`. `AnthropicAiQuery@1` stays available and unchanged.
+One LLM query node for two provider APIs: `provider: Anthropic` (default; the Anthropic Messages API, directly or through a compatible endpoint such as Claude on Microsoft Foundry) and `provider: OpenAiCompatible` (the OpenAI Chat Completions API: OpenAI, Azure OpenAI, Ollama, vLLM, LiteLLM — any endpoint that serves `{baseUrl}/chat/completions`). Prompt, prompt template, MCP tools, guaranteed JSON, usage and secret masking work as for `AnthropicAiQuery@1`. `AnthropicAiQuery@1` is deprecated for new pipelines — keeps running unchanged, use `LlmQuery@1` for new pipelines; no removal date.
 
-**Required:** a question (`question`, or a `promptTemplateName` whose template has a `UserTemplate`) and a model — there is no default model: set `aiModel` on the AiConfiguration (recommended), `DefaultModelId` on the prompt template, or `model` on the node, otherwise the node fails with "AI model is required". The key comes **only** from the `AiConfiguration` named by `apiKeyConfigurationName` (the pipeline needs a `Uses` association to it); there is no inline `apiKey`.
+**Required:** a question (`question`, or a `promptTemplateName` whose template has a `UserTemplate`) and a model — there is no default model: set `aiModel` on the AiConfiguration (recommended), `DefaultModelId` on the prompt template, or `model` on the node, otherwise the node fails with "AI model is required". The key comes **only** from the `AiConfiguration` named by `apiKeyConfigurationName` (the pipeline needs a `Uses` association to it); there is no inline `apiKey`, so set `apiKeyConfigurationName` in every `LlmQuery@1` node.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `provider` | enum | `Anthropic` | `Anthropic` or `OpenAiCompatible`. `OpenAiCompatible` needs the `providerEndpoint` of the AiConfiguration (below) |
-| `apiKeyConfigurationName` | string | optional | Well-known name of the `AiConfiguration` with `apiKey` and/or the sealed `providerEndpoint`; its `aiModel`, `maxTokens`, `temperature`, `mcpServerUrl` win over the node's values |
+| `apiKeyConfigurationName` | string | required in practice | Without it the node has no key and no `providerEndpoint` and fails with "API key is required. Set 'apiKeyConfigurationName' to an AiConfiguration that holds an 'apiKey' or a 'providerEndpoint'." (also for a keyless endpoint such as Ollama). Well-known name of the `AiConfiguration` with `apiKey` and/or the sealed `providerEndpoint`; its `aiModel`, `maxTokens`, `temperature`, `mcpServerUrl` win over the node's values |
 | `model` | string | none | Model id as the provider expects it; on Microsoft Foundry and Azure OpenAI the **deployment name**. Order: template → AiConfiguration `aiModel` → `model` |
 | `promptTemplateName` | string | optional | Well-known name of a `System.Ai/AiPromptTemplate` (system prompt, question, model, temperature, maxTokens); needs a `Uses` association like the AiConfiguration |
 | `question` | string | optional* | Task for the model. *Required unless the template supplies one; overrides the template's text |
