@@ -504,5 +504,9 @@ logFiles/MeshAdapter.log
 3. **Reference docs** (hand-maintained summaries, may lag): SDK nodes `references/node-reference-sdk.md`, Mesh Adapter nodes `references/node-reference-mesh.md`
 4. **DataContext mechanics** (paths, write modes, field filters, iterations): `references/data-context-guide.md`
 5. **Real examples** (annotated pipelines): `references/pipeline-examples.md`
+6. **On a tenant** (MCP client, no skill files or source code): with the opt-in blueprint `System.Ai.Builder` this skill
+   is installed as knowledge pages; open them with `knowledge_search` / `knowledge_get` and cite them as `[slug]`. Start
+   page `pipeline-index`, which lists every `pipeline-` page (basics, DataContext, entity updates, node references
+   `pipeline-nodes-*`, examples `pipeline-examples-*`).
 
 **If there is ANY doubt about a node's properties or behavior, read the source code. Do not guess.**

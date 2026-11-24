@@ -2,6 +2,13 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Changed
+
+- **`octo-app-builder`, `pipeline-expert`** — the reference sections point to the knowledge pages a tenant gets with the opt-in blueprint `System.Ai.Builder` (start pages `app-index` and `pipeline-index`, `knowledge_search` / `knowledge_get`, cited as `[slug]`) for an MCP client without the skill files (AB#8779).
+- **`pipeline-expert`** — `references/node-reference-mesh.md`, `LlmQuery@1`: the Ollama endpoint example names `http://<ollama-host>:11434/v1` (the host as the adapter reaches it) instead of a loopback address; the knowledge-page content guard refuses loopback addresses, and on a tenant the adapter is not the developer machine (AB#8779).
+
 ## [0.28.21] — 2026-11-26
 
 ### Fixed

@@ -1300,7 +1300,7 @@ Where the request goes is **not a node setting**. It is the optional attribute `
 | Claude on Microsoft Foundry | `Anthropic` | `https://<resource>.services.ai.azure.com/anthropic` | deployment name |
 | OpenAI | `OpenAiCompatible` | `https://api.openai.com/v1` | OpenAI model id |
 | Azure OpenAI (v1 API) | `OpenAiCompatible` | `https://<resource>.openai.azure.com/openai/v1` | deployment name |
-| Ollama (local, keyless) | `OpenAiCompatible` | `http://127.0.0.1:11434/v1` (no `apiKey`) | e.g. `qwen2.5:7b-instruct` |
+| Ollama (local, keyless) | `OpenAiCompatible` | `http://<ollama-host>:11434/v1`, the host as the adapter reaches it (no `apiKey`) | e.g. `qwen2.5:7b-instruct` |
 
 Plain `http` works for loopback only, so an Ollama in the cluster needs https. `AnthropicAiQuery@1` does not read `providerEndpoint`.
 
