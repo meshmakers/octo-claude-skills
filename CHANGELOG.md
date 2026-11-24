@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Changed
+
+- **`octo-devtools`** - removed the "Not released yet" notes from `SKILL.md`, `references/workflows.md` section 5 and `references/command-reference.md`: octo-tools PR #61 (AB#9259) is merged (4f7582e3), so the 0.x line directory behaviour described there is the current one.
+
 ## [0.28.18] — 2026-11-24
 
 ### Changed

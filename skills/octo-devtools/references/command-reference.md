@@ -256,8 +256,6 @@ Clean all git repos (removes untracked files).
 
 ## Branch Management
 
-> **Not released yet:** Until octo-tools PR #61 (AB#9259) is merged, `New-TestBranch`, `Sync-TestBranch` and `Remove-TestBranch` behave as before: without `-branch` they work on `$rootPath` itself (not on `<parent of rootPath>/0.<n>-<word>`), they cover only the `octo-*` folders, and `New-TestBranch` does not fetch and branches from whatever each repository has checked out. Until then always pass `-branch <line dir>`, put every repository of the line folder on a fresh `main` first (`Invoke-SwitchAllBranches -Name main -branch <line dir>`, `Sync-AllGitRepos -branch <line dir>`, check with `Get-AllGitRepStatus -branch <line dir>`) and branch non-`octo-*` repositories by hand. Check whether #61 is merged before you rely on the behaviour described here.
-
 ### `New-TestBranch`
 Create the test branch `test/0.<MinorVersion>-<Description>` in every repository of `Invoke-CloneMainRepos` that the line folder holds (`mm-common` included); a repository whose origin already has the branch is switched to it. Every repository is fetched and branched explicitly from `origin/main`; one with uncommitted changes to tracked files is not branched, it is listed with its reason (console and `-Json`) and the exit code is non-zero. See workflows.md section 5.
 - `-MinorVersion` (int, 2-999, required): minor version; the major version is always 0
