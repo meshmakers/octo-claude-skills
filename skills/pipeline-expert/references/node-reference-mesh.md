@@ -1033,7 +1033,7 @@ One LLM query node for two provider APIs: `provider: Anthropic` (default; the An
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `provider` | enum | `Anthropic` | `Anthropic` or `OpenAiCompatible`. `OpenAiCompatible` needs the `providerEndpoint` of the AiConfiguration (below) |
-| `apiKeyConfigurationName` | string | required in practice | Without it the node has no key and no `providerEndpoint` and fails with "API key is required. Set 'apiKeyConfigurationName' to an AiConfiguration that holds an 'apiKey' or a 'providerEndpoint'." (also for a keyless endpoint such as Ollama). Well-known name of the `AiConfiguration` with `apiKey` and/or the sealed `providerEndpoint`; its `aiModel`, `maxTokens`, `temperature`, `mcpServerUrl` win over the node's values |
+| `apiKeyConfigurationName` | string | required in practice | Without it the node has no key and no `providerEndpoint`. With `provider: OpenAiCompatible` (also a keyless Ollama) it fails before any request with "LlmQuery@1 with provider OpenAiCompatible needs the providerEndpoint of AiConfiguration ''. No request was sent.", whatever `continueOnError` says. With `provider: Anthropic` it fails with "API key is required. Set 'apiKeyConfigurationName' to an AiConfiguration that holds an 'apiKey' or a 'providerEndpoint'."; with `continueOnError: true` that error is only logged and the data goes on. Well-known name of the `AiConfiguration` with `apiKey` and/or the sealed `providerEndpoint`; its `aiModel`, `maxTokens`, `temperature`, `mcpServerUrl` win over the node's values |
 | `model` | string | none | Model id as the provider expects it; on Microsoft Foundry and Azure OpenAI the **deployment name**. Order: template → AiConfiguration `aiModel` → `model` |
 | `promptTemplateName` | string | optional | Well-known name of a `System.Ai/AiPromptTemplate` (system prompt, question, model, temperature, maxTokens); needs a `Uses` association like the AiConfiguration |
 | `question` | string | optional* | Task for the model. *Required unless the template supplies one; overrides the template's text |
@@ -1112,7 +1112,7 @@ Change `type: AnthropicAiQuery@1` to `type: LlmQuery@1`; `provider` defaults to 
 
 ### McpToolCall@1
 
-Calls **one allowlisted tool** on the tenant's OctoMesh MCP service, deterministically — no model decides — as a configured **service account**. Use it for the write after an AI step: `AnthropicAiQuery@1` reads (optionally with MCP tools) and returns schema-valid JSON, then `McpToolCall@1` writes it through e.g. `knowledge_upsert_page`, so the tool's content guard and versioning apply.
+Calls **one allowlisted tool** on the tenant's OctoMesh MCP service, deterministically — no model decides — as a configured **service account**. Use it for the write after an AI step: `LlmQuery@1` reads (optionally with MCP tools) and returns schema-valid JSON, then `McpToolCall@1` writes it through e.g. `knowledge_upsert_page`, so the tool's content guard and versioning apply.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -1129,7 +1129,7 @@ Calls **one allowlisted tool** on the tenant's OctoMesh MCP service, determinist
 | `continueOnError` | bool | false | Continue when the **call** fails. Never applies to configuration errors or allowlist violations |
 
 ```yaml
-- type: AnthropicAiQuery@1
+- type: LlmQuery@1
   description: Generate the page as JSON (read-only tools)
   apiKeyConfigurationName: AiConfig
   promptTemplateName: knowledge-ingest
