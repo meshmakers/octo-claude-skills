@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added
+
+- **`pipeline-expert`** — `references/node-reference-mesh.md` documents the node `LlmQuery@1` (AB#9308): one LLM query node for `provider: Anthropic` (default; Anthropic direct or Claude on Microsoft Foundry) and `provider: OpenAiCompatible` (OpenAI, Azure OpenAI v1, Ollama and other `/chat/completions` endpoints); property table with defaults; the sealed `providerEndpoint` of the AiConfiguration (System.Communication 4.20.0, JSON `{"baseUrl","apiKey"}`, keyless allowed, set either `ApiKey` or `ProviderEndpoint`, the `apiKey` never sent to its URL, required for `OpenAiCompatible`, `baseUrl` rules, fails before any request whatever `continueOnError` says); endpoint examples; precedence template → AiConfiguration → node including the CK defaults `MaxTokens` 4000 / `Temperature` 0.1 that win over the node values; the one retry without a refused temperature; limits (Ollama ignores the token limit, cost estimate only for Anthropic models); migration from `AnthropicAiQuery@1`, which stays available. `SKILL.md` lists the node and adds the trigger `LlmQuery`. New `###` heading `Transform Nodes > LlmQuery@1` (with `####` subheadings, about 9,700 characters): the System.Ai.Builder page plan must place it in the next sync.
+
 ## [0.28.16] — 2026-11-23
 
 ### Changed
