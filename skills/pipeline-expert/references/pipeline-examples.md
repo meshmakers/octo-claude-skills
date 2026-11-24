@@ -663,7 +663,8 @@ transformations:
                 targetPath: $.updates._items
                 updateKind: Insert
                 ckTypeId: EnergyCommunity/BillingDocumentLineItem
-                generateRtId: true
+                rtIdPath: $.key.data.lineItemRtId   # empty: generateRtId needs rtIdPath to create the id
+                generateRtId: true                  # the association below reads it from the update item
                 attributeUpdates:
                   - attributeName: GrossAmount
                     attributeValueType: Double

@@ -271,7 +271,12 @@ This is **different** from the PascalCase you see in GraphQL query results (wher
 { "RtEntity": { "RtId": "cc...bb01", "CkTypeId": "Industry.Basic/Machine", "Attributes": { "MachineState": 0 } }, "RtId": "cc...bb01", "CkTypeId": "Industry.Basic/Machine", "ModOption": 0 }
 ```
 
-The top-level `RtId` is populated only when a static `rtId` is given or an upstream node resolved/generated it. Do NOT use `generateRtId: true` — obtain IDs first via `GetOrCreateRtEntitiesByType@1` or `GetRtEntitiesByWellKnownName@1` so they can be referenced in associations.
+The top-level `RtId` is populated only when a static `rtId` is given, `rtIdPath` holds an id, or `generateRtId` made one.
+
+**The `generateRtId` rule.** `generateRtId: true` creates a new id only when `rtIdPath` is set and its value is empty; without `rtIdPath` it does nothing (the insert has no `RtId` until `ApplyChanges` writes it). The new id goes into the update item at `targetPath` (`RtId`) and is **not** written back to `rtIdPath`.
+- **Fine:** a new entity whose id a later node reads from its update item (`<targetPath>.RtId`), e.g. an HTTP API that inserts one entity and returns `$.updates[0].RtId` ([http-api-pipelines.md](../octo-app-builder/references/http-api-pipelines.md)).
+- **Never:** point `CreateAssociationUpdate@1` or another node at the `rtIdPath` of a `generateRtId` node: it stays empty and the node fails.
+- **Parent/child, associations and upserts:** resolve the ids first with `GetOrCreateRtEntitiesByType@1` or `GetRtEntitiesByWellKnownName@1` and pass them via `rtIdPath` (workflow below): the ids are at known paths before any update is built, and a re-run finds the entities instead of duplicating them.
 
 ## Mandatory Associations
 
@@ -283,7 +288,7 @@ Some CK types have **mandatory outbound associations** (multiplicity = ONE). Cre
 
 ### The intended workflow for creating entities with associations
 
-Use `GetOrCreateRtEntitiesByType@1` to resolve/generate IDs for both parent and child (each writes `rtId` + `modOp` paths), then have `CreateUpdateInfo@1` and `CreateAssociationUpdate@1` reference those IDs **via paths** — never `generateRtId: true`:
+Use `GetOrCreateRtEntitiesByType@1` to resolve/generate IDs for both parent and child (each writes `rtId` + `modOp` paths), then have `CreateUpdateInfo@1` and `CreateAssociationUpdate@1` reference those IDs **via paths**, not with `generateRtId` (the rule above):
 
 ```yaml
 - type: GetOrCreateRtEntitiesByType@1   # parent → $.parentRtId / $.parentModOp
