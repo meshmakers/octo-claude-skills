@@ -251,7 +251,9 @@ under `LoadedCkModels`, no warnings. A silent no-op with `WasSkipped` means the
   roles and multiplicities in the CK model source, their runtime errors, the public JSON schemas.
 - [references/draft-and-validate.md](references/draft-and-validate.md) — mandate
   (models and pipelines, never free code), the generate-and-validate loop, confirm before import.
+- [references/custom-frontend.md](references/custom-frontend.md) — own Angular app from
+  `meshmakers/template-repo`: init, OIDC client of the dev server, scaffold and codegen over MCP, current tool gaps.
 - **On a tenant** (MCP client, no skill files): with the opt-in blueprint `System.Ai.Builder` this skill is
   installed as knowledge pages; open them with `knowledge_search` / `knowledge_get` and cite them as `[slug]`.
   Start page `app-index`; the pages are `app-build-sequence`, `app-draft-validate`, `app-blueprint-authoring`,
-  `app-ck-model-syntax`, `app-http-api-pipelines`, `app-http-api-validation-addresses`, `app-web-workload` and `app-workload-secrets`.
+  `app-ck-model-syntax`, `app-http-api-pipelines`, `app-http-api-validation-addresses`, `app-web-workload`, `app-workload-secrets` and `app-custom-frontend`.
