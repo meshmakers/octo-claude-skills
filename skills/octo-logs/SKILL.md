@@ -11,6 +11,8 @@ allowed-tools:
   - "mcp__dash0__getLogCorrelations"
   - "mcp__dash0__getSpans"
   - "mcp__dash0__getTraceDetails"
+  - "mcp__dash0__runTask"
+  - "mcp__dash0__waitForTask"
 ---
 
 # OctoMesh Cluster Logs — Dash0
@@ -44,7 +46,7 @@ deliberately holds no environment-specific facts.
 | Discover filter keys / values (containers, services, pods) | `mcp__dash0__getAttributeKeys` / `mcp__dash0__getAttributeValues` (`scope: "logs"`) |
 | "What is different about the error logs?" | `mcp__dash0__getLogCorrelations` |
 | Follow a request into its trace | `mcp__dash0__getSpans` / `mcp__dash0__getTraceDetails` (filter `trace_id`) |
-| Open-ended "why is X failing" across signals | `mcp__dash0__runTask` (Agent0), then `waitForTask` |
+| Open-ended "why is X failing" across signals | `mcp__dash0__runTask` (Agent0), then `mcp__dash0__waitForTask`. Over MCP Agent0 only reads and diagnoses; ask it questions, never to change anything, and check its answer with the tools above before you rely on it |
 
 Every tool takes `dataset` and a `timeRange` (`{"from":"now-1h","to":"now"}` or
 ISO timestamps; `from` must be in the past and differ from `to`).

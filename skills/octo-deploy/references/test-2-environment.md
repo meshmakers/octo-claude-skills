@@ -44,7 +44,7 @@ octo-cli -c AddContext -n test-2_<tenantId> `
   -isu "https://connect.<test-2-domain>/" -asu "https://assets.<test-2-domain>/" `
   -bsu "https://bots.<test-2-domain>/" -csu "https://communication.<test-2-domain>/" `
   -tid <tenantId>
-octo-cli -c Login -i --context test-2_<tenantId>
+octo-cli -c LogIn -i --context test-2_<tenantId>
 octo-cli -c AuthStatus --context test-2_<tenantId>
 ```
 
@@ -61,7 +61,7 @@ Notes:
 
 ## Authentication
 
-- **Interactive (human):** `octo-cli -c Login -i` — browser/device-code flow.
+- **Interactive (human):** `octo-cli -c LogIn -i` — browser/device-code flow.
 - **Headless (agent/CI):** `octo-cli -c LogInClientCredentials` with
   `OCTO_CLI_CLIENT_ID`/`OCTO_CLI_CLIENT_SECRET` (or `-id` plus `--secret-stdin`; never the deprecated `-s`). Requires a
   client-credentials client provisioned for the target tenant (the octo skill's
@@ -120,7 +120,7 @@ Notes:
 5. `octo-cli -c DeployWorkload -id 670000000000000000000002 --context
    <tenant-context>` (re-trigger after the deployment site is up), then
    `octo-cli -c GetAdapters -j --context <tenant-context>` until the Mesh Adapter
-   shows Online (~1 min: operator provisions the CommunicationPool CR, then
+   shows Online (~1 min: operator provisions the DeploymentSite resource, then
    Helm-installs the adapter pod `<tenantId>-670…002-…`).
 
 ## The environment gate (`requires: octo.environment`)

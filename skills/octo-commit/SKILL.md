@@ -1,6 +1,6 @@
 ---
 name: octo-commit
-description: "Structured workflow for committing finished work across OctoMesh repositories: scans repos for changes, resolves or creates the Azure DevOps work item, builds the AB# commit message and PR title (AB#<id> <Fix|New|Chore|Refactor|Test|Docs>: …), verifies the build/tests, and optionally opens a PR and hands it over for review: with octo-claude-pm installed its agent-operating-rules decide the CodeRabbit review rounds and the merge queue; the developer merges, never the agent. Enforces the review checkpoint — never pushes or opens a PR without explicit user approval in the current session. Trigger on: commit, push, PR, pull request, PR title, merge, finish work, done, ship it, wrap up, AB#, work item, CodeRabbit, title check, ready to commit, close task, create branch, feature branch, feat/, dev/, Azure DevOps."
+description: "Structured workflow for committing finished work across OctoMesh repositories: scans repos for changes, resolves the Azure DevOps work item (creates only a Bug or Task; User Stories come from the Product Owner), builds the AB# commit message and PR title (AB#<id> <Fix|New|Chore|Refactor|Test|Docs>: …), verifies with the repository's own build, test and lint, and optionally opens a PR and hands it over for review: with octo-claude-pm installed its agent-operating-rules decide the CodeRabbit review rounds and the merge queue; the developer merges, never the agent. Enforces the review checkpoint — never pushes or opens a PR without explicit user approval in the current session. Trigger on: commit, push, PR, pull request, PR title, merge, finish work, done, ship it, wrap up, AB#, work item, CodeRabbit, title check, ready to commit, close task, create branch, feature branch, feat/, dev/, Azure DevOps."
 allowed-tools:
   - "Bash(git status:*)"
   - "Bash(git diff:*)"
@@ -9,7 +9,8 @@ allowed-tools:
   - "Bash(git commit:*)"
   - "Bash(git checkout:*)"
   - "Bash(git push:*)"
-  - "Bash(git pull:*)"
+  - "Bash(git fetch:*)"
+  - "Bash(git rebase:*)"
   - "Bash(git config:*)"
   - "Bash(git remote:*)"
   - "Bash(gh pr create:*)"
@@ -42,6 +43,20 @@ Structured workflow for committing finished work across OctoMesh repositories wi
 - Statements like "I'll look at it later", "Ich schau's mir später an", "let me review first" mean **STOP** — do not push, do not open a PR. The user is taking a review checkpoint *before* the push.
 - Committing locally may be fine when asked; **pushing and PR creation always require a fresh, explicit go-ahead** ("push it", "create the PR", "ship it").
 - When in doubt, ask via **AskUserQuestion** before any `git push` / `gh pr create` / `az repos pr create`.
+- **With `octo-claude-pm` installed**, its `agent-operating-rules` decide when an agent may push its own story branch and open the PR without asking (§2.2); everything they do not allow still needs the user's go in the current session.
+
+## With octo-claude-pm installed
+
+When the plugin `octo-claude-pm` is installed, its `agent-operating-rules` §2 are the process rules and this skill does not restate them. Follow them for:
+
+- **Branch** — name, one branch and one PR per repository per Feature slice, docs in the same PR (§2.1).
+- **Verification and local review** — the recorded verification and the local review the verify gate checks (§2.2).
+- **PR, review rounds and merge** — PR title and body, review rounds, queuing the PR, the developer tests and merges (§2.3).
+- **Docs batch** — `octo-documentation` and `octo-claude-skills`: push the story branch **without a PR**; the daily docs batch opens the one PR per repository and sets the plugin version (§2.1). Story branches in these two repositories and in `octo-claude-pm` (which is not batched) leave the plugin version alone and add CHANGELOG lines under `## [Unreleased]` (§2.1).
+- **Exceptions to the PR flow** — chain changes and pure CK model / blueprint version bumps directly on `main` happen only as the rules decide (§2.5, §2.5a); this skill never offers a push to `main` as a strategy.
+- **Work items** — who creates which item (`backlog-conventions` §2, §12).
+
+The steps below hold with and without the plugin; where they differ, they say so. Without `octo-claude-pm` they describe a generic branch-and-PR flow.
 
 ## Commit Message and PR Title Format
 
@@ -72,9 +87,8 @@ CI in the OctoMesh repos triggers on `dev/*`, `test/*`, and `main` (see each rep
 |----------|---------|---------|----------------|
 | Feature branch (default) | `feat/<username>/<short_meaningful_description>` | `feat/reimar/implement-skill` | No — only on PR |
 | Long-running feature branch | `dev/AB#<wi-id>_<short_meaningful_description>` | `dev/AB#1234_implement-skill` | Yes — every push |
-| Direct to main | no branch creation | only for small, confirmed low-risk changes | — |
 
-Default to the **feat** pattern unless the user explicitly wants a CI build on every push (then use the long-running `dev/...` pattern). Derive `<username>` from `git config user.name` (first name, lowercase). Derive `<short_meaningful_description>` from the work item title or change context (kebab-case, no spaces). The AB# work-item link lives in the commit message and PR title, not in the branch name.
+With `octo-claude-pm` installed, its §2.1 names the branch (`<user>/AB#<id>_<desc>`) and decides when stories share one. Without it, default to the **feat** pattern unless the user explicitly wants a CI build on every push (then use the long-running `dev/...` pattern). Derive `<username>` from `git config user.name` (first name, lowercase). Derive `<short_meaningful_description>` from the work item title or change context (kebab-case, no spaces). The AB# work-item link lives in the commit message and PR title, not in the branch name.
 
 ## Workflow
 
@@ -172,17 +186,20 @@ az boards query \
 **Backlog hierarchy (since 2026-10-09):** Epic → Feature → **User Story** / **Bug** → Task.
 Commits reference a requirement-level item — a **User Story**, **Bug** or **Task** — never an Epic or a Feature
 (those are planning items for humans). The **Issue** type is legacy: commits may still reference an existing open
-Issue, but **never create a new Issue** — create a User Story instead.
+Issue, but **never create a new Issue**.
 
-If the search only finds a matching Epic or Feature, do not commit against it: create a User Story under the
-matching Feature (or ask which Feature, if only the Epic matches).
+If the search only finds a matching Epic or Feature, do not commit against it: get a User Story under the
+matching Feature as described below (or ask which Feature, if only the Epic matches).
 
 Present matching work items to the user with AskUserQuestion if multiple matches found.
 
-**If no matching work item exists**, ask user whether to create one. If yes, gather the following via AskUserQuestion:
+**If no matching work item exists:**
 
-1. **Type**: User Story (new functionality, default), Bug (defect), or Task (technical sub-step of a story)
-2. **Parent Feature** (required for User Story and Bug): search open Features (WIQL below) and let the user pick.
+- **New functionality needs a User Story.** With `octo-claude-pm` installed, an agent does not create it: it asks the Product Owner agent of the software part for the story (`backlog-conventions` §2, §12) and waits for its ID. Without the plugin, the user creates the story under the right Feature, with acceptance criteria.
+- **An agent creates only a Bug or a Task itself.** Ask the user whether to create one, then gather the following via AskUserQuestion:
+
+1. **Type**: Bug (defect) or Task (technical sub-step of a story)
+2. **Parent Feature** (required for a Bug): search open Features (WIQL below) and let the user pick.
    Maintenance or quality work without a real Feature goes to the team's current Sustain Feature,
    titled `Sustain Q<n>/<year> – <Team>`. A Task's parent is the User Story it belongs to.
 3. **Team / Area**: use the parent Feature's area path (one theme team per Feature)
@@ -217,15 +234,15 @@ az boards area team list \
   --project OctoMesh
 ```
 
-Create the work item and link it to its parent (Mutating — confirm with user first):
+Create the Bug and link it to its parent (Mutating — confirm with user first):
 
 ```bash
 az boards work-item create \
-  --type "User Story" \
-  --title "<Outcome-style title, e.g. Tenant admin can revoke a service account>" \
+  --type "Bug" \
+  --title "<What is wrong, e.g. Tenant list shows deleted tenants>" \
   --area "<AreaPath of the parent Feature>" \
   --iteration "OctoMesh" \
-  --fields "Microsoft.VSTS.Common.AcceptanceCriteria=<testable criteria>" \
+  --fields "Microsoft.VSTS.TCM.ReproSteps=<steps, expected, actual>" \
   --org https://dev.azure.com/meshmakers \
   --project OctoMesh
 
@@ -236,33 +253,28 @@ az boards work-item relation add \
   --org https://dev.azure.com/meshmakers
 ```
 
-- **User Story:** `Microsoft.VSTS.Common.AcceptanceCriteria` is mandatory — derive it from the change and confirm it with the user.
 - **Bug:** put the description into `Microsoft.VSTS.TCM.ReproSteps` (via `--fields`), not `--description` — `System.Description` is not the visible field on Bugs.
+- **Task:** `--type "Task"` with `--description`; its parent (`--target-id`) is the User Story.
 
-### Step 5: Choose Commit Strategy
+### Step 5: Create the Branch
 
-Use **AskUserQuestion** if not already clear from context: **Direct to main** (small, low-risk) or **Feature branch + PR** (standard).
-
-For a feature branch, create it using the Branch Naming convention above:
+Every change goes through a branch and a PR; this skill offers no direct push to `main` (the exceptions are decided by `octo-claude-pm` §2.5/§2.5a, not here). Branch from a freshly fetched `main`, named as in Branch Naming above:
 
 ```bash
-git -C <repo> checkout -b feat/<username>/<short_meaningful_description>
+git -C <repo> fetch origin
+git -C <repo> checkout --no-track -b "<branch>" origin/main
 ```
 
 ### Step 6: Verify Completion
 
-Before committing, verify the work is ready. For each changed repo, check based on its CLAUDE.md:
+Before committing, verify the work is ready with **the repository's own build, test and lint commands** — read them from its `AGENTS.md` or `CLAUDE.md` (Step 3). With `octo-claude-pm` installed, run them through its recorded verification for the commit you push (§2.2); the verify gate checks that record.
 
-**For .NET repos:**
+Only when the repository names no commands, fall back to:
+
 ```bash
-dotnet build <solution>.sln --configuration DebugL
+dotnet build <solution>.sln --configuration DebugL   # .NET
 dotnet test <solution>.sln --configuration DebugL
-```
-
-**For Angular/frontend repos:**
-```bash
-npm run lint
-npm test -- --watch=false
+npm run lint && npm test -- --watch=false            # Angular/frontend
 ```
 
 If build or tests fail, use **AskUserQuestion**:
@@ -279,10 +291,12 @@ Before any `git push` / `gh pr create` / `az repos pr create`, you must have exp
 > - **Repo:** [repo-name]
 > - **Message:** `AB#1234 New: Add pipeline validation`
 > - **Files:** [file list or summary]
-> - **Branch:** main / feat/reimar/feature-name
+> - **Branch:** feat/reimar/feature-name (or the `octo-claude-pm` branch name)
 > - **Will push + open PR:** yes/no
 
 If the user defers ("I'll look at it later"), STOP — you may commit locally only if explicitly asked, but do **not** push or open a PR.
+
+With `octo-claude-pm` installed, the push of your own story branch and the PR follow its §2.2 instead (see the review checkpoint above).
 
 ### Step 8: Commit and Push
 
@@ -318,9 +332,19 @@ git -C <repo> push
 
 **NEVER force-push to main.** Always confirm before pushing (see Review Checkpoint).
 
+**Branch behind `main`?** Update it from `origin/main`, not with `git pull`:
+
+```bash
+git -C <repo> fetch origin
+git -C <repo> rebase origin/main
+git -C <repo> push --force-with-lease origin "<branch>"   # only your own branch, only right after the rebase
+```
+
+A force push is allowed only as `--force-with-lease` on your own branch right after such a rebase (`octo-claude-pm` §2.9); any other force push needs the user's go. In `octo-documentation` and `octo-claude-skills` the push of the story branch ends this skill when `octo-claude-pm` is installed: no PR, the docs batch opens it (§2.1).
+
 ### Step 9: Create PR (if feature branch)
 
-**With `octo-claude-pm` 0.46.0 or later installed**, its verify gate refuses PR creation, `gh pr ready`, pushes to a branch with an open non-draft PR and `@coderabbitai review` until the commit has a local verification record, and PR creation and review requests also a recorded local code review. Order: review the diff locally (`/code-review` or a review sub-agent), commit the fixes, then on that commit run the plugin's `verify_record.py … run -- "<build>" "<test>" "<lint>"` and `verify_record.py … review …`; record again after every new commit. A refusal prints the full command. The rules (clean tree, shared-environment escape, two CodeRabbit rounds, one PR per repository per Feature slice) are in its `agent-operating-rules` §2.1–§2.3.
+**With `octo-claude-pm` 0.46.0 or later installed**, its verify gate refuses PR creation, `gh pr ready`, pushes to a branch with an open non-draft PR and review requests until the commit has the recorded verification and local review of its `agent-operating-rules` §2.2; a refusal prints the command to run. Who reviews locally, the order of the steps and the review rounds are in §2.2 and §2.3 — follow them there.
 
 **For GitHub repos** (majority of OctoMesh repos). Derive the `owner/repo` slug from the origin URL (mostly `meshmakers/<repo>`; some are under `reikla/`, see Repo Remotes). The `sed` keeps the last two path parts, so HTTPS URLs, `git@github.com:` and SSH host aliases such as `git@github-company:` all work:
 
@@ -402,14 +426,15 @@ See `${CLAUDE_PLUGIN_ROOT}/skills/octo-commit/references/repo-remotes.md` for th
 | Mistake | Prevention |
 |---------|------------|
 | Pushing without approval | Get explicit go-ahead **this session** before any push/PR |
-| Committing without work item | Always resolve AB# first -- search or create |
+| Committing without work item | Always resolve AB# first -- search, or get one (Step 4) |
 | Wrong WIQL command | Use `az boards query --wiql`, NOT `az boards work-item query` |
 | Wrong or missing type (`Change`, `Feat`, `AB#123: …`) | Exactly one of `Fix`, `New`, `Chore`, `Refactor`, `Test`, `Docs` — CodeRabbit's title check flags anything else |
 | Applying CodeRabbit findings blindly | Check each against the code and the work item; fix the valid ones, decline the rest with a reason |
 | Merging the PR yourself (`gh pr merge`, `--admin`, `--auto`) | Never; the developer tests and merges — with `octo-claude-pm` installed, follow its `agent-operating-rules` §2.3 |
 | Trusting the green `CodeRabbit` status | Read the pre-merge checks in CodeRabbit's PR comment; a failed title check can leave the status green |
-| Creating a new Issue | Issue is legacy — create a User Story under a Feature |
-| Committing against an Epic or Feature | Reference a User Story / Bug / Task; create one under the Feature if needed |
+| Creating a new Issue | Issue is legacy — use a User Story, Bug or Task under a Feature |
+| Agent creating a User Story | With `octo-claude-pm`, ask the PO agent of the software part; agents create only Bugs and Tasks |
+| Committing against an Epic or Feature | Reference a User Story / Bug / Task under the Feature (Step 4) |
 | Story or Bug without parent | Every new User Story / Bug needs a parent Feature (Sustain Feature for maintenance) |
 | Wrong team name | It's `Solutions Team` (plural), not "Solution Team" |
 | Bare Co-Authored-By | Use model-specific name: `Claude <model> <noreply@anthropic.com>` |
@@ -419,13 +444,15 @@ See `${CLAUDE_PLUGIN_ROOT}/skills/octo-commit/references/repo-remotes.md` for th
 | Committing secrets | Review staged files for .env, credentials, tokens |
 | Force-pushing to main | Never. Use feature branches for risky changes |
 | Wrong build config | OctoMesh .NET repos require `DebugL`, not `Debug` or `Release` |
-| Stale branch | Pull latest before branching: `git pull --rebase` |
+| Stale branch | Branch from a freshly fetched `origin/main`; update with `git rebase origin/main`, then `--force-with-lease` on your own branch only |
+| Verifying with a plain `dotnet build` | Run the repository's own build, test and lint (AGENTS.md / CLAUDE.md), recorded with `octo-claude-pm` |
+| Opening a PR in `octo-documentation` / `octo-claude-skills` | With `octo-claude-pm`, push the story branch only; the daily docs batch opens the PR |
 
 ## Red Flags -- STOP and Verify
 
 - **About to push or open a PR without explicit approval in the current session** — STOP. "I'll look at it later" means do not push.
 - About to commit without an AB# work item link
-- Pushing directly to main on a non-trivial change
+- About to push to `main` (only the `octo-claude-pm` exceptions §2.5/§2.5a allow it)
 - Tests not run or failing
 - Changes in repos you haven't read CLAUDE.md for
 - Sensitive files in the staging area (.env, appsettings with secrets)
