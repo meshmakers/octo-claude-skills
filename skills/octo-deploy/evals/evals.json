@@ -4,7 +4,7 @@
     {
       "id": 0,
       "prompt": "My app 'inventory-lite' works on my local kind setup, built per our app-builder conventions: CK model Demo.Inventory (compiled output in ck\\out\\ck-demo.inventory.yaml), blueprint InventoryLite-1.0.0 in blueprint\\InventoryLite\\1.0.0\\ (image tag 0.1.0 pinned in the seed's ValuesYaml), app image meshmakers/inventory-lite-app:0.1.0. I now need it running on test-2, tenant 'acmedemo' — the tenant does not exist yet. Write me a complete RUNBOOK.md with every command in order, including one-time setup, what to check after each step, and what can go wrong at each step. There is no CI pipeline yet. I am working from home today. Do NOT execute anything — just write the runbook.",
-      "expected_output": "RUNBOOK.md: octo-ckc/octo-bpm publishing to shared catalogs (or ImportCk shortcut for CK), Tailscale + docker push to <registry>, Register-OctoCliContext test-2, tenant creation via octosystem + EnableCommunication on target tenant, RefreshCatalogs + RefreshBlueprintCatalogs (server-side), InstallBlueprint/DeployDataFlow/DeployWorkload, kubectl-free verification.",
+      "expected_output": "RUNBOOK.md: octo-ckc/octo-bpm publishing to shared catalogs (or ImportCk shortcut for CK), Tailscale + docker push to <registry>, Register-OctoCliContext test-2, tenant creation via octosystem + EnableCommunication on target tenant + DeployDeploymentSite before DeployWorkload of the Mesh Adapter, RefreshCatalogs + RefreshBlueprintCatalogs (server-side), InstallBlueprint/DeployDataFlow/DeployWorkload, kubectl-free verification.",
       "files": [],
       "assertions": [
         "Registers a test-2 context via Register-OctoCliContext -Installation test-2 (or AddContext with the correct *.<test-2-domain> service URLs) and authenticates",
@@ -14,7 +14,7 @@
         "Image step pushes <registry>/meshmakers/inventory-lite-app:0.1.0 AND mentions connecting Tailscale first",
         "Refreshes the SERVER-side catalog caches before InstallBlueprint: RefreshCatalogs for the CK model and RefreshBlueprintCatalogs for the blueprint; no local cache-file deletion for test-2",
         "Overall order: publish artifacts, context/tenant setup, RefreshCatalogs + RefreshBlueprintCatalogs, InstallBlueprint, DeployDataFlow, DeployWorkload",
-        "Does NOT instruct DeployWorkload on the system Mesh Adapter 670000000000000000000002",
+        "Deploys the deployment site first (octo-cli -c DeployDeploymentSite -id 670000000000000000000001, then GetDeploymentSites until Deployed) before it (re)triggers DeployWorkload on the Mesh Adapter 670000000000000000000002; never names a DeployPool command",
         "Verification uses kubectl-free signals (GetAdapters/GetDataFlowStatus/GetWorkloadsByChart/lastDeploymentError) plus the app URL on <test-2-domain>",
         "Mentions the requires: octo.environment gate ([dev, test]) or checking for WasSkipped: true on install"
       ]
@@ -31,6 +31,20 @@
         "Problem 2: fix = docker push <registry>/meshmakers/inventory-lite-app:0.1.0, with Tailscale connected first (working from home)",
         "Problem 2: re-trigger the deploy after the push (DeployWorkload again or undeploy/redeploy)",
         "No invented mechanisms: no kubectl fixes presented as available on test-2, no nonexistent commands"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I want to put my app 'meter-hub' on test-2 (tenant 'acmedemo', communication already enabled, deployment site deployed). Its CK model Demo.MeterHub is written with ckLanguage: 2 and depends on System.StreamData with a version range; the compiled output is ck\\out\\ck-demo.meterhub.yaml. The app exposes a POST /readings route through a FromHttpRequest@2 pipeline (no allowAnonymous) on the Mesh Adapter ingress. Write plan.md: how to get the model onto test-2, what to check first, how to test the route with curl, and where to look if the install fails on the server. Do NOT execute anything.",
+      "expected_output": "plan.md: the model goes to ck-models/v3 (ckLanguage 2 / range / minEngineVersion), shared-environment gate checked before publish or ImportCk, curl with a bearer token of the tenant passed on stdin, /octo-logs for server-side errors.",
+      "files": [],
+      "assertions": [
+        "States that octo-ckc Publish puts this model under ck-models/v3 (ckLanguage 2 / range-retaining / minEngineVersion), not ck-models/v2, without inventing a flag for it",
+        "Before publishing or ImportCk on test-2, checks the minEngineVersion in the compiled output and that every service of test-2 runs an engine at or above it (CK v2 engine); otherwise does not publish and asks the environment owner",
+        "Names message 126 (CkModelRequiresNewerEngine) or a not-found model as the symptom of an engine that is too old, and does not suggest bumping or republishing the model to get past it",
+        "The curl test sends a bearer token of the tenant, passed as a header on stdin (printf ... | curl -H @-), never printed or copied out of the octo-cli context file; expects 401 without a token because allowAnonymous is not set",
+        "Points to /octo-logs for server-side errors and names no internal dataset names",
+        "Uses only existing octo-cli commands (ImportCk, InstallBlueprint, RefreshCatalogs, RefreshBlueprintCatalogs, DeployWorkload, DeployDeploymentSite, ...); no DeployPool, no staging or production steps"
       ]
     }
   ]

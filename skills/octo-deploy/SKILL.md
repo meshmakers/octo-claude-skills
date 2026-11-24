@@ -20,6 +20,7 @@ these instructions to them.
 | Individual octo-cli commands, status checks, tenant admin | `Skill("octo", ...)` |
 | Operator/Helm internals (what the operator does with a workload) | `Skill("octo-operator", ...)` |
 | Something broke and needs deep investigation | `Skill("octo-agent", ...)` |
+| Server-side errors on test-2 (service logs, traces) | `Skill("octo-logs", ...)` |
 
 ## What actually has to move (and what doesn't)
 
@@ -75,6 +76,12 @@ octo-bpm -c publish -p ./blueprint/<Name>/<version> -c PrivateGitHubBlueprintCat
 docker push <registry>/meshmakers/<app>:<tag>
 ```
 
+**CK v2 models need a CK v2 environment.** `octo-ckc Publish` puts a model with `ckLanguage: 2`, range-retaining
+dependencies or a `minEngineVersion` under `ck-models/v3/` instead of `ck-models/v2/`; engines before CK v2 do not
+see it. Publish or import such a model for test-2 only when every service there runs an engine at or above the
+model's `minEngineVersion` — see *Two catalog roots* in
+[references/publishing.md](references/publishing.md).
+
 `octo-ckc`/`octo-bpm` are the CK and blueprint CLIs of `octo-construction-kit-engine`,
 not on PATH by default. <!-- developer-machine -->(on a developer machine: the build output `bin/DebugL/net10.0/` of that repository)<!-- /developer-machine --> The pushed image tag must equal the tag
 pinned in the seed's ValuesYaml — verify before pushing.
@@ -83,8 +90,9 @@ pinned in the seed's ValuesYaml — verify before pushing.
 wanted yet, `octo-cli -c ImportCk -f <compiled> -w` directly on the target
 tenant works too — `ckModelDependencies` resolution skips the catalog lookup
 when a satisfying model version is already installed in the tenant
-(source-verified short-circuit). The blueprint itself has no such shortcut: it
-must be in a catalog the target asset repository reads.
+(source-verified short-circuit). The CK v2 rule above applies to it as well. The
+blueprint itself has no such shortcut: it must be in a catalog the target asset
+repository reads.
 
 ### 2. Register the test-2 context + authenticate
 
@@ -183,11 +191,13 @@ The octo-cli signals below need no cluster access:
 | Adapter online, pipelines deployed | `octo-cli -c GetAdapters -j`, `octo-cli -c GetDataFlowStatus -id <dataflowRtId> -j` |
 | Workload state + failure detail | `octo-cli -c GetWorkloadsByChart -cn <chartName>`; the Application entity's `deploymentState` / `statusMessage` / `lastDeploymentError` attributes via Studio<!-- developer-machine --> or rt_explorer<!-- /developer-machine --> |
 | App reachable | `https://<app>-<tenantId>.<cluster-domain>` (from the `{{domain.default}}` hostname) |
-| API reachable | only when the Mesh Adapter's ingress is on (`IngressEnabled`, opt-in, then `DeployWorkload`; octo-app-builder `references/http-api-pipelines.md`): `https://<Hostname>/<tenantId>/<path>` with a token of the tenant, header on stdin (`printf 'Authorization: Bearer %s\n' "$TOKEN" \| curl -H @- …`); without an ingress test with `ExecutePipeline` |
+| API reachable | only when the Mesh Adapter's ingress is on (`IngressEnabled`, opt-in, then `DeployWorkload`): `https://<Hostname>/<tenantId>/<path>`. A `FromHttpRequest@2` route answers `401` without a bearer token of the tenant unless the route sets `allowAnonymous: true`. Get the token into a shell variable without printing it (for example a client-credentials token of a client of the tenant; never copied out of the octo-cli context file) and pass the header on stdin (`printf 'Authorization: Bearer %s\n' "$TOKEN" \| curl -H @- …`); details in octo-app-builder `references/http-api-pipelines.md`. Without an ingress test with `ExecutePipeline` |
 
 `lastDeploymentError` carries the Helm error plus pod diagnostics (waiting
 reasons like ImagePullBackOff, exit codes, Warning events) collected by the
 operator — it is the primary triage signal; no cluster access is needed.
+For errors on the server side (asset repository, communication controller,
+Mesh Adapter, operator), read the service logs and traces with `/octo-logs`.
 
 End-to-end: run the same curl matrix used locally (create / list / error paths /
 no leaked fields) against the hosts of the target cluster, then the browser flow.
@@ -204,6 +214,7 @@ no leaked fields) against the hosts of the target cluster, then the browser flow
 | 6 | Mutating the wrong environment | Context confusion. `AuthStatus` before every mutating step; the context name (`<cluster>_<tenant>` vs `local_<tenant>`) is the tell. |
 | 7 | Adapter stuck `Unregistered`/`Pending` forever, no pod, no error | The parent **deployment site is Undeployed** — workload deploy triggers fired before it is up are silently lost. Deploy it first (`DeployDeploymentSite -id 670…001`), then re-run `DeployWorkload -id 670…002`. |
 | 8 | Wrong tag deployed after a new image push | Same-tag pushes don't restart pods. Either bump the tag (new tag in the seed + new blueprint version + push + publish + `RefreshBlueprintCatalogs` + `UpdateBlueprint` + `DeployWorkload`) or undeploy/redeploy the workload. |
+| 9 | `InstallBlueprint` or `ImportCk` refuses the CK model with message 126 (`CkModelRequiresNewerEngine`), or the model is "not found" although it was published | A CK v2 model (`ck-models/v3/`, `minEngineVersion`) on a service with an older engine. Do not bump or republish the model to get past it; wait until every service of test-2 runs the CK v2 engine ([references/publishing.md](references/publishing.md)). Server-side detail: `/octo-logs`. |
 
 ## References
 

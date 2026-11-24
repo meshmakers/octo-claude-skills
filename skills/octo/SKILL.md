@@ -117,6 +117,7 @@ Command-name + one-line purpose + safety type only. **For full flag detail, read
 | `AddClientToRole` / `RemoveClientFromRole` | Assign/remove a role (by name) of a client-credentials client (`-id <clientId> -r <role>`); new token needed | Mutating |
 | `UpdateClientRoles` | Replace all directly assigned roles of a client (`-id`, `-rids <roleId,…>`) | Mutating |
 | `AddClientToGroup` / `RemoveClientFromGroup` | Add/remove a client to/from a group (`-id <groupId> -cid <clientId>`); the client inherits the group's roles | Mutating |
+| `GetClientRoles` | List the roles assigned directly to a client in the context's tenant (`-id <clientId>`; JSON `Id`/`Name`, no group-inherited roles) | Read-only |
 | `GetClientMirrors` | List sub-tenants a client is mirrored into | Read-only |
 | `SetClientAutoProvision` | Flip a client's auto-provision flag (no backfill) | Mutating |
 | `ProvisionClientInExistingTenants` | Backfill a flagged client into all existing sub-tenants | Mutating |
