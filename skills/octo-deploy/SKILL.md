@@ -67,8 +67,9 @@ this order; each has a checkable outcome.
 **Check first: CK v2 models need a CK v2 environment.** `octo-ckc Publish` puts a model with `ckLanguage: 2`,
 range-retaining dependencies or a `minEngineVersion` under `ck-models/v3/` instead of `ck-models/v2/`; engines before
 CK v2 do not see it. Before you run the publish command below, confirm that every service on test-2 runs an engine
-at or above the model's `minEngineVersion`; if not, do not publish or import the model for test-2 — see *Two catalog
-roots* in [references/publishing.md](references/publishing.md).
+at or above the model's `minEngineVersion`; if not, do not publish it to a catalog test-2 reads and do not import it
+there, and if you cannot confirm the engine version, ask the environment's owner — see *Two catalog roots* in
+[references/publishing.md](references/publishing.md).
 
 ```bash
 # CK model -> shared CK catalog (one-time: GitHub token in ~/.octo-ckc/settings.json, see references/publishing.md)

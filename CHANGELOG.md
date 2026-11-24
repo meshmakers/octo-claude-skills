@@ -2,6 +2,13 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Changed
+
+- **`octo-commit`** — Step 5 no longer leaves unpushed commits of the starting branch out of the PR (AB#6360): it lists `origin/main..HEAD`, branches from `HEAD` and runs `git rebase --autostash origin/main` for commits that belong to the work, cherry-picks with a named stash otherwise, aborts and asks on a conflict, and says that resetting the starting branch needs the user's go.
+- **`octo-deploy`** — step 1 states the CK v2 environment check before the publish commands, and names the shared catalog and the environment owner (AB#6362).
+
 ## [0.28.18] — 2026-11-24
 
 ### Changed
