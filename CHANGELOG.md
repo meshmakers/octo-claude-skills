@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Changed
+
+- **`octo`** — new read-only octo-cli command `GetClientRoles -id <clientId>` (AB#9699): lists the roles assigned directly to a client in the context's tenant as JSON (`Id`, `Name`; no group-inherited roles), so a grant such as `CommunicationManagement` can be checked before and after a change. `SKILL.md` (command table) and `references/command-reference.md` describe it; the note on reading client roles names it next to the MCP tool `get_client_roles`. Needs an octo-cli with AB#9699 (octo-cli PR #98).
+
 ## [0.28.16] — 2026-11-23
 
 ### Changed

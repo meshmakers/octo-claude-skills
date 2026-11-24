@@ -258,6 +258,15 @@ octo-cli -c GetClient -id <clientId>
 |---|---|---|---|
 | `-id` | `clientId` | The client ID to retrieve | Yes |
 
+#### GetClientRoles
+Lists the roles assigned directly to a client in the tenant of the context (roles inherited from groups are not listed), as a JSON array of `Id` and `Name`, `[]` when there are none. Read-only, prints no secret. An unknown client or tenant ends with a message naming it and exit `-5`; a context whose tenant does not exist usually stops at sign-in (exit `-4`). Use `--context` to read another tenant, e.g. before and after `AddClientToRole`.
+```
+octo-cli -c GetClientRoles -id <clientId>
+```
+| Flag | Long | Description | Required |
+|---|---|---|---|
+| `-id` | `clientId` | The ClientId whose direct roles to list | Yes |
+
 #### AddAuthorizationCodeClient
 ```
 octo-cli -c AddAuthorizationCodeClient -id <clientId> -n <name> -u <clientUri> [-ru <redirectUri>] [-fclo <frontChannelLogoutUri>]
@@ -344,7 +353,7 @@ octo-cli -c RemoveClientFromGroup -id <groupRtId> -cid ci-deploy
 | `AddClientToGroup` | `-id`/`identifier` group runtime ID (`GetGroups`), `-cid`/`clientId` | `add_client_to_group` |
 | `RemoveClientFromGroup` | `-id` group runtime ID, `-cid` client ID | `remove_client_from_group` |
 
-To read the roles a client has directly, use the MCP tool `get_client_roles` (role IDs, without the roles inherited from groups); `GetClient` does not list roles. Only an administrator of the tenant can assign roles; a client never grants roles to itself.
+To read the roles a client has directly, use `GetClientRoles -id <clientId>` (role IDs and names) or the MCP tool `get_client_roles` (role IDs); both leave out the roles inherited from groups, and `GetClient` does not list roles. Only an administrator of the tenant can assign roles; a client never grants roles to itself.
 
 ### Client Mirror Management
 
