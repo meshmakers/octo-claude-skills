@@ -2,6 +2,13 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Changed
+
+- **`octo-commit`** — no longer contradicts octo-claude-pm `agent-operating-rules` (AB#6360, Feature AB#6352): a new section *With octo-claude-pm installed* points to §2.1 (branch, Feature slice, docs batch, plugin version under `## [Unreleased]`), §2.2 (recorded verification and local review), §2.3 (PR, review rounds, merge) and §2.5/§2.5a (the only pushes to `main`) instead of copying them. "Direct to main" is no longer offered (Step 5 always branches from a freshly fetched `origin/main`). Step 4: with octo-claude-pm an agent asks the PO agent of the software part for a User Story and creates only Bugs and Tasks itself; the `az boards … --type "User Story"` example is replaced by a Bug example. Step 6 verifies with the repository's own build, test and lint (AGENTS.md / CLAUDE.md), recorded with octo-claude-pm; plain `dotnet build` stays only as fallback. `git pull --rebase` is replaced by `git rebase origin/main` with `--force-with-lease` on the own branch only (§2.9). In `octo-documentation` and `octo-claude-skills` the story branch is pushed without a PR; the daily docs batch opens it. The review checkpoint stays, except for the own branch push the rules allow.
+- **`octo-deploy`** — matches today's octo-cli and the CK v2 catalog layout (AB#6362, Feature AB#6352): `references/publishing.md` explains the two catalog roots `ck-models/v2/` and `ck-models/v3/` (`ckLanguage: 2`, range-retaining and `minEngineVersion` models go to v3) and the shared-environment gate (no v3 model published to a catalog test-2 reads or imported on a test-2 tenant before every service there runs an engine at or above its `minEngineVersion`), pointing to the engine's `docs/ck-publishing.md` instead of copying versions. `SKILL.md` adds the gate to the publish step and the ImportCk shortcut, a pitfall for message 126 (`CkModelRequiresNewerEngine`), a routing row and a triage pointer to `/octo-logs` for server-side errors, and the note that `FromHttpRequest@2` routes need a bearer token of the tenant unless `allowAnonymous: true` is set (pointer to octo-app-builder `references/http-api-pipelines.md`). `references/test-2-environment.md` names the operator's `DeploymentSite` resource instead of the old `CommunicationPool` CR and spells `LogIn` as the command class does. `evals/evals.json`: eval 0 expects `DeployDeploymentSite` before the Mesh Adapter's `DeployWorkload` (it forbade that `DeployWorkload` before, contrary to the skill); new eval 2 covers the v3 root, the gate, the token and `/octo-logs`.
+
 ## [0.28.17] — 2026-11-24
 
 ### Added

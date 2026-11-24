@@ -25,8 +25,31 @@ octo-ckc -c Publish -f ./ck/out/ck-<name>.yaml -c PrivateGitHubCatalog -r   # -r
 ```
 
 Publish commits the compiled model to
-`ck-models/v2/<letter>/<Name>/<major>/ck-<name>-<version>.json` on `main` and
-upserts the three catalog.json index levels — one API commit per file.
+`ck-models/<root>/<letter>/<Name>/<major>/ck-<name>-<version>.json` on `main` and
+upserts the three catalog.json index levels of that root — one API commit per file.
+
+### Two catalog roots: `ck-models/v2/` and `ck-models/v3/`
+
+`octo-ckc` picks the root from the compiled model; there is no flag for it:
+
+| Model | Root |
+|---|---|
+| classic model (`ckLanguage` 1, exact dependency pins) | `ck-models/v2/` |
+| `ckLanguage: 2`, range-retaining dependencies, or any model whose compiled output carries `minEngineVersion` (also a classic model on such a dependency) | `ck-models/v3/` |
+
+Engines before CK v2 read only `v2`; engines from CK v2 on read both. An engine below a
+model's `minEngineVersion` refuses it (message 126, `CkModelRequiresNewerEngine`).
+A published version lives in one root only. The rules, the
+`minEngineVersion` values and their history are in the engine repository
+(`octo-construction-kit-engine`), `docs/ck-publishing.md` (*Two catalog roots*) and
+`docs/system-ck-models.md`.
+
+**Shared-environment gate.** Never publish a `ck-models/v3/` model into a catalog test-2
+reads, and never `ImportCk` it on a test-2 tenant, before **every** service of test-2 runs
+an engine at or above the model's `minEngineVersion` (the CK v2 engine). Check
+`minEngineVersion` in the compiled output (`./ck/out/ck-<name>.yaml`) before you publish;
+when you cannot confirm the engine version of test-2's services, ask the environment's
+owner instead of publishing. Never bump or republish a model to get past a refusal.
 
 ### Shortcut: skip the catalog entirely
 
@@ -34,6 +57,8 @@ upserts the three catalog.json index levels — one API commit per file.
 satisfying model version installed (source-verified:
 `EnsureCkModelInstalledAsync` returns before any catalog lookup when
 installed ≥ requested). So this works without any catalog publish:
+
+The shared-environment gate above applies here too.
 
 ```bash
 # on the target tenant's context
