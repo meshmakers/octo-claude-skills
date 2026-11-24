@@ -271,6 +271,23 @@ Backfill missing attributes on a list of `EntityUpdateInfo<RtEntity>` items from
   archiveRtId: cc0000000000000000000aa1
 ```
 
+### DetectStreamDataGaps@1
+
+Finds, per series of one windowed stream data archive (time-range or rollup; a raw archive fails the node), the missing ranges `[start, end)` and the missing slot count over the half-open period `[from, to)`, without a row limit for the caller. Reads only the given archive. The UTC offset of `from`/`to` sets the day boundary (no time zone option): local July 2026 is `2026-07-01T00:00:00+02:00` .. `2026-08-01T00:00:00+02:00`. Optional validity periods per series (`validityPeriods` / `validityPeriodsPath`, `[{ rtId, from, to? }]`, half-open) restrict the check and cut the ranges at their boundaries, so one range per series can be re-requested in one request.
+
+The full contract (every property with default and errors, the result shape, the storage limits it handles internally, and an example with metering points) is on the documentation page **DetectStreamDataGaps@1** (Technology Guide > Communication > Data Flows > Nodes > Extract, https://docs.meshmakers.cloud/docs/technologyGuide/communication/dataFlows/nodes/extract/detectStreamDataGaps_1) — read it there instead of copying it here; the source of truth is `DetectStreamDataGapsNodeConfiguration.cs` (see "Source Code Research" in `SKILL.md`).
+
+```yaml
+- type: DetectStreamDataGaps@1
+  archiveRtId: cc0000000000000000000aa1
+  rtIdsPath: $.participations[*].rtId
+  from: 2026-07-01T00:00:00+02:00
+  to:   2026-08-01T00:00:00+02:00
+  expectedInterval: 00:15:00          # default: the archive's period
+  validityPeriodsPath: $.participations
+  targetPath: $.gaps                  # series[].ranges[] with start, end, missingCount
+```
+
 ---
 
 ## Transform Nodes
