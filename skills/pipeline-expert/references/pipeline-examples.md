@@ -604,6 +604,8 @@ transformations:
                 targetPath: $.key.data.sum
                 aggregations:
                   - path: $.key.quantities[*]
+                    filterPath: null          # no filter, but the key must be present
+                    comparisonValue: null
                     aggregationPath: $.Values[2]
                     value: 1
 
