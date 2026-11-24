@@ -262,8 +262,23 @@ Every change goes through a branch and a PR; this skill offers no direct push to
 
 ```bash
 git -C <repo> fetch origin
+git -C <repo> log --oneline origin/main..HEAD    # commits of the starting branch that are not on main
+```
+
+If that list is empty, branch from `origin/main` (uncommitted changes come along):
+
+```bash
 git -C <repo> checkout --no-track -b "<branch>" origin/main
 ```
+
+If it lists commits that belong to this work (Step 1 reported them as unpushed), branch from the current `HEAD` instead and move them onto `origin/main`, so they are part of the PR:
+
+```bash
+git -C <repo> checkout --no-track -b "<branch>" HEAD
+git -C <repo> rebase origin/main
+```
+
+Commits in that list that do not belong to this work stay on the starting branch: branch from `origin/main` and `git cherry-pick` only the ones that do.
 
 ### Step 6: Verify Completion
 
