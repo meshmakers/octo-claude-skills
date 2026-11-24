@@ -4,6 +4,10 @@ All notable changes to the octo-claude-skills plugin. Format loosely follows [Ke
 
 ## [Unreleased]
 
+### Added
+
+- **`octo-app-builder`** — new reference `references/ck-model-syntax.md` (AB#9366): CK model source syntax for enums (`enums:`, `key`/`name` rules, `valueType: Enum` + `valueCkEnumId`), association roles (`associationRoles:` with the five required keys, used from a type's `associations:` with `targetCkTypeId`; origin = the declaring type gets `outboundName`/`outboundMultiplicity`, the target `inboundName`/`inboundMultiplicity`) and multiplicities `ZeroOrOne`/`One`/`N` with their runtime checks and messages (mandatory outbound `One` on create, at most one, no removal of a mandatory one, declared types only), the compile errors `validate_ck_model` reports, a complete model (enum, mandatory 1:N, optional self-association) and the public JSON schemas as the reference for all other keys. Checked against the CK compiler and runtime engine; every example passes `validate_ck_model`. Linked from `SKILL.md` and `blueprint-authoring.md`; a new file for the System.Ai.Builder page plan (page `app-ck-model-syntax`).
+
 ### Changed
 
 - **`pipeline-expert`, `octo-app-builder`** — one `generateRtId` rule, checked against `CreateUpdateInfo@1` and `CreateAssociationUpdate@1` of the Mesh Adapter (AB#9367): `generateRtId: true` creates an id only when `rtIdPath` is set and empty, puts it into the update item and never into `rtIdPath`. Fine for a new entity whose id a later node reads from its update item (the HTTP API create pattern, now with a one-line reason); never point an association at the `rtIdPath` of such a node; parent/child, associations and upserts resolve ids with `GetOrCreateRtEntitiesByType@1`. The unscoped "never `generateRtId`" sentences are scoped; the billing example gets the `rtIdPath` its association needs, the slot-booking example drops the flag (without `rtIdPath` it did nothing).

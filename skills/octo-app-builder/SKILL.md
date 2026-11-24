@@ -247,9 +247,11 @@ under `LoadedCkModels`, no warnings. A silent no-op with `WasSkipped` means the
   pipeline YAML for create/list/conditional-update APIs, response shaping, debugging.
 - [references/app-workload.md](references/app-workload.md) — Application entity,
   property-walker chart contract, proxy server pattern, image + deploy loop.
+- [references/ck-model-syntax.md](references/ck-model-syntax.md) — enums, association
+  roles and multiplicities in the CK model source, their runtime errors, the public JSON schemas.
 - [references/draft-and-validate.md](references/draft-and-validate.md) — mandate
   (models and pipelines, never free code), the generate-and-validate loop, confirm before import.
 - **On a tenant** (MCP client, no skill files): with the opt-in blueprint `System.Ai.Builder` this skill is
   installed as knowledge pages; open them with `knowledge_search` / `knowledge_get` and cite them as `[slug]`.
   Start page `app-index`; the pages are `app-build-sequence`, `app-draft-validate`, `app-blueprint-authoring`,
-  `app-http-api-pipelines`, `app-http-api-validation-addresses`, `app-web-workload` and `app-workload-secrets`.
+  `app-ck-model-syntax`, `app-http-api-pipelines`, `app-http-api-validation-addresses`, `app-web-workload` and `app-workload-secrets`.

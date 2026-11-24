@@ -66,6 +66,9 @@ types:
 Mark attributes that runtime/services own (status enums, sync counters, timestamps)
 with `isRuntimeState: true` so blueprint re-applies never trample them.
 
+Enums, association roles and their multiplicities (ZeroOrOne, One, N), with a complete model that
+validates: [ck-model-syntax.md](ck-model-syntax.md).
+
 ### Compile + publish
 
 `octo-ckc` is the CK compiler CLI of `octo-construction-kit-engine`, not on PATH by default. <!-- developer-machine -->(on a developer machine: the build output `bin/DebugL/net10.0/` of that repository)<!-- /developer-machine -->
