@@ -1,0 +1,46 @@
+# Drift check of the skills against the committed name inventory (AB#6366, Feature AB#6352).
+# Runs on every pull request (including the daily docs/batch-* PRs) and on every push to main.
+# Needs no secrets and no access to other repositories: the inventory is committed in this
+# repository and refreshed weekly by scripts/refresh_name_inventory.py (AB#9741).
+name: skill-drift
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: skill-drift-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Unit tests (fixture skills, fixture source trees)
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Inventory holds names only
+        run: python3 scripts/scan_inventory_secrets.py inventory/names.json
+
+      - name: Drift check (fails on findings not in the baseline; warns when the inventory is older than 14 days)
+        run: python3 scripts/check_skill_drift.py --summary
+
+      - name: Skill frontmatter
+        # validate_skill_frontmatter.py parses YAML; PyYAML is its only dependency.
+        run: |
+          python3 -m pip install --quiet "pyyaml>=6,<7"
+          python3 scripts/validate_skill_frontmatter.py

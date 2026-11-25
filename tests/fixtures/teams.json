@@ -1,0 +1,22 @@
+{
+ "$comment": "Fixture in the shape of octo-claude-pm teams.json; IDs are made up.",
+ "project": "Fixture",
+ "sustain": {
+  "features": {
+   "core": 101,
+   "ops": 104
+  }
+ },
+ "teams": [
+  {
+   "areaPath": "Fixture\\Core",
+   "key": "core",
+   "productOwnerAgent": "po-core (Thor)"
+  },
+  {
+   "areaPath": "Fixture\\Ops",
+   "key": "ops",
+   "productOwnerAgent": "po-ops (Heimdall)"
+  }
+ ]
+}

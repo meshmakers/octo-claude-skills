@@ -1,0 +1,13 @@
+{
+ "entries": [
+  {
+   "files": [
+    "skills/demo/*"
+   ],
+   "kind": "node",
+   "name": "RetiredDemo@1",
+   "reason": "fixture: a retired node named on purpose",
+   "workItem": 1
+  }
+ ]
+}

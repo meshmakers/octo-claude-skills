@@ -10,7 +10,14 @@ A Claude Code plugin providing skills for working with the OctoMesh platform. Us
 .claude-plugin/plugin.json   — Plugin manifest (name, version, metadata; $schema-validated)
 .claude-plugin/marketplace.json — Marketplace listing (kept in version sync with plugin.json)
 hooks/hooks.json              — SessionStart hooks (venv pre-warm, pwsh probe)
-scripts/                      — repo maintenance: validate_skill_frontmatter.py (release gate)
+scripts/                      — repo maintenance: validate_skill_frontmatter.py (release gate),
+                                check_skill_drift.py, generate_name_inventory.py, refresh_name_inventory.py,
+                                scan_inventory_secrets.py (drift check, see below), launchd/ (refresh job template)
+inventory/                    — names.json (name inventory), allowlist.json (accepted mentions + baseline),
+                                sources.json (which repositories feed the inventory)
+OWNERS                        — owning PO agent of every skill
+tests/                        — unit tests with fixture skills and fixture source trees (python3 -m unittest)
+.github/workflows/            — skill-drift.yml: tests, inventory scan, drift check, frontmatter on every PR
 skills/
   octo/                       — Hub skill: octo-cli NL interface, CK/RT exploration, routing to siblings
     SKILL.md                  — Skill definition (frontmatter + operational guide)
@@ -94,6 +101,21 @@ bash skills/octo/scripts/run_python.sh scripts/validate_skill_frontmatter.py  # 
 - **Reference docs** in `references/`: detailed content that SKILL.md points to for drill-down (command flags, node properties, URL mappings). Keep SKILL.md as the operational overview; put exhaustive details in references — Claude loads them on demand.
 - **Progressive drill-down**: exploration workflows go broad-to-narrow: models → types in model → type detail → instances → instance detail.
 - **Accuracy**: every command, flag, parameter, node property, port, and version documented in a skill must be verified against the OctoMesh source repos or read-only `octo-cli <Command> --help` output before writing. Never document from memory.
+
+## Owners, same-change rule and drift check (AB#6366, AB#9741)
+
+- **Owners:** `OWNERS` maps every skill to its owning PO agent. A new skill gets an owner line in the same change; the drift check fails for a skill without one.
+- **Same-change rule:** whoever changes behaviour a skill describes (cmdlet, octo-cli command or argument, pipeline node, documentation path, workflow) updates the skill in the same change.
+- **Drift check:** run it before you push a skill change; CI (`.github/workflows/skill-drift.yml`) runs the same on every PR and push to `main`:
+
+  ```bash
+  python3 scripts/check_skill_drift.py --summary    # exit 1 on a name the inventory does not list
+  python3 -m unittest discover -s tests -v          # fixture tests of the check and the generator
+  ```
+
+  The drift scripts use the standard library only and run with plain `python3`, not the venv wrapper.
+- **A finding** means the skill names a cmdlet, parameter, command, argument, node or docs path that does not exist on the private repositories' `main` (or a `C:\dev` path, or a `<repo>/CLAUDE.md` pointer where the repository has AGENTS.md). Fix the skill. A deliberate mention (a removed name in a "replaces the removed …" note) goes into `inventory/allowlist.json` with a reason and the work item that decided it.
+- **The inventory** (`inventory/names.json`) is generated, never edited by hand: `scripts/generate_name_inventory.py --monorepo <checkouts>`; the weekly `scripts/refresh_name_inventory.py` refreshes it. Schema, baseline and refresh details: README, section *Drift check*.
 
 ## Skills shipped as knowledge pages (AB#8490)
 

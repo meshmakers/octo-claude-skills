@@ -64,6 +64,13 @@ this order; each has a checkable outcome.
 
 ### 1. Publish the artifacts (manual lane)
 
+**Check first: CK v2 models need a CK v2 environment.** `octo-ckc Publish` puts a model with `ckLanguage: 2`,
+range-retaining dependencies or a `minEngineVersion` under `ck-models/v3/` instead of `ck-models/v2/`; engines before
+CK v2 do not see it. Before you run the publish command below, confirm that every service on test-2 runs an engine
+at or above the model's `minEngineVersion`; if not, do not publish it to a catalog test-2 reads and do not import it
+there, and if you cannot confirm the engine version, ask the environment's owner — see *Two catalog roots* in
+[references/publishing.md](references/publishing.md).
+
 ```bash
 # CK model -> shared CK catalog (one-time: GitHub token in ~/.octo-ckc/settings.json, see references/publishing.md)
 octo-ckc -c Publish -f ./ck/out/ck-<name>.yaml -c PrivateGitHubCatalog -r
@@ -75,12 +82,6 @@ octo-bpm -c publish -p ./blueprint/<Name>/<version> -c PrivateGitHubBlueprintCat
 # App image -> the registry (must be reachable from your network, see pitfall 4)
 docker push <registry>/meshmakers/<app>:<tag>
 ```
-
-**CK v2 models need a CK v2 environment.** `octo-ckc Publish` puts a model with `ckLanguage: 2`, range-retaining
-dependencies or a `minEngineVersion` under `ck-models/v3/` instead of `ck-models/v2/`; engines before CK v2 do not
-see it. Publish or import such a model for test-2 only when every service there runs an engine at or above the
-model's `minEngineVersion` — see *Two catalog roots* in
-[references/publishing.md](references/publishing.md).
 
 `octo-ckc`/`octo-bpm` are the CK and blueprint CLIs of `octo-construction-kit-engine`,
 not on PATH by default. <!-- developer-machine -->(on a developer machine: the build output `bin/DebugL/net10.0/` of that repository)<!-- /developer-machine --> The pushed image tag must equal the tag

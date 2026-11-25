@@ -45,4 +45,74 @@ See [CLAUDE.md](CLAUDE.md) for authoring conventions (description budgets, the 5
 claude plugin validate .
 ```
 
+## Skill owners and the same-change rule
+
+Every skill has an owning PO agent, listed in [`OWNERS`](OWNERS): Heimdall (octo-devtools, octo-agent, octo-commit, octo-deploy, octo-logs, octo-logs-setup, octo-operator), Thor (octo, pipeline-expert, octo-app-builder), Freya (refinery-studio, octo-ck-miro), Mimir (octo-mcp). The owner keeps the skill true and receives its drift findings.
+
+**Same-change rule:** whoever changes behaviour a skill describes (a cmdlet, an octo-cli command or argument, a pipeline node, a documentation path, a workflow) updates the skill in the same change.
+
+## Drift check
+
+A skill that names something that no longer exists sends an agent into a dead end. The drift check compares every name the skills use with a committed inventory of the names that exist:
+
+| Kind | Found in the skills as | Inventory source |
+|------|------------------------|------------------|
+| `cmdlet`, `cmdlet-parameter` | `Verb-Noun` and its `-Parameter` in code (inline code or fenced blocks; PowerShell's own cmdlets and common parameters are always accepted, parameter prefixes too) | octo-tools `modules/*.psm1` |
+| `octo-cli-command`, `octo-cli-argument` | `octo-cli … -c <Command> -arg --argument` | octo-cli `src/ManagementTool/Commands/**` |
+| `node` | `Name@<version>` in code | `[NodeName("Name", n)]` outside test folders of the `octo-*` repositories |
+| `repo-doc` | `<repo>/AGENTS.md`, `<repo>/CLAUDE.md`, `<repo>/docs/…` for repositories matching `repoPatterns` | AGENTS.md/CLAUDE.md presence and the paths below `docs/` |
+| `reference-to-shim` | `<repo>/CLAUDE.md` for a repository that has AGENTS.md (point to AGENTS.md) | as above |
+| `machine-path` | `C:\dev` anywhere | — |
+
+Run it locally (Python 3.10+, standard library only):
+
+```bash
+python3 scripts/check_skill_drift.py              # findings grouped by owner; exit 1 on a finding or a skill without owner
+python3 scripts/check_skill_drift.py --summary    # plus counts per skill and owner
+python3 scripts/check_skill_drift.py --ignore-baseline   # also the baselined findings
+python3 -m unittest discover -s tests -v          # fixture tests
+```
+
+The GitHub Actions workflow [`skill-drift`](.github/workflows/skill-drift.yml) runs the unit tests, the inventory scan, the drift check and the frontmatter validation on every pull request (also the daily `docs/batch-*` PRs) and on every push to `main`. It needs no secrets and no access to other repositories. It **warns** (does not fail) when the inventory is more than 14 days old, so a missed weekly refresh is visible.
+
+### Inventory (`inventory/names.json`, schema version 1)
+
+```json
+{
+  "schemaVersion": 1,
+  "generated": "2026-11-25",
+  "repoPatterns": ["octo-*"],
+  "excludeRepos": ["…"],
+  "cmdlets": {"Start-Octo": ["nonInteractive", "…"]},
+  "octoCli": {"commands": {"Setup": ["--email", "-e", "…"]}, "globalArguments": ["-c", "--context", "…"]},
+  "nodes": {"ApplyChanges": [1, 2]},
+  "repos": {"octo-tools": {"agentsMd": true, "claudeMd": true, "docHashes": ["<16 hex digits>", "…"]}}
+}
+```
+
+Names only: no hosts, URLs, file contents or secrets. Paths below `docs/` are stored as the first 16 hex digits of the SHA-256 of the path (`docs/guide.md`, and every folder on the way such as `docs/guides`), so internal document names stay out of this public repository while the check can still resolve every path a skill names. `scripts/scan_inventory_secrets.py` fails on anything in the inventory that is not a name; CI and the weekly refresh run it.
+
+### Accepted mentions and the baseline (`inventory/allowlist.json`)
+
+Each entry has `kind`, `name` (case-insensitive glob), optional `files` (globs), a `reason` and the `workItem` that tracks it; an entry without a work item is refused. Two uses: deliberate mentions (a removed node named as the predecessor of its replacement) and the **baseline** of known findings (`reason` starting with `baseline <date>:`), each tracked by a Bug or story until the owner fixes the skill — then the entry is removed. The check fails only on findings that are not accepted.
+
+### Weekly refresh (AB#9741)
+
+The inventory comes from repositories public CI cannot read, so it is generated where the checkouts are:
+
+```bash
+python3 scripts/generate_name_inventory.py --monorepo <folder with the checkouts> [--date YYYY-MM-DD]
+python3 scripts/refresh_name_inventory.py --monorepo <folder with the checkouts>                     # dry run
+python3 scripts/refresh_name_inventory.py --monorepo <folder with the checkouts> --apply   # the real run (= --push --file-bugs)
+```
+
+`generate_name_inventory.py` is deterministic: the same trees and the same `--date` give byte-identical output. `inventory/sources.json` names the repositories (`repoPatterns`, `nodeRepoPatterns`, `extraRepos`, `excludeRepos`, and `requiredRepos`, whose absence fails the refresh instead of dropping their names).
+
+`refresh_name_inventory.py` is a dry run unless `--apply` (or `--push` / `--file-bugs`) is given. It makes fresh shallow HTTPS clones of the default branches (credentials from the GitHub CLI, never a prompt; URLs are never printed), regenerates the inventory in a fresh clone of this repository, scans it, and with `--push` commits it on `<user>/AB#9741_name-inventory-refresh` and pushes it **without a pull request** — the daily docs batch takes it to `main`. While an earlier refresh still waits for the batch, that branch is continued with today's `main` merged into it; once the batch has taken it, the next run starts again from `main`. The drift check then runs on today's `main` with the new inventory, and with `--file-bugs` every finding that is not accepted becomes one Bug per skill (`Skill drift: <skill> …`, tag `skill-drift`) under the Sustain Feature of the skill's owner; an open Bug is updated instead of creating a second one, and while a skill is clean its open Bug gets a comment in every run until someone closes it. A failed run (not a finding) is reported as a comment on the Platform Ops Sustain Feature; `--update-self` (used by the launchd job) fast-forwards the job's own checkout first and reports a failed update the same way. Owners, project and Sustain Features are read at run time from the `octo-claude-pm` plugin (`teams.json`); none of them is stored here. It needs `git`, `gh` (logged in) and, for `--file-bugs`, `az` (logged in).
+
+- **Run mode:** a scheduled launchd job on a developer Mac (template [`scripts/launchd/skill-name-inventory-refresh.plist.example`](scripts/launchd/skill-name-inventory-refresh.plist.example)). Moving it to a scheduled Azure DevOps pipeline is the later option, owned by the build agent of `octo-claude-pm` (Argos).
+- **Owner:** Heimdall (Platform Ops / DevEx); the job runs on the workstation of the developer who installed it.
+- **Schedule:** Mondays 06:30 local time. A missed run (machine off) becomes the 14-day warning of the drift check.
+- **By hand:** `launchctl kickstart gui/$(id -u)/skill-name-inventory-refresh`, or the command above.
+
 Release history lives in [CHANGELOG.md](CHANGELOG.md).
