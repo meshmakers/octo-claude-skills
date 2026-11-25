@@ -17,6 +17,7 @@ All notable changes to the octo-claude-skills plugin. Format loosely follows [Ke
 ### Changed
 
 - **`octo-devtools`** - removed the "Not released yet" notes from `SKILL.md`, `references/workflows.md` section 5 and `references/command-reference.md`: octo-tools PR #61 (AB#9259) is merged (4f7582e3), so the 0.x line directory behaviour described there is the current one.
+
 ### Added
 
 - **Drift check** (AB#6366, Feature AB#6352) — `scripts/check_skill_drift.py` (standard library only) checks every skill (`skills/**/*.md`, `skills/*/evals/*.json`) against the committed name inventory `inventory/names.json`: octo-tools cmdlets and parameters, octo-cli commands and arguments, pipeline nodes with version, `<repo>/AGENTS.md|CLAUDE.md|docs/…` paths, `C:\dev` paths and `<repo>/CLAUDE.md` pointers for repositories with AGENTS.md. It reports file, line, kind, name and owner, groups findings by owner and exits 1; it warns when the inventory is older than 14 days. `OWNERS` lists the owning PO agent of all 13 skills; a skill without owner fails the check. `inventory/allowlist.json` holds deliberate mentions and the baseline of the 41 findings of the first run, each with its tracking work item (AB#6353, AB#9797, AB#9798, AB#9799, AB#9800); an entry without a work item is refused. The first GitHub Actions workflow `.github/workflows/skill-drift.yml` runs the unit tests, the inventory scan, the drift check and the frontmatter validation on every PR and push to `main`. README and CLAUDE.md state the same-change rule and how to run the check.
