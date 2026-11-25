@@ -31,7 +31,7 @@ from dataclasses import asdict, dataclass
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 
-# PowerShell approved verbs (Get-Verb) plus the two octo-tools uses outside the list.
+# PowerShell approved verbs (Get-Verb) plus Manage; Inventory adds every other verb octo-tools uses.
 VERBS = (
     "Add Approve Assert Backup Block Build Checkpoint Clear Close Compare Complete Compress Confirm Connect "
     "Convert ConvertFrom ConvertTo Copy Debug Deny Deploy Disable Disconnect Dismount Edit Enable Enter Exit "
@@ -70,7 +70,6 @@ BUILTIN_CMDLETS = {
     ).split()
 }
 
-CMDLET_RE = re.compile(r"(?<![\w$.-])(" + "|".join(VERBS) + r")-([A-Z][A-Za-z0-9]+)(?![\w-])")
 PARAM_RE = re.compile(r"(?<![\w-])-([A-Za-z][A-Za-z0-9]*)(?![\w-])")
 OCTO_CLI_RE = re.compile(r"(?<![\w-])octo-cli(?:\.exe)?(?![\w-])")
 CLI_ARG_RE = re.compile(r"(?<![\w-])(--?|/)([A-Za-z?][A-Za-z0-9-]*)(?![\w])")
@@ -135,6 +134,11 @@ class Inventory:
         self.generated = data.get("generated", "")
         self.cmdlets = {name.lower(): (name, [p.lower() for p in params])
                         for name, params in data.get("cmdlets", {}).items()}
+        # Approved verbs plus every verb octo-tools uses (Check-, Clone-, ...), so their renames are seen too.
+        verbs = set(VERBS) | {name.split("-", 1)[0] for name, _ in self.cmdlets.values()}
+        self.cmdlet_re = re.compile(
+            r"(?<![\w$.-])(" + "|".join(sorted(verbs, key=len, reverse=True)) + r")-([A-Z][A-Za-z0-9]+)(?![\w-])"
+        )
         cli = data.get("octoCli", {})
         self.cli_commands = {name.lower(): (name, {a.lower() for a in args})
                              for name, args in cli.get("commands", {}).items()}
@@ -172,6 +176,9 @@ class AllowList:
             if not isinstance(work_item, int) or isinstance(work_item, bool) or work_item <= 0:
                 raise ConfigError(f"allow-list entry {number} ({entry['name']}): needs the workItem (integer ID) "
                                   "that tracks it")
+            if not entry.get("files") and (entry["kind"] == "*" or not entry["name"].strip("*?")):
+                raise ConfigError(f"allow-list entry {number} ({entry['name']}): a wildcard kind or name needs "
+                                  "'files' to limit it")
             self.entries.append(entry)
 
     def allows(self, kind: str, name: str, file: str) -> bool:
@@ -191,15 +198,21 @@ def code_segments(lines: list[str], is_json: bool):
     """Yield (line number, segment text, is_code) for every line.
 
     Markdown: fenced blocks are code as a whole, inline code spans are code, the
-    rest is prose. JSON (evals): every line counts as code.
+    rest is prose. JSON (evals): every line counts as code. Inside a fenced block a
+    line ending in a shell (`` \\ ``) or PowerShell (`` ` ``) continuation is joined
+    with the following lines and reported under the number of its first line.
     """
     fence = None
+    pending: tuple[int, str] | None = None
     for number, line in enumerate(lines, 1):
         if is_json:
             yield number, line, True
             continue
         match = FENCE_RE.match(line)
         if match:
+            if pending:
+                yield pending[0], pending[1], True
+                pending = None
             marker = match.group(1)
             if fence is None:
                 fence = marker
@@ -207,7 +220,13 @@ def code_segments(lines: list[str], is_json: bool):
                 fence = None
             continue
         if fence is not None:
-            yield number, line, True
+            start, text = pending if pending else (number, "")
+            stripped = line.rstrip()
+            if stripped.endswith("\\") or stripped.endswith("`"):
+                pending = (start, text + stripped[:-1] + " ")
+                continue
+            pending = None
+            yield start, text + line, True
             continue
         last = 0
         for span in CODE_SPAN_RE.finditer(line):
@@ -217,12 +236,14 @@ def code_segments(lines: list[str], is_json: bool):
             last = span.end()
         if last < len(line):
             yield number, line[last:], False
+    if pending:
+        yield pending[0], pending[1], True
 
 
 def check_cmdlets(segment: str, inv: Inventory) -> list[tuple[str, str, str]]:
     """Return (kind, name, detail) for unknown cmdlets and unknown parameters of known ones."""
     found = []
-    matches = list(CMDLET_RE.finditer(segment))
+    matches = list(inv.cmdlet_re.finditer(segment))
     for index, match in enumerate(matches):
         name = match.group(0)
         known = inv.cmdlets.get(name.lower())
@@ -243,8 +264,8 @@ def check_cmdlets(segment: str, inv: Inventory) -> list[tuple[str, str, str]]:
             given = param.group(1).lower()
             if given in COMMON_PARAMETERS:
                 continue
-            # PowerShell accepts any unambiguous prefix of a parameter name.
-            if any(p == given or p.startswith(given) for p in params):
+            # PowerShell accepts the full name or a prefix that matches exactly one parameter.
+            if given in params or sum(1 for p in params if p.startswith(given)) == 1:
                 continue
             found.append(("cmdlet-parameter", f"{canonical} -{param.group(1)}", "parameter not in inventory"))
     return found
@@ -277,10 +298,11 @@ def check_octo_cli(segment: str, inv: Inventory) -> list[tuple[str, str, str]]:
             prefix, term = arg.group(1), arg.group(2)
             if term.lower() == command.lower():
                 continue
-            candidates = {f"-{term}".lower(), f"--{term}".lower()}
-            if candidates & (args | inv.cli_global):
+            # mm-common CommandLineParser: "-x" names the short term, "--x" and "/x" the long term.
+            form = f"-{term}".lower() if prefix == "-" else f"--{term}".lower()
+            if form in args or form in inv.cli_global:
                 continue
-            if prefix == "/" :
+            if prefix == "/":
                 continue  # most likely a path, not an argument
             found.append(("octo-cli-argument", f"{canonical} {prefix}{term}", "argument not in inventory"))
     return found

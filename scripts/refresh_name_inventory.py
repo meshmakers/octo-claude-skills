@@ -66,12 +66,28 @@ class RunFailed(Exception):
 # ------------------------------------------------------------------ helpers
 
 
+def git_subcommand(args) -> str:
+    """The git subcommand of an argument list (skips '-c <value>' and other options)."""
+    skip = False
+    for arg in args:
+        if skip:
+            skip = False
+        elif arg == "-c":
+            skip = True
+        elif not arg.startswith("-"):
+            return arg
+    return "?"
+
+
 def git(*args: str, cwd: pathlib.Path | None = None, check: bool = True) -> str:
-    result = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True,
-                            env={**os.environ, "GIT_TERMINAL_PROMPT": "0"}, timeout=900)
+    # Errors name the subcommand and exit code only: git output and the command line can hold a remote URL.
+    try:
+        result = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True,
+                                env={**os.environ, "GIT_TERMINAL_PROMPT": "0"}, timeout=900)
+    except subprocess.TimeoutExpired:
+        raise RunFailed(f"git {git_subcommand(args)} timed out") from None
     if check and result.returncode != 0:
-        # git errors can carry remote URLs: report the subcommand and exit code only.
-        raise RunFailed(f"git {args[0]} failed (exit {result.returncode})")
+        raise RunFailed(f"git {git_subcommand(args)} failed (exit {result.returncode})")
     return result.stdout.strip()
 
 
@@ -80,13 +96,15 @@ def find_teams_json(explicit: str | None) -> pathlib.Path:
         return pathlib.Path(explicit).expanduser()
     candidates = glob.glob(os.path.expanduser(TEAMS_JSON_GLOB))
 
-    def version_key(path: str):
-        part = pathlib.Path(path).parts[-6]
-        return tuple(int(x) if x.isdigit() else 0 for x in part.split("."))
-
     if not candidates:
         raise RunFailed("teams.json of octo-claude-pm not found; pass --teams-json")
-    return pathlib.Path(max(candidates, key=version_key))
+    return pathlib.Path(max(candidates, key=plugin_version_key))
+
+
+def plugin_version_key(path: str) -> tuple[int, ...]:
+    """Version of the plugin folder in <cache>/octo-claude-pm/octo-claude-pm/<version>/skills/backlog-conventions/references/teams.json."""
+    part = pathlib.Path(path).parts[-5]
+    return tuple(int(x) if x.isdigit() else -1 for x in part.split("."))
 
 
 def owner_targets(teams: dict) -> dict[str, dict]:
@@ -126,7 +144,11 @@ class AzureBoards:
         self.org, self.project = org, project
 
     def _az(self, *args: str) -> dict | list:
-        result = subprocess.run(["az", *args, "--org", self.org, "--output", "json"], capture_output=True, text=True)
+        try:
+            result = subprocess.run(["az", *args, "--org", self.org, "--output", "json"], capture_output=True,
+                                    text=True, timeout=300)
+        except subprocess.TimeoutExpired:
+            raise RunFailed(f"az {' '.join(args[:2])} timed out") from None
         if result.returncode != 0:
             raise RunFailed(f"az {' '.join(args[:2])} failed (exit {result.returncode})")
         return json.loads(result.stdout or "null")
@@ -218,11 +240,27 @@ def file_findings(boards, findings: list[dict], owners: dict[str, str], targets:
 def source_repos(monorepo: pathlib.Path, sources: dict) -> list[str]:
     patterns = sources.get("repoPatterns", []) + sources.get("nodeRepoPatterns", [])
     names = {p.name for p in generate_name_inventory.matching_repos(monorepo, patterns, sources.get("excludeRepos", []))}
-    names |= {sources.get("cmdletRepo", "octo-tools"), sources.get("cliRepo", "octo-cli")}
     names = {n for n in names if (monorepo / n / ".git").exists()}
-    # extraRepos need no local checkout: they are cloned from the owner of the octo-tools remote.
-    names |= set(sources.get("extraRepos", []))
+    # Required and extra repositories need no local checkout: they are cloned from the owner of the
+    # octo-tools remote.
+    names |= set(required_repos(sources)) | set(sources.get("extraRepos", []))
     return sorted(names)
+
+
+def required_repos(sources: dict) -> list[str]:
+    """Repositories without which the inventory would be incomplete (the run fails when one is missing)."""
+    names = {sources.get("cmdletRepo", "octo-tools"), sources.get("cliRepo", "octo-cli")}
+    names |= set(sources.get("requiredRepos", []))
+    return sorted(names)
+
+
+def update_self() -> None:
+    """Fast-forward this checkout and restart the run with the new code when it changed."""
+    before = git("rev-parse", "HEAD", cwd=REPO)
+    git(*clone_args(), "pull", "--ff-only", "--quiet", cwd=REPO)
+    if git("rev-parse", "HEAD", cwd=REPO) != before:
+        argv = [a for a in sys.argv[1:] if a != "--update-self"]
+        os.execv(sys.executable, [sys.executable, str(pathlib.Path(__file__).resolve()), *argv])
 
 
 def remote_url(monorepo: pathlib.Path, name: str, sources: dict) -> str:
@@ -273,15 +311,27 @@ def clone_sources(monorepo: pathlib.Path, names: list[str], target: pathlib.Path
 
 
 def prepare_skills_clone(skills_url: str, work: pathlib.Path, branch: str) -> tuple[pathlib.Path, bool]:
-    """Clone this repository; continue the refresh branch when it is still on the remote."""
+    """Clone this repository and prepare the refresh branch on top of today's default branch.
+
+    The drift check must see today's skills, OWNERS and allow-list. A refresh branch that
+    still waits for the docs batch is continued (so there is only one), with the default
+    branch merged into it; a branch whose tip is already in the default branch (batched,
+    not yet deleted) is restarted from the default branch, which is a fast-forward of it.
+    """
     clone = work / "octo-claude-skills"
-    git(*clone_args(), "clone", "--quiet", "--depth", "50", "--no-tags", https_url(skills_url), str(clone))
+    git(*clone_args(), "clone", "--quiet", "--no-tags", https_url(skills_url), str(clone))
     git("config", "credential.helper", "!gh auth git-credential", cwd=clone)
+    default = git("rev-parse", "--abbrev-ref", "HEAD", cwd=clone)
     remote_branch = git("ls-remote", "--heads", "origin", branch, cwd=clone)
     if remote_branch:
-        git("fetch", "--quiet", "--depth", "50", "origin", f"refs/heads/{branch}:refs/remotes/origin/{branch}", cwd=clone)
-        git("checkout", "--quiet", "-b", branch, f"origin/{branch}", cwd=clone)
-        return clone, True
+        git("fetch", "--quiet", "origin", f"refs/heads/{branch}:refs/remotes/origin/{branch}", cwd=clone)
+        merged = subprocess.run(["git", "merge-base", "--is-ancestor", f"origin/{branch}", f"origin/{default}"],
+                                cwd=clone, capture_output=True).returncode == 0
+        if not merged:
+            git("checkout", "--quiet", "-b", branch, f"origin/{branch}", cwd=clone)
+            # names.json is regenerated right after; "-X ours" only settles a conflict in it.
+            git("merge", "--quiet", "--no-edit", "-X", "ours", f"origin/{default}", cwd=clone)
+            return clone, True
     git("checkout", "--quiet", "-b", branch, cwd=clone)
     return clone, False
 
@@ -299,8 +349,12 @@ def run(args, boards=None) -> int:
         if boards is None:
             boards = AzureBoards(args.org, project) if args.file_bugs else DryRunBoards()
 
+        if getattr(args, "update_self", False):
+            update_self()
+
         monorepo = pathlib.Path(args.monorepo).expanduser().resolve()
-        sources = json.loads((REPO / "inventory" / "sources.json").read_text(encoding="utf-8"))
+        sources_path = pathlib.Path(getattr(args, "sources", None) or REPO / "inventory" / "sources.json")
+        sources = json.loads(sources_path.read_text(encoding="utf-8"))
         work = pathlib.Path(args.work_dir or tempfile.mkdtemp(prefix="skill-inventory-"))
         try:
             if args.source_tree:
@@ -310,6 +364,11 @@ def run(args, boards=None) -> int:
                 names = source_repos(monorepo, sources)
                 print(f"cloning {len(names)} repositories", file=sys.stderr)
                 clone_sources(monorepo, names, src, sources)
+
+            missing = [r for r in required_repos(sources) if not (src / r).is_dir()]
+            if missing:
+                # A missing repository would drop its names and turn into false findings.
+                raise RunFailed(f"required source repositories missing: {', '.join(missing)}")
 
             branch = f"{args.user}/AB#{args.work_item}_name-inventory-refresh"
             if args.skills_tree:
@@ -336,7 +395,7 @@ def run(args, boards=None) -> int:
                 git("add", "inventory/names.json", cwd=skills_root)
                 git("commit", "--quiet", "-m", f"AB#{args.work_item} Chore: Refresh the skill name inventory ({date})",
                     cwd=skills_root)
-                git("push", "--quiet", "-u", "origin", branch, cwd=skills_root)
+                git(*clone_args(), "push", "--quiet", "-u", "origin", branch, cwd=skills_root)
                 print(f"pushed {branch} ({'continued' if continued else 'new'}); the docs batch takes it to main",
                       file=sys.stderr)
             elif old != new:
@@ -359,15 +418,20 @@ def run(args, boards=None) -> int:
         finally:
             if not args.keep and not args.work_dir:
                 shutil.rmtree(work, ignore_errors=True)
-    except (RunFailed, OSError, json.JSONDecodeError, check_skill_drift.ConfigError) as exc:
-        message = f"{COMMENT_PREFIX} {date}: the weekly skill name inventory refresh failed: {exc}"
+    except Exception as exc:  # noqa: BLE001 - every failure is reported, none may pass silently
+        if isinstance(exc, (RunFailed, check_skill_drift.ConfigError)):
+            reason = str(exc)  # written without URLs or secrets
+        else:
+            # Other exceptions can carry command lines or paths with credentials: name the type only.
+            reason = f"unexpected {type(exc).__name__}"
+        message = f"{COMMENT_PREFIX} {date}: the weekly skill name inventory refresh failed: {reason}"
         print(message, file=sys.stderr)
         ops = teams.get("sustain", {}).get("features", {}).get("ops")
         if boards is not None and ops:
             try:
                 boards.comment(int(ops), message)
-            except RunFailed as inner:
-                print(f"could not report the failure: {inner}", file=sys.stderr)
+            except Exception as inner:  # noqa: BLE001
+                print(f"could not report the failure: {type(inner).__name__}", file=sys.stderr)
         return 3
 
 
@@ -382,6 +446,9 @@ def main(argv: list[str] | None = None) -> int:
                                                           "repository list and their origin remotes)")
     parser.add_argument("--push", action="store_true", help="commit and push the refreshed inventory")
     parser.add_argument("--file-bugs", action="store_true", help="file findings and failures in Azure Boards")
+    parser.add_argument("--sources", default=None, help="sources file (default: inventory/sources.json)")
+    parser.add_argument("--update-self", action="store_true",
+                        help="fast-forward this checkout first (a failure is reported like any failed run)")
     parser.add_argument("--apply", action="store_true",
                         help="act: the same as --push --file-bugs (without it, and without those two, the run is a "
                              "dry run that only prints what it would push, file and comment)")

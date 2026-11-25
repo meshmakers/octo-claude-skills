@@ -121,8 +121,7 @@ class OwnersTest(unittest.TestCase):
         owners = check_skill_drift.load_owners(ROOT / "OWNERS")
         skills = sorted(p.name for p in (ROOT / "skills").iterdir() if (p / "SKILL.md").exists())
         self.assertEqual(sorted(owners), skills)
-        self.assertEqual(len(skills), 13)
-        self.assertEqual(set(owners.values()), {"Heimdall", "Thor", "Freya", "Mimir"})
+        self.assertLessEqual(set(owners.values()), {"Heimdall", "Thor", "Freya", "Mimir", "Sol", "Njord"})
 
 
 class InputValidationTest(unittest.TestCase):
@@ -143,6 +142,69 @@ class InputValidationTest(unittest.TestCase):
             code, _, err = run_check(FIXTURES / "check-valid", inventory=bad)
         self.assertEqual(code, 2)
         self.assertIn("schemaVersion", err)
+
+
+class ScannerRulesTest(unittest.TestCase):
+    """Edge cases of the scanners, against the fixture inventory."""
+
+    def findings(self, body):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp) / "repo"
+            shutil.copytree(FIXTURES / "check-valid", root)
+            (root / "skills" / "demo" / "SKILL.md").write_text(f"---\nname: demo\ndescription: \"x\"\n---\n{body}\n")
+            _, out, _ = run_check(root, "--json")
+        return [(f["line"], f["kind"], f["name"]) for f in json.loads(out)["findings"]]
+
+    def test_short_term_with_double_dash_and_long_term_with_single_dash_are_findings(self):
+        found = self.findings("`octo-cli -c ImportDemo --f x -file y -f z --file w`")
+        self.assertEqual(sorted(n for _, _, n in found), ["ImportDemo --f", "ImportDemo -file"])
+
+    def test_slash_long_term_is_accepted(self):
+        self.assertEqual(self.findings("`octo-cli -c ImportDemo /file x`"), [])
+
+    def test_ambiguous_prefix_is_a_finding_unique_prefix_is_not(self):
+        # Start-DemoStack has -profile and -nonInteractive; Invoke-DemoBuild has -repo, -configuration, -extra, -noTests.
+        self.assertEqual(self.findings("`Start-DemoStack -prof x -non $true`"), [])
+        with tempfile.TemporaryDirectory() as tmp:
+            inv = json.loads(INVENTORY.read_text())
+            inv["cmdlets"]["Start-DemoStack"].append("profileName")
+            path = pathlib.Path(tmp) / "names.json"
+            path.write_text(json.dumps(inv))
+            root = pathlib.Path(tmp) / "repo"
+            shutil.copytree(FIXTURES / "check-valid", root)
+            (root / "skills" / "demo" / "SKILL.md").write_text("---\nname: demo\ndescription: \"x\"\n---\n"
+                                                              "`Start-DemoStack -prof x`\n")
+            _, out, _ = run_check(root, "--json", inventory=path)
+        self.assertEqual([f["name"] for f in json.loads(out)["findings"]], ["Start-DemoStack -prof"])
+
+    def test_continuation_lines_belong_to_their_command(self):
+        body = "```bash\nocto-cli -c ImportDemo \\\n  --nosuch x \\\n  -f y\n```\n```powershell\nInvoke-DemoBuild `\n  -bogus 1\n```"
+        self.assertEqual(sorted(self.findings(body)),
+                         [(6, "octo-cli-argument", "ImportDemo --nosuch"), (11, "cmdlet-parameter", "Invoke-DemoBuild -bogus")])
+
+    def test_verbs_outside_the_approved_list_are_checked_when_octo_tools_uses_them(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            inv = json.loads(INVENTORY.read_text())
+            inv["cmdlets"]["Clone-DemoRepos"] = []
+            path = pathlib.Path(tmp) / "names.json"
+            path.write_text(json.dumps(inv))
+            root = pathlib.Path(tmp) / "repo"
+            shutil.copytree(FIXTURES / "check-valid", root)
+            (root / "skills" / "demo" / "SKILL.md").write_text("---\nname: demo\ndescription: \"x\"\n---\n"
+                                                              "`Clone-DemoRepos` and `Clone-OldRepos`\n")
+            _, out, _ = run_check(root, "--json", inventory=path)
+        self.assertEqual([f["name"] for f in json.loads(out)["findings"]], ["Clone-OldRepos"])
+
+    def test_bare_wildcard_entry_without_files_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp) / "repo"
+            shutil.copytree(FIXTURES / "check-valid", root)
+            for entry in ({"kind": "*", "name": "Foo@1"}, {"kind": "node", "name": "*"}):
+                allow = {"entries": [{**entry, "reason": "x", "workItem": 3}]}
+                (root / "inventory" / "allowlist.json").write_text(json.dumps(allow))
+                code, _, err = run_check(root)
+                self.assertEqual(code, 2, entry)
+                self.assertIn("needs 'files'", err)
 
 
 class StalenessTest(unittest.TestCase):

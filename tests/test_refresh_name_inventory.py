@@ -9,8 +9,10 @@ import argparse
 import contextlib
 import io
 import json
+import os
 import pathlib
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -77,6 +79,7 @@ class RefreshTest(unittest.TestCase):
             date=date, teams_json=str(FIXTURES / "teams.json"), org="https://example.invalid", file_bugs=True,
             monorepo=str(self.src), work_dir=str(self.tmp / "work"), keep=True, source_tree=str(self.src),
             skills_tree=str(self.skills), user="tester", work_item="1", push=False,
+            sources=str(FIXTURES / "sources.json"), update_self=False,
         )
         out, err = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
@@ -141,6 +144,34 @@ class RefreshTest(unittest.TestCase):
         item, text = self.boards.comments[0]
         self.assertEqual(item, 104)
         self.assertIn("refresh failed", text)
+        self.assertIn("required source repositories missing: octo-tools", text)
+
+    def test_missing_node_repository_fails_instead_of_dropping_its_names(self):
+        shutil.rmtree(self.src / "octo-mesh-demo")
+        code, log = self.run_refresh("2026-01-12")
+        self.assertEqual(code, 3, log)
+        self.assertIn("octo-mesh-demo", self.boards.comments[0][1])
+
+    def test_unexpected_exception_is_reported_by_type_only(self):
+        def boom(*_args, **_kwargs):
+            raise ValueError("https://user:secret@example.invalid/repo.git")
+
+        original = refresh.generate_name_inventory.generate
+        refresh.generate_name_inventory.generate = boom
+        try:
+            code, log = self.run_refresh("2026-01-12")
+        finally:
+            refresh.generate_name_inventory.generate = original
+        self.assertEqual(code, 3)
+        item, text = self.boards.comments[0]
+        self.assertEqual(item, 104)
+        self.assertIn("unexpected ValueError", text)
+        self.assertNotIn("secret", text + log)
+
+    def test_newest_plugin_version_wins(self):
+        base = "/c/octo-claude-pm/octo-claude-pm/{}/skills/backlog-conventions/references/teams.json"
+        paths = [base.format(v) for v in ("0.52.11", "0.53.0", "0.9.40")]
+        self.assertEqual(max(paths, key=refresh.plugin_version_key), base.format("0.53.0"))
 
     def test_default_is_a_dry_run_that_prints_what_it_would_file(self):
         self.rename_cmdlet()
@@ -148,7 +179,8 @@ class RefreshTest(unittest.TestCase):
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             code = refresh.main(["--monorepo", str(self.src), "--source-tree", str(self.src),
                                  "--skills-tree", str(self.skills), "--teams-json", str(FIXTURES / "teams.json"),
-                                 "--user", "tester", "--date", "2026-01-12"])
+                                 "--sources", str(FIXTURES / "sources.json"), "--user", "tester",
+                                 "--date", "2026-01-12"])
         log = out.getvalue() + err.getvalue()
         self.assertEqual(code, 0, log)
         self.assertIn("dry run: nothing is pushed, filed or commented", log)
@@ -177,6 +209,84 @@ class RefreshTest(unittest.TestCase):
         targets = refresh.owner_targets(teams)
         self.assertEqual(targets["Thor"]["feature"], 101)
         self.assertEqual(targets["Heimdall"]["areaPath"], "Fixture\\Ops")
+
+
+class RefreshBranchTest(unittest.TestCase):
+    """prepare_skills_clone against a local bare repository: the check must see today's main."""
+
+    def setUp(self):
+        self.tmp = pathlib.Path(tempfile.mkdtemp())
+        self.origin = self.tmp / "origin.git"
+        self.seed = self.tmp / "seed"
+        self.git("init", "--quiet", "--bare", "-b", "main", str(self.origin))
+        self.git("clone", "--quiet", str(self.origin), str(self.seed))
+        self.git("-C", str(self.seed), "checkout", "--quiet", "-b", "main")
+        self.commit("skill.md", "old text\n", "main 1")
+        self.git("-C", str(self.seed), "push", "--quiet", "origin", "main")
+        self.branch = "tester/AB#1_name-inventory-refresh"
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def git(self, *args):
+        env = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@invalid", "GIT_COMMITTER_NAME": "t",
+               "GIT_COMMITTER_EMAIL": "t@invalid", "PATH": os.environ["PATH"],
+               "HOME": str(self.tmp)}
+        return subprocess.run(["git", *args], check=True, capture_output=True, text=True,
+                                            env=env).stdout.strip()
+
+    def commit(self, name, text, message):
+        (self.seed / name).write_text(text)
+        self.git("-C", str(self.seed), "add", name)
+        self.git("-C", str(self.seed), "commit", "--quiet", "-m", message)
+
+    def prepare(self, label):
+
+        old = {k: os.environ.get(k) for k in ("HOME", "GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL",
+                                              "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL")}
+        os.environ.update(HOME=str(self.tmp), GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@invalid",
+                          GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@invalid")
+        try:
+            work = self.tmp / label
+            work.mkdir()
+            return refresh.prepare_skills_clone(str(self.origin), work, self.branch)
+        finally:
+            for key, value in old.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
+
+    def test_waiting_branch_is_continued_with_todays_main_merged(self):
+        self.git("-C", str(self.seed), "checkout", "--quiet", "-b", self.branch)
+        self.commit("names.json", "week 1\n", "refresh 1")
+        self.git("-C", str(self.seed), "push", "--quiet", "origin", self.branch)
+        self.git("-C", str(self.seed), "checkout", "--quiet", "main")
+        self.commit("skill.md", "fixed text\n", "main 2: skill fixed")
+        self.git("-C", str(self.seed), "push", "--quiet", "origin", "main")
+
+        clone, continued = self.prepare("a")
+        self.assertTrue(continued)
+        self.assertEqual((clone / "skill.md").read_text(), "fixed text\n")
+        self.assertEqual((clone / "names.json").read_text(), "week 1\n")
+
+    def test_batched_branch_restarts_from_main(self):
+        self.git("-C", str(self.seed), "checkout", "--quiet", "-b", self.branch)
+        self.commit("names.json", "week 1\n", "refresh 1")
+        self.git("-C", str(self.seed), "push", "--quiet", "origin", self.branch)
+        self.git("-C", str(self.seed), "checkout", "--quiet", "main")
+        self.git("-C", str(self.seed), "merge", "--quiet", "--no-ff", "-m", "batch", self.branch)
+        self.commit("skill.md", "fixed text\n", "main 3")
+        self.git("-C", str(self.seed), "push", "--quiet", "origin", "main")
+
+        clone, continued = self.prepare("b")
+        self.assertFalse(continued)
+        self.assertEqual((clone / "skill.md").read_text(), "fixed text\n")
+
+    def test_no_branch_starts_from_main(self):
+        clone, continued = self.prepare("c")
+        self.assertFalse(continued)
+        self.assertEqual((clone / "skill.md").read_text(), "old text\n")
 
 
 class HelperTest(unittest.TestCase):

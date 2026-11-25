@@ -258,6 +258,15 @@
     "skills/octo-operator/SKILL.md"
    ],
    "kind": "cmdlet",
+   "name": "Create-KindTestCluster",
+   "reason": "baseline 2026-11-25: not in inventory",
+   "workItem": 9798
+  },
+  {
+   "files": [
+    "skills/octo-operator/SKILL.md"
+   ],
+   "kind": "cmdlet",
    "name": "Remove-KindTestCluster",
    "reason": "baseline 2026-11-25: not in inventory",
    "workItem": 9798

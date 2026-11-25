@@ -6,7 +6,7 @@
   Start it by hand:   launchctl kickstart gui/$(id -u)/skill-name-inventory-refresh
   Remove it:          launchctl bootout gui/$(id -u)/skill-name-inventory-refresh
 
-  <skills-clone>  a clone of octo-claude-skills used only by this job (kept on main by the job itself)
+  <skills-clone>  a clone of octo-claude-skills used only by this job (--update-self keeps it on main; a failed update is reported like a failed run)
   <monorepo>      the folder with the OctoMesh repository checkouts (repository list and origin remotes)
   <path>          a PATH that contains git, gh (logged in) and az (logged in, for the Bugs)
   A missed run (Mac off) shows up as a warning in the drift check once the inventory is older than 14 days.
@@ -18,9 +18,13 @@
   <string>skill-name-inventory-refresh</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/bin/sh</string>
-    <string>-c</string>
-    <string>git -C "&lt;skills-clone&gt;" pull --ff-only --quiet &amp;&amp; python3 "&lt;skills-clone&gt;/scripts/refresh_name_inventory.py" --monorepo "&lt;monorepo&gt;" --apply</string>
+    <string>/usr/bin/env</string>
+    <string>python3</string>
+    <string>&lt;skills-clone&gt;/scripts/refresh_name_inventory.py</string>
+    <string>--update-self</string>
+    <string>--monorepo</string>
+    <string>&lt;monorepo&gt;</string>
+    <string>--apply</string>
   </array>
   <key>EnvironmentVariables</key>
   <dict>
