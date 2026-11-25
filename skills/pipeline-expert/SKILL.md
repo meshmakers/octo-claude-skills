@@ -1,6 +1,6 @@
 ---
 name: pipeline-expert
-description: "Authoring, reading, editing, debugging, and validating OctoMesh ETL pipeline YAML — the node-by-node config, DataContext/JSONPath data flow, triggers, transformations, entity CRUD via CreateUpdateInfo/ApplyChanges, archive (CrateDB) writes, inter-pipeline chaining within a DataFlow, and deployment/debug troubleshooting. Use whenever someone builds or fixes a pipeline definition or asks what a node does. Trigger on: pipeline YAML, pipeline node, node configuration, DataContext, ForEach, For, DataFlow, PipelineTrigger, cron schedule, ToPipelineDataEvent, FromPipelineDataEvent, FromPipelineTriggerEvent, FromExecutePipelineCommand, GetRtEntities, CreateUpdateInfo, CreateAssociationUpdate, ApplyChanges, association updates, field filters, SaveStreamDataInArchive, TimeRangeArchive, BackfillFromRtEntity, SetPipelineExecutionResult, OutputData empty, Group node, DataPointMapping, ApplyDataPointMappings, BuildMappingTargets, GenerateDataPointMappings, ValidateDataPointCoverage, ToDiscord, LlmQuery, AnthropicAiQuery, MCP, Zenon, SAP, anomaly detection, CSV/Excel import, SFTP, Grafana, Teams, OCR, pipeline schema, pipeline validation, pipeline debug, deploy pipeline, pipeline error."
+description: "Authoring, reading, editing, debugging, and validating OctoMesh ETL pipeline YAML — node config, DataContext/JSONPath data flow, triggers, transformations, entity CRUD via CreateUpdateInfo/ApplyChanges, archive (CrateDB) writes, inter-pipeline chaining within a DataFlow, and deployment/debug troubleshooting. Use when someone builds or fixes a pipeline or asks what a node does. Trigger on: pipeline YAML, pipeline node, node configuration, DataContext, ForEach, For, DataFlow, PipelineTrigger, cron schedule, ToPipelineDataEvent, FromPipelineDataEvent, FromPipelineTriggerEvent, FromExecutePipelineCommand, GetRtEntities, targetTenant, cross-tenant, CreateUpdateInfo, CreateAssociationUpdate, ApplyChanges, association updates, field filters, SaveStreamDataInArchive, TimeRangeArchive, BackfillFromRtEntity, SetPipelineExecutionResult, OutputData empty, Group node, DataPointMapping, ApplyDataPointMappings, BuildMappingTargets, GenerateDataPointMappings, ValidateDataPointCoverage, ToDiscord, LlmQuery, AnthropicAiQuery, MCP, Zenon, SAP, anomaly detection, CSV/Excel import, SFTP, Grafana, Teams, OCR, pipeline schema, pipeline validation, pipeline debug, deploy pipeline, pipeline error."
 allowed-tools:
   - "Read(${CLAUDE_PLUGIN_ROOT}/skills/pipeline-expert/references/*)"
   - "Grep"
@@ -151,7 +151,7 @@ This is an operational overview of the **most-used** nodes. The full property ta
 |------|---------|
 | `FromPolling@1` | Poll at interval (e.g., `00:05:00`) |
 | `FromHttpRequest@2` | HTTP endpoint (method + path, `allowAnonymous`, `requiredRoles`); `@1` is deprecated |
-| `FromWatchRtEntity@1` | Entity change stream (Insert/Update/Delete) |
+| `FromWatchRtEntity@1` | Entity change stream (Insert/Update/Replace; delete events only with `includeDeletes: true`) |
 | `FromPipelineDataEvent@1` | Receive data from another pipeline in the same DataFlow |
 | `FromExecutePipelineCommand@1` | Manual execution command (SDK node — all adapters); pipeline must be in a DataFlow |
 | `FromPipelineTriggerEvent@1` | Scheduled execution via PipelineTrigger entity (5-field cron) |
@@ -173,7 +173,7 @@ This is an operational overview of the **most-used** nodes. The full property ta
 | Node | Purpose |
 |------|---------|
 | `SetPrimitiveValue@1` / `SetArrayOfPrimitiveValues@1` / `WriteJson@1` | Inject static/dynamic value, value array, or raw JSON (SDK) |
-| `GetRtEntitiesByType@1` / `GetRtEntitiesById@1` / `GetRtEntitiesByWellKnownName@1` | Query entities by CK type (or, with `ckInterfaceId`, by CK interface: all implementing types, `take` required) / by ID / by well-known name (enriches with IDs) |
+| `GetRtEntitiesByType@1` / `GetRtEntitiesById@1` / `GetRtEntitiesByWellKnownName@1` | Query entities by CK type (or, with `ckInterfaceId`, by CK interface: all implementing types, `take` required) / by ID / by well-known name (enriches with IDs); `targetTenant` / `targetTenants` read another tenant of the subtree (see below) |
 | `GetOrCreateRtEntitiesByType@1` | Find by field filters or generate a new ID |
 | `GetAssociationTargets@1` | Traverse associations |
 | `GetQueryById@1` | Execute a saved query (simple/aggregation/grouping queries; cache disabled — always fresh) |
@@ -198,7 +198,7 @@ Simulation: `Simulation@1` is an **Extract** node (not Transform) — Bogus/Math
 | Node | Purpose |
 |------|---------|
 | `ApplyChanges@1` | Apply entity updates to MongoDB |
-| `ApplyChanges@2` | Apply entity + association updates (preferred) |
+| `ApplyChanges@2` | Apply entity + association updates (preferred); `targetTenant` writes into another tenant of the subtree, `targetTenants` is the one-way master-data sync into the child tenants |
 | `SaveStreamDataInArchive@1` | Write entity data to a named CrateDB **CkArchive** (replaces removed `SaveInTimeSeries@1`); requires `archiveRtId` pointing at an **Activated** archive |
 | `SaveTimeRangeStreamDataInArchive@1` | Write pre-aggregated time-range points to an Activated `TimeRangeArchive` (requires `archiveRtId`) |
 | `UpdateRtEntityIfNewer@1` | Timestamp dedup: keep only strictly-newer candidates for the RT write, emit all for the archive write |
@@ -209,6 +209,7 @@ Simulation: `Simulation@1` is an **Extract** node (not Transform) — Bogus/Math
 | `DeployPipeline@1` | Deploy another pipeline in the same DataFlow via the Communication Controller REST API |
 | `SendEMail@1`, `GenerateAndStoreReport@1`, `SftpUpload@1` | Email / report generation / SFTP upload |
 | `GrafanaProvisionTenant@1` / `GrafanaDeprovisionTenant@1` | Provision / deprovision a tenant Grafana org |
+| **Crossing tenants** | only the three `GetRtEntities*` nodes and `ApplyChanges@2` reach the **parent**, a **sibling** or a direct **child** (`targetTenant` with `relation: Parent \| Sibling \| Child`; `targetTenants` with `relation: Child` for a consolidated read, `onRefused: Fail \| Report`, or the one-way master-data sync of `ApplyChanges@2`). The node identity must be `Caller` or `ServiceAccount` with rights provisioned **in the target**, never `System`; a refusal is `CROSS_TENANT_FORBIDDEN`. Settings, sync contract (`RtSyncOrigin`, `SYNC_OWNED_ENTITY`, `CROSS_TENANT_WRITE_FAILED`) and examples: `references/node-reference-mesh.md`, section "Cross-tenant settings". |
 
 ### Buffering (SDK)
 
