@@ -20,7 +20,7 @@
   <array>
     <string>/bin/sh</string>
     <string>-c</string>
-    <string>git -C "&lt;skills-clone&gt;" pull --ff-only --quiet &amp;&amp; python3 "&lt;skills-clone&gt;/scripts/refresh_name_inventory.py" --monorepo "&lt;monorepo&gt;" --push --file-bugs</string>
+    <string>git -C "&lt;skills-clone&gt;" pull --ff-only --quiet &amp;&amp; python3 "&lt;skills-clone&gt;/scripts/refresh_name_inventory.py" --monorepo "&lt;monorepo&gt;" --apply</string>
   </array>
   <key>EnvironmentVariables</key>
   <dict>

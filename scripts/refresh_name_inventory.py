@@ -25,7 +25,7 @@ Owner IDs, the project and the Sustain Features are read at run time from the
 octo-claude-pm plugin (``skills/backlog-conventions/references/teams.json``); none
 of them is stored in this public repository.
 
-Run:  python3 scripts/refresh_name_inventory.py --monorepo <path> [--push] [--file-bugs]
+Run:  python3 scripts/refresh_name_inventory.py --monorepo <path> [--apply | --push | --file-bugs]   (default: dry run)
 Standard library only; needs git and, for --file-bugs, the Azure CLI (az boards) logged in.
 """
 from __future__ import annotations
@@ -162,14 +162,14 @@ class AzureBoards:
 
 
 class DryRunBoards:
-    """Prints what would be filed."""
+    """Prints what would be filed. Does not query Azure Boards, so it cannot tell an update from a create."""
 
     def find_open_bug(self, skill: str) -> int | None:
         return None
 
-    def create_bug(self, title, area, repro, parent) -> int:
+    def create_bug(self, title, area, repro, parent) -> int | None:
         print(f"would create Bug '{title}' under Feature {parent} ({area})")
-        return 0
+        return None
 
     def update_bug(self, bug_id, title, repro) -> None:
         print(f"would update Bug {bug_id}: '{title}'")
@@ -207,7 +207,8 @@ def file_findings(boards, findings: list[dict], owners: dict[str, str], targets:
             log.append(f"{skill}: {len(items)} finding(s), updated Bug {existing}")
         else:
             bug_id = boards.create_bug(title, target["areaPath"], repro, target["feature"])
-            log.append(f"{skill}: {len(items)} finding(s), created Bug {bug_id} under Feature {target['feature']}")
+            action = f"created Bug {bug_id}" if bug_id else "would create a Bug"
+            log.append(f"{skill}: {len(items)} finding(s), {action} under Feature {target['feature']}")
     return log
 
 
@@ -381,6 +382,9 @@ def main(argv: list[str] | None = None) -> int:
                                                           "repository list and their origin remotes)")
     parser.add_argument("--push", action="store_true", help="commit and push the refreshed inventory")
     parser.add_argument("--file-bugs", action="store_true", help="file findings and failures in Azure Boards")
+    parser.add_argument("--apply", action="store_true",
+                        help="act: the same as --push --file-bugs (without it, and without those two, the run is a "
+                             "dry run that only prints what it would push, file and comment)")
     parser.add_argument("--teams-json", help="teams.json of octo-claude-pm (default: newest installed plugin)")
     parser.add_argument("--org", default=DEFAULT_ORG, help="Azure DevOps organization URL")
     parser.add_argument("--work-item", default="9741", help="work item of the refresh commits (default 9741)")
@@ -392,6 +396,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--skills-tree", default=None, help=argparse.SUPPRESS)  # tests: use this tree, no clone
     args = parser.parse_args(argv)
     args.user = args.user or default_user()
+    if args.apply:
+        args.push = args.file_bugs = True
+    if not (args.push or args.file_bugs):
+        print("dry run: nothing is pushed, filed or commented (use --apply to act)", file=sys.stderr)
     return run(args)
 
 

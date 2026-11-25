@@ -142,6 +142,36 @@ class RefreshTest(unittest.TestCase):
         self.assertEqual(item, 104)
         self.assertIn("refresh failed", text)
 
+    def test_default_is_a_dry_run_that_prints_what_it_would_file(self):
+        self.rename_cmdlet()
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = refresh.main(["--monorepo", str(self.src), "--source-tree", str(self.src),
+                                 "--skills-tree", str(self.skills), "--teams-json", str(FIXTURES / "teams.json"),
+                                 "--user", "tester", "--date", "2026-01-12"])
+        log = out.getvalue() + err.getvalue()
+        self.assertEqual(code, 0, log)
+        self.assertIn("dry run: nothing is pushed, filed or commented", log)
+        self.assertIn("would create Bug 'Skill drift: ops-skill", log)
+        self.assertIn("would create Bug 'Skill drift: core-skill", log)
+        self.assertNotIn("pushed", log.replace("nothing is pushed", ""))
+
+    def test_apply_turns_on_push_and_bug_filing(self):
+        captured = {}
+
+        def fake_run(args, boards=None):
+            captured.update(push=args.push, file_bugs=args.file_bugs)
+            return 0
+
+        original = refresh.run
+        refresh.run = fake_run
+        try:
+            with contextlib.redirect_stderr(io.StringIO()):
+                refresh.main(["--monorepo", str(self.src), "--apply", "--user", "tester"])
+        finally:
+            refresh.run = original
+        self.assertEqual(captured, {"push": True, "file_bugs": True})
+
     def test_owner_targets_read_from_teams_json(self):
         teams = json.loads((FIXTURES / "teams.json").read_text())
         targets = refresh.owner_targets(teams)

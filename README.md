@@ -103,7 +103,7 @@ The inventory comes from repositories public CI cannot read, so it is generated 
 ```bash
 python3 scripts/generate_name_inventory.py --monorepo <folder with the checkouts> [--date YYYY-MM-DD]
 python3 scripts/refresh_name_inventory.py --monorepo <folder with the checkouts>                     # dry run
-python3 scripts/refresh_name_inventory.py --monorepo <folder with the checkouts> --push --file-bugs  # the real run
+python3 scripts/refresh_name_inventory.py --monorepo <folder with the checkouts> --apply   # the real run (= --push --file-bugs)
 ```
 
 `generate_name_inventory.py` is deterministic: the same trees and the same `--date` give byte-identical output. `inventory/sources.json` names the repositories (`repoPatterns`, `nodeRepoPatterns`, `extraRepos`, `excludeRepos`).
