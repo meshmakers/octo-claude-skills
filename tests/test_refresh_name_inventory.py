@@ -236,6 +236,7 @@ class RefreshBranchTest(unittest.TestCase):
                                             env=env).stdout.strip()
 
     def commit(self, name, text, message):
+        (self.seed / name).parent.mkdir(parents=True, exist_ok=True)
         (self.seed / name).write_text(text)
         self.git("-C", str(self.seed), "add", name)
         self.git("-C", str(self.seed), "commit", "--quiet", "-m", message)
@@ -259,7 +260,7 @@ class RefreshBranchTest(unittest.TestCase):
 
     def test_waiting_branch_is_continued_with_todays_main_merged(self):
         self.git("-C", str(self.seed), "checkout", "--quiet", "-b", self.branch)
-        self.commit("names.json", "week 1\n", "refresh 1")
+        self.commit("inventory/names.json", "week 1\n", "refresh 1")
         self.git("-C", str(self.seed), "push", "--quiet", "origin", self.branch)
         self.git("-C", str(self.seed), "checkout", "--quiet", "main")
         self.commit("skill.md", "fixed text\n", "main 2: skill fixed")
@@ -268,12 +269,12 @@ class RefreshBranchTest(unittest.TestCase):
         clone, continued = self.prepare("a")
         self.assertTrue(continued)
         self.assertEqual((clone / "skill.md").read_text(), "fixed text\n")
-        self.assertEqual((clone / "names.json").read_text(), "week 1\n")
+        self.assertEqual((clone / "inventory/names.json").read_text(), "week 1\n")
 
     def squash_batch(self, delete_branch):
         """The docs batch as main allows it: a squash merge; afterwards the batch deletes the story branch."""
         self.git("-C", str(self.seed), "checkout", "--quiet", "-b", self.branch)
-        self.commit("names.json", "week 1\n", "refresh 1")
+        self.commit("inventory/names.json", "week 1\n", "refresh 1")
         self.git("-C", str(self.seed), "push", "--quiet", "origin", self.branch)
         self.git("-C", str(self.seed), "checkout", "--quiet", "main")
         self.git("-C", str(self.seed), "merge", "--quiet", "--squash", self.branch)
@@ -288,7 +289,7 @@ class RefreshBranchTest(unittest.TestCase):
         clone, continued = self.prepare("b")
         self.assertFalse(continued)
         self.assertEqual((clone / "skill.md").read_text(), "fixed text\n")
-        self.assertEqual((clone / "names.json").read_text(), "week 1\n")
+        self.assertEqual((clone / "inventory/names.json").read_text(), "week 1\n")
 
     def test_squash_batched_branch_not_yet_deleted_is_continued_with_main_merged(self):
         # A squash merge never makes the branch an ancestor of main: until the batch deletes it, the
@@ -297,7 +298,32 @@ class RefreshBranchTest(unittest.TestCase):
         clone, continued = self.prepare("d")
         self.assertTrue(continued)
         self.assertEqual((clone / "skill.md").read_text(), "fixed text\n")
-        self.assertEqual((clone / "names.json").read_text(), "week 1\n")
+        self.assertEqual((clone / "inventory/names.json").read_text(), "week 1\n")
+
+    def test_allow_list_entry_on_the_refresh_branch_fails_the_run(self):
+        # AB#9840: baseline entries belong on a story branch; on the refresh branch an entry its owner
+        # removed on main would come back with the next batch.
+        self.git("-C", str(self.seed), "checkout", "--quiet", "-b", self.branch)
+        self.commit("inventory/names.json", "week 1\n", "refresh 1")
+        self.commit("inventory/allowlist.json", '{"entries": ["baseline"]}\n', "baseline on the refresh branch")
+        self.git("-C", str(self.seed), "push", "--quiet", "origin", self.branch)
+        with self.assertRaises(refresh.RunFailed) as ctx:
+            self.prepare("e")
+        self.assertIn("inventory/allowlist.json", str(ctx.exception))
+
+    def test_entry_removed_on_main_after_a_squash_batch_does_not_come_back(self):
+        self.git("-C", str(self.seed), "checkout", "--quiet", "-b", self.branch)
+        self.commit("inventory/names.json", "week 1\n", "refresh 1")
+        self.commit("inventory/allowlist.json", '{"entries": ["baseline"]}\n', "baseline on the refresh branch")
+        self.git("-C", str(self.seed), "push", "--quiet", "origin", self.branch)
+        self.git("-C", str(self.seed), "checkout", "--quiet", "main")
+        self.git("-C", str(self.seed), "merge", "--quiet", "--squash", self.branch)
+        self.git("-C", str(self.seed), "commit", "--quiet", "-m", "batch (squash)")
+        self.commit("inventory/allowlist.json", '{"entries": []}\n', "owner fixed the skill, entry removed")
+        self.git("-C", str(self.seed), "push", "--quiet", "origin", "main")
+        with self.assertRaises(refresh.RunFailed) as ctx:
+            self.prepare("f")
+        self.assertIn("inventory/allowlist.json", str(ctx.exception))
 
     def test_no_branch_starts_from_main(self):
         clone, continued = self.prepare("c")

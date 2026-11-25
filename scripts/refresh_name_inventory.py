@@ -334,9 +334,15 @@ def prepare_skills_clone(skills_url: str, work: pathlib.Path, branch: str) -> tu
     """Clone this repository and prepare the refresh branch on top of today's default branch.
 
     The drift check must see today's skills, OWNERS and allow-list. A refresh branch that
-    still waits for the docs batch is continued (so there is only one), with the default
-    branch merged into it; a branch whose tip is already in the default branch (batched,
-    not yet deleted) is restarted from the default branch, which is a fast-forward of it.
+    still exists on the remote is continued (so there is only one), with the default branch
+    merged into it; only a branch whose tip is an ancestor of the default branch is restarted
+    from it. The default branch takes squash or rebase merges, so a batched branch is continued
+    until the docs batch deletes it.
+
+    The refresh branch carries nothing but inventory/names.json (regenerated right after). After
+    the merge it may differ from the default branch only in that file; anything else (e.g. an
+    allow-list entry committed on the branch, which would come back after its owner removed it
+    on the default branch) fails the run instead of being pushed (AB#9840).
     """
     clone = work / "octo-claude-skills"
     git(*clone_args(), "clone", "--quiet", "--no-tags", https_url(skills_url), str(clone))
@@ -349,8 +355,15 @@ def prepare_skills_clone(skills_url: str, work: pathlib.Path, branch: str) -> tu
                                 cwd=clone, capture_output=True).returncode == 0
         if not merged:
             git("checkout", "--quiet", "-b", branch, f"origin/{branch}", cwd=clone)
-            # names.json is regenerated right after; "-X ours" only settles a conflict in it.
+            # names.json is regenerated right after; "-X ours" settles a conflict in it. A conflict
+            # anywhere else is caught by the check below, which compares the result with the default branch.
             git("merge", "--quiet", "--no-edit", "-X", "ours", f"origin/{default}", cwd=clone)
+            other = [p for p in git("diff", "--name-only", f"origin/{default}", "HEAD", cwd=clone).splitlines()
+                     if p and p != "inventory/names.json"]
+            if other:
+                raise RunFailed(f"refresh branch {branch} differs from {default} outside inventory/names.json "
+                                f"({', '.join(sorted(other))}); move those changes to a story branch and delete "
+                                "or fix the refresh branch")
             return clone, True
     git("checkout", "--quiet", "-b", branch, cwd=clone)
     return clone, False
