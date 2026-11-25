@@ -1,0 +1,8 @@
+{
+ "evals": [
+  {
+   "prompt": "Import the demo data",
+   "expected": "runs octo-cli -c ImportDemo -f data.json and a pipeline with TransformDemo@2"
+  }
+ ]
+}

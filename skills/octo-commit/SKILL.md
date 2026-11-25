@@ -262,8 +262,25 @@ Every change goes through a branch and a PR; this skill offers no direct push to
 
 ```bash
 git -C <repo> fetch origin
+git -C <repo> log --oneline origin/main..HEAD    # commits of the starting branch that are not on main
+```
+
+If that list is empty, branch from `origin/main`. Uncommitted changes come along, unless git refuses because a changed file differs between `HEAD` and `origin/main`; then use the rebase path below.
+
+```bash
 git -C <repo> checkout --no-track -b "<branch>" origin/main
 ```
+
+If it lists commits that belong to this work (on a branch that was already pushed, the list also holds pushed commits; judge each one), branch from the current `HEAD` instead and move them onto `origin/main`, so they are part of the PR. `--autostash` puts uncommitted changes aside for the rebase and back afterwards:
+
+```bash
+git -C <repo> checkout --no-track -b "<branch>" HEAD
+git -C <repo> rebase --autostash origin/main
+```
+
+Commits in that list that do not belong to this work stay on the starting branch: branch from `origin/main` and `git cherry-pick` only the ones that do; with uncommitted changes, put them aside with a named stash first (`git stash push -m "<branch>: pending work"`, then `git stash pop` after the cherry-pick).
+
+On a conflict, stop with `git rebase --abort` (or `git cherry-pick --abort`) and ask the user. The starting branch keeps its commits; resetting it (for example a local `main` after the squash merge) needs the user's go, with `octo-claude-pm` its §2.9.
 
 ### Step 6: Verify Completion
 

@@ -1,0 +1,21 @@
+# Owning PO agent of every skill (octo-claude-pm agent-operating-rules 9.2, AB#6352).
+# Format: <skill> <owner>. The drift check (scripts/check_skill_drift.py) fails for a
+# skill under skills/ without an owner and for an owner line naming no skill.
+# The owner keeps the skill true; drift findings are filed to the owner.
+
+octo-agent        Heimdall
+octo-commit       Heimdall
+octo-deploy       Heimdall
+octo-devtools     Heimdall
+octo-logs         Heimdall
+octo-logs-setup   Heimdall
+octo-operator     Heimdall
+
+octo              Thor
+octo-app-builder  Thor
+pipeline-expert   Thor
+
+octo-ck-miro      Freya
+refinery-studio   Freya
+
+octo-mcp          Mimir

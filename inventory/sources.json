@@ -1,0 +1,24 @@
+{
+ "$comment": "Input of scripts/generate_name_inventory.py and scripts/refresh_name_inventory.py. Repository names only. repoPatterns: repositories whose AGENTS.md/CLAUDE.md/docs lists go into the inventory and that the drift check treats as repositories. nodeRepoPatterns: repositories scanned for [NodeName] registrations. extraRepos: cloned by the weekly refresh even without a local checkout (plug repositories whose nodes the skills describe). excludeRepos: never cloned or listed (octo-mesh-deployment is not hosted on GitHub and holds no docs the skills point to). requiredRepos (plus cmdletRepo and cliRepo): the refresh fails when one of them is missing, instead of dropping its names.",
+ "cliRepo": "octo-cli",
+ "cmdletRepo": "octo-tools",
+ "excludeRepos": [
+  "octo-mesh-deployment"
+ ],
+ "extraRepos": [
+  "octo-plug-csv",
+  "octo-plug-ispro-ng",
+  "octo-plug-zenon"
+ ],
+ "nodeRepoPatterns": [
+  "octo-*"
+ ],
+ "repoPatterns": [
+  "octo-*"
+ ],
+ "requiredRepos": [
+  "octo-communication-sdk",
+  "octo-mesh-adapter",
+  "octo-sdk"
+ ]
+}

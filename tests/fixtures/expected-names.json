@@ -1,0 +1,76 @@
+{
+ "cmdlets": {
+  "Invoke-DemoBuild": [
+   "configuration",
+   "extra",
+   "noTests",
+   "repo"
+  ],
+  "Start-DemoStack": [
+   "nonInteractive",
+   "profile"
+  ],
+  "Stop-DemoStack": []
+ },
+ "excludeRepos": [],
+ "generated": "2026-01-05",
+ "nodes": {
+  "FromDemoTrigger": [
+   1
+  ],
+  "TransformDemo": [
+   1,
+   2
+  ]
+ },
+ "octoCli": {
+  "commands": {
+   "ImportDemo": [
+    "--file",
+    "--replace",
+    "--wait",
+    "-f",
+    "-r",
+    "-w"
+   ],
+   "ListDemos": []
+  },
+  "globalArguments": [
+   "--command",
+   "--context",
+   "--help",
+   "-?",
+   "-c"
+  ]
+ },
+ "repoPatterns": [
+  "octo-*"
+ ],
+ "repos": {
+  "octo-cli": {
+   "agentsMd": false,
+   "claudeMd": false,
+   "docHashes": []
+  },
+  "octo-legacy-demo": {
+   "agentsMd": false,
+   "claudeMd": true,
+   "docHashes": []
+  },
+  "octo-mesh-demo": {
+   "agentsMd": true,
+   "claudeMd": true,
+   "docHashes": [
+    "02f6e5e32f4d97f1",
+    "07fdd026b11c494c",
+    "7714db7c09a66a1b"
+   ]
+  },
+  "octo-tools": {
+   "agentsMd": false,
+   "claudeMd": false,
+   "docHashes": []
+  }
+ },
+ "schemaVersion": 1
+}

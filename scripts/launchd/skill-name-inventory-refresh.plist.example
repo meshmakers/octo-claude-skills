@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Weekly refresh of the skill name inventory (AB#9741) as a macOS launchd job.
+  Replace the placeholders, save as ~/Library/LaunchAgents/skill-name-inventory-refresh.plist and load it:
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/skill-name-inventory-refresh.plist
+  Start it by hand:   launchctl kickstart gui/$(id -u)/skill-name-inventory-refresh
+  Remove it:          launchctl bootout gui/$(id -u)/skill-name-inventory-refresh
+
+  <skills-clone>  a clone of octo-claude-skills used only by this job (--update-self keeps it on main; a failed update is reported like a failed run)
+  <monorepo>      the folder with the OctoMesh repository checkouts (repository list and origin remotes)
+  <path>          a PATH that contains git, gh (logged in) and az (logged in, for the Bugs)
+  A missed run (Mac off) shows up as a warning in the drift check once the inventory is older than 14 days.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>skill-name-inventory-refresh</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/env</string>
+    <string>python3</string>
+    <string>&lt;skills-clone&gt;/scripts/refresh_name_inventory.py</string>
+    <string>--update-self</string>
+    <string>--monorepo</string>
+    <string>&lt;monorepo&gt;</string>
+    <string>--apply</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>&lt;path&gt;</string>
+  </dict>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Weekday</key>
+    <integer>1</integer>
+    <key>Hour</key>
+    <integer>6</integer>
+    <key>Minute</key>
+    <integer>30</integer>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>/tmp/skill-name-inventory-refresh.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/skill-name-inventory-refresh.log</string>
+</dict>
+</plist>
