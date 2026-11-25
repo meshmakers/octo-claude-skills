@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Changed
+
+- **README** — new section *Updates* (AB#6367, Feature AB#6352): the update commands (`/plugin marketplace update octo-claude-skills`, `/plugin update octo-claude-skills@octo-claude-skills`, `/reload-plugins`, and the `claude plugin` shell form) and what the version notice at session start means that `octo-claude-pm` shows when this plugin is behind its released version.
+
 ## [0.28.18] — 2026-11-24
 
 ### Changed
