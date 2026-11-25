@@ -173,7 +173,7 @@ This is an operational overview of the **most-used** nodes. The full property ta
 | Node | Purpose |
 |------|---------|
 | `SetPrimitiveValue@1` / `SetArrayOfPrimitiveValues@1` / `WriteJson@1` | Inject static/dynamic value, value array, or raw JSON (SDK) |
-| `GetRtEntitiesByType@1` / `GetRtEntitiesById@1` / `GetRtEntitiesByWellKnownName@1` | Query entities by CK type (or, with `ckInterfaceId`, by CK interface: all implementing types, `take` required) / by ID / by well-known name (enriches with IDs); `targetTenant` / `targetTenants` read another tenant of the subtree (see below) |
+| `GetRtEntitiesByType@1` / `GetRtEntitiesById@1` / `GetRtEntitiesByWellKnownName@1` | Query entities by CK type (or, with `ckInterfaceId`, by CK interface: all implementing types, `take` required) / by ID / by well-known name (enriches with IDs); `targetTenant` / `targetTenants` read a Parent, Sibling or Child tenant (see below) |
 | `GetOrCreateRtEntitiesByType@1` | Find by field filters or generate a new ID |
 | `GetAssociationTargets@1` | Traverse associations |
 | `GetQueryById@1` | Execute a saved query (simple/aggregation/grouping queries; cache disabled — always fresh) |
@@ -198,7 +198,7 @@ Simulation: `Simulation@1` is an **Extract** node (not Transform) — Bogus/Math
 | Node | Purpose |
 |------|---------|
 | `ApplyChanges@1` | Apply entity updates to MongoDB |
-| `ApplyChanges@2` | Apply entity + association updates (preferred); `targetTenant` writes into another tenant of the subtree, `targetTenants` is the one-way master-data sync into the child tenants |
+| `ApplyChanges@2` | Apply entity + association updates (preferred); `targetTenant` writes into a Parent, Sibling or Child tenant, `targetTenants` is the one-way master-data sync into the child tenants |
 | `SaveStreamDataInArchive@1` | Write entity data to a named CrateDB **CkArchive** (replaces removed `SaveInTimeSeries@1`); requires `archiveRtId` pointing at an **Activated** archive |
 | `SaveTimeRangeStreamDataInArchive@1` | Write pre-aggregated time-range points to an Activated `TimeRangeArchive` (requires `archiveRtId`) |
 | `UpdateRtEntityIfNewer@1` | Timestamp dedup: keep only strictly-newer candidates for the RT write, emit all for the archive write |

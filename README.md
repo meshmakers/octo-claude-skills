@@ -33,20 +33,20 @@ claude plugin install octo-claude-skills
 ## Updates
 
 New versions are released through the marketplace (the `version` in `.claude-plugin/plugin.json` on `main`; the
-changes of each version are in [`CHANGELOG.md`](CHANGELOG.md)). Update inside Claude Code with:
+changes of each version are in [`CHANGELOG.md`](CHANGELOG.md)). Update from a shell with:
 
 ```
-/plugin marketplace update octo-claude-skills
-/plugin update octo-claude-skills@octo-claude-skills
-/reload-plugins
+claude plugin marketplace update octo-claude-skills
+claude plugin update octo-claude-skills@octo-claude-skills
 ```
 
-`/reload-plugins` loads the new skills into the running session (or restart Claude Code). Check the installed version
-with `/plugin` → *Installed*. From a shell: `claude plugin marketplace update octo-claude-skills`, then
-`claude plugin update octo-claude-skills@octo-claude-skills`.
+Then run `/reload-plugins` in an open session (or restart Claude Code) to load the new skills. Inside a session,
+refresh the listing with `/plugin marketplace update octo-claude-skills`, then open the plugin on the *Installed* tab of
+`/plugin` and select *Update now* (there is no `/plugin update` command). The *Installed* tab also shows the installed
+version.
 
 With `octo-claude-pm` installed, a session start shows one line when this plugin is behind its released version, for
-example `octo-claude-skills 0.28.17 is behind the released 0.28.18. Update: …` with the three commands above. Run them;
+example `octo-claude-skills 0.28.17 is behind the released 0.28.18. Update: …` with the update commands. Run them;
 the line is gone at the next session start. The check reads the released version at most once a day, never waits for
 the network and shows nothing when the plugin is current or GitHub cannot be reached.
 

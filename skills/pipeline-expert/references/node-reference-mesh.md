@@ -5,7 +5,7 @@ Nodes provided by the **Mesh Adapter** (`octo-mesh-adapter`) — one of several 
 ## Cross-tenant settings (`targetTenant`, `targetTenants`)
 
 A pipeline is registered in one tenant and, without these settings, reads and writes only that tenant. A few data
-nodes can reach **another tenant of the same subtree**. Both conditions must hold, otherwise the node fails with
+nodes can reach **another tenant of the same subtree** (a Parent, a Sibling under the same parent or a Child of the pipeline's tenant). Both conditions must hold, otherwise the node fails with
 `CROSS_TENANT_FORBIDDEN` and nothing of the target is read or written:
 
 1. the target is in the **relation** the node names, computed from the platform's tenant registry at run time;
@@ -53,7 +53,7 @@ same message; the reason is only in the adapter log.
 | `ServiceAccount` | service-account token exchanged for a token of the target | shadow client `xt_{sourceTenant}_{clientId}`: public, no secret, token exchange as only grant, no redirect URIs, no offline access, with the target's roles; Parent/Sibling target: source tenant permits the target; mirrored clients refused |
 | `System` | — | always refused, at deploy (controller) and at run time |
 
-Deploy gate (communication controller): `identity: System` with a target setting is refused; `ServiceAccount` with a
+Controller gate (runs on deploy and on every push path; an offending pipeline goes to `Error`): `identity: System` with a target setting is refused; `ServiceAccount` with a
 `tenantIdPath` is refused whatever the path; `Caller` with a `tenantIdPath` deploys with a warning and is refused at
 run time unless a verified caller exists (never for a schedule, watch or event).
 
@@ -227,7 +227,7 @@ Retrieve runtime entities by CK type ID, or by CK **interface** ID (all implemen
 | `documentMode` | enum | Extend | Extend/Replace |
 | `targetValueKind` | enum | Simple | Simple/Array |
 | `targetValueWriteMode` | enum | Overwrite | Overwrite/Append/Prepend/Merge |
-| `targetTenant` | object | optional | Read another tenant of the subtree (see *Cross-tenant settings*) |
+| `targetTenant` | object | optional | Read another tenant of the subtree (Parent, Sibling or Child; see *Cross-tenant settings*) |
 | `targetTenants` | object | optional | Read several child tenants (see *Cross-tenant settings*) |
 
 Each `sortOrders` entry has `attributeName` (the attribute to sort by — **not** `attributePath`) and `sortOrder` (`Ascending`/`Descending`). `GetAssociationTargets@1` uses the same `SortOrderDto` shape.
@@ -281,7 +281,7 @@ Retrieve specific entities by their IDs.
 | `take` | int | optional | Take count |
 | `fieldFilters` | array | optional | Field filters |
 | `targetPath` | string | required | Where to store results |
-| `targetTenant` | object | optional | Read another tenant of the subtree (see *Cross-tenant settings*) |
+| `targetTenant` | object | optional | Read another tenant of the subtree (Parent, Sibling or Child; see *Cross-tenant settings*) |
 | `targetTenants` | object | optional | Read several child tenants (see *Cross-tenant settings*) |
 
 ```yaml
@@ -306,7 +306,7 @@ Look up entities by well-known name. Enriches source data with matching entity I
 | `modOperationPath` | string | **required** (`$.modOperation` in the UI) | Where to write mod operation (0=Insert, 1=Update) |
 | `generateInsertOperation` | bool | false | Generate Insert op if entity not found |
 | `attributeTargetPath` | string | optional | Path to write entity attributes as dictionary |
-| `targetTenant` | object | optional | Look up in another tenant of the subtree (see *Cross-tenant settings*); no `targetTenants` |
+| `targetTenant` | object | optional | Look up in another tenant of the subtree (Parent, Sibling or Child; see *Cross-tenant settings*); no `targetTenants` |
 
 ```yaml
 - type: GetRtEntitiesByWellKnownName@1
@@ -1492,7 +1492,7 @@ Apply both entity and association updates with transactional support.
 |----------|------|---------|-------------|
 | `entityUpdatesPath` | string | optional | JSONPath to entity updates |
 | `associationUpdatesPath` | string | optional | JSONPath to association updates |
-| `targetTenant` | object | optional | Write into another tenant of the subtree (see *Cross-tenant settings*) |
+| `targetTenant` | object | optional | Write into another tenant of the subtree (Parent, Sibling or Child; see *Cross-tenant settings*) |
 | `targetTenants` | object | optional | One-way master-data sync into the child tenants (see *Cross-tenant settings*) |
 
 ```yaml
