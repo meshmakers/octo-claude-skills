@@ -1,0 +1,329 @@
+{
+ "$comment": "Accepted mentions. Each entry needs kind, name, reason and workItem (the work item that tracks it); files (optional) are globs relative to the repository root, name is a case-insensitive glob. Two uses: deliberate mentions (a retired name in a 'replaces the removed ...' note) and the baseline of known findings (reason 'baseline <date>: ...'), which stay here until the tracking work item fixes the skill; then remove the entry. kind: cmdlet, cmdlet-parameter, octo-cli-command, octo-cli-argument, node, repo-doc, reference-to-shim, machine-path or *.",
+ "entries": [
+  {
+   "files": [
+    "skills/octo-devtools/SKILL.md"
+   ],
+   "kind": "cmdlet",
+   "name": "Invoke-BuildFrontend",
+   "reason": "baseline 2026-11-25: not in inventory",
+   "workItem": 6353
+  },
+  {
+   "files": [
+    "skills/octo-devtools/SKILL.md"
+   ],
+   "kind": "cmdlet",
+   "name": "Invoke-OctoCliLogin",
+   "reason": "baseline 2026-11-25: not in inventory",
+   "workItem": 6353
+  },
+  {
+   "files": [
+    "skills/octo-devtools/SKILL.md"
+   ],
+   "kind": "cmdlet",
+   "name": "Invoke-OctoCliLoginLocal",
+   "reason": "baseline 2026-11-25: not in inventory",
+   "workItem": 6353
+  },
+  {
+   "files": [
+    "skills/octo-devtools/SKILL.md"
+   ],
+   "kind": "cmdlet",
+   "name": "Invoke-OctoCliLoginProduction",
+   "reason": "baseline 2026-11-25: not in inventory",
+   "workItem": 6353
+  },
+  {
+   "files": [
+    "skills/octo-devtools/SKILL.md"
+   ],
+   "kind": "cmdlet",
+   "name": "Invoke-OctoCliLoginStaging",
+   "reason": "baseline 2026-11-25: not in inventory",
+   "workItem": 6353
+  },
+  {
+   "files": [
+    "skills/octo-devtools/SKILL.md"
+   ],
+   "kind": "cmdlet",
+   "name": "Invoke-OctoCliLoginTest2",
+   "reason": "baseline 2026-11-25: not in inventory",
+   "workItem": 6353
+  },
+  {
+   "files": [
+    "skills/octo-devtools/SKILL.md"
+   ],
+   "kind": "cmdlet",
+   "name": "Invoke-SetDebugConfiguration",
+   "reason": "baseline 2026-11-25: not in inventory",
+   "workItem": 6353
+  },
+  {
+   "files": [
+    "skills/octo-devtools/references/command-reference.md"
+   ],
+   "kind": "cmdlet",
+   "name": "Invoke-BuildFrontend",
+   "reason": "baseline 2026-11-25: not in inventory",
+   "workItem": 6353
+  },
+  {
+   "files": [
+    "skills/octo-devtools/references/command-reference.md"
+   ],
+   "kind": "cmdlet",
+   "name": "Invoke-OctoCliLogin",
+   "reason": "baseline 2026-11-25: not in inventory",
+   "workItem": 6353
+  },
+  {
+   "files": [
+    "skills/octo-devtools/references/command-reference.md"
+   ],
+   "kind": "cmdlet",
+   "name": "Invoke-OctoCliLoginLocal",
+   "reason": "baseline 2026-11-25: not in inventory",
+   "workItem": 6353
+  },
+  {
+   "files": [
+    "skills/octo-devtools/references/command-reference.md"
+   ],
+   "kind": "cmdlet",
+   "name": "Invoke-OctoCliLoginProduction",
+   "reason": "baseline 2026-11-25: not in inventory",
+   "workItem": 6353
+  },
+  {
+   "files": [
+    "skills/octo-devtools/references/command-reference.md"
+   ],
+   "kind": "cmdlet",
+   "name": "Invoke-OctoCliLoginStaging",
+   "reason": "baseline 2026-11-25: not in inventory",
+   "workItem": 6353
+  },
+  {
+   "files": [
+    "skills/octo-devtools/references/command-reference.md"
+   ],
+   "kind": "cmdlet",
+   "name": "Invoke-OctoCliLoginTest2",
+   "reason": "baseline 2026-11-25: not in inventory",
+   "workItem": 6353
+  },
+  {
+   "files": [
+    "skills/octo-devtools/references/command-reference.md"
+   ],
+   "kind": "cmdlet",
+   "name": "Invoke-SetDebugConfiguration",
+   "reason": "baseline 2026-11-25: not in inventory",
+   "workItem": 6353
+  },
+  {
+   "files": [
+    "skills/octo-devtools/references/workflows.md"
+   ],
+   "kind": "cmdlet",
+   "name": "Invoke-OctoCliLoginLocal",
+   "reason": "baseline 2026-11-25: not in inventory",
+   "workItem": 6353
+  },
+  {
+   "files": [
+    "skills/octo-devtools/references/workflows.md"
+   ],
+   "kind": "cmdlet",
+   "name": "Invoke-OctoCliLoginProduction",
+   "reason": "baseline 2026-11-25: not in inventory",
+   "workItem": 6353
+  },
+  {
+   "files": [
+    "skills/octo-devtools/references/workflows.md"
+   ],
+   "kind": "cmdlet",
+   "name": "Invoke-OctoCliLoginStaging",
+   "reason": "baseline 2026-11-25: not in inventory",
+   "workItem": 6353
+  },
+  {
+   "files": [
+    "skills/octo-devtools/references/workflows.md"
+   ],
+   "kind": "cmdlet",
+   "name": "Invoke-OctoCliLoginTest2",
+   "reason": "baseline 2026-11-25: not in inventory",
+   "workItem": 6353
+  },
+  {
+   "files": [
+    "skills/octo-devtools/references/workflows.md"
+   ],
+   "kind": "cmdlet-parameter",
+   "name": "Invoke-CloneMainRepos -NoPush",
+   "reason": "baseline 2026-11-25: parameter not in inventory",
+   "workItem": 6353
+  },
+  {
+   "files": [
+    "skills/pipeline-expert/*"
+   ],
+   "kind": "node",
+   "name": "EnrichWithMongoData@1",
+   "reason": "removed node, named only as the predecessor that BackfillFromRtEntity@1 replaces",
+   "workItem": 6366
+  },
+  {
+   "files": [
+    "skills/pipeline-expert/*"
+   ],
+   "kind": "node",
+   "name": "SaveInTimeSeries@1",
+   "reason": "removed node, named only as the predecessor that SaveStreamDataInArchive@1 replaces",
+   "workItem": 6366
+  },
+  {
+   "files": [
+    "skills/octo/references/command-reference.md"
+   ],
+   "kind": "octo-cli-argument",
+   "name": "AddContext -apu",
+   "reason": "baseline 2026-11-25: argument not in inventory",
+   "workItem": 9797
+  },
+  {
+   "files": [
+    "skills/octo/references/command-reference.md"
+   ],
+   "kind": "octo-cli-argument",
+   "name": "Config -apu",
+   "reason": "baseline 2026-11-25: argument not in inventory",
+   "workItem": 9797
+  },
+  {
+   "files": [
+    "skills/octo/references/command-reference.md"
+   ],
+   "kind": "octo-cli-argument",
+   "name": "UpdateBlueprint -nb",
+   "reason": "baseline 2026-11-25: argument not in inventory",
+   "workItem": 9797
+  },
+  {
+   "files": [
+    "skills/octo/references/command-reference.md"
+   ],
+   "kind": "octo-cli-command",
+   "name": "ListBlueprintBackups",
+   "reason": "baseline 2026-11-25: not in inventory",
+   "workItem": 9797
+  },
+  {
+   "files": [
+    "skills/octo/references/command-reference.md"
+   ],
+   "kind": "octo-cli-command",
+   "name": "RollbackBlueprint",
+   "reason": "baseline 2026-11-25: not in inventory",
+   "workItem": 9797
+  },
+  {
+   "files": [
+    "skills/octo/references/environments.md"
+   ],
+   "kind": "cmdlet",
+   "name": "Invoke-OctoCliLoginProduction",
+   "reason": "baseline 2026-11-25: not in inventory",
+   "workItem": 9797
+  },
+  {
+   "files": [
+    "skills/octo/references/environments.md"
+   ],
+   "kind": "cmdlet",
+   "name": "Invoke-OctoCliLoginStaging",
+   "reason": "baseline 2026-11-25: not in inventory",
+   "workItem": 9797
+  },
+  {
+   "files": [
+    "skills/octo-operator/SKILL.md"
+   ],
+   "kind": "cmdlet",
+   "name": "Remove-KindTestCluster",
+   "reason": "baseline 2026-11-25: not in inventory",
+   "workItem": 9798
+  },
+  {
+   "files": [
+    "skills/octo-deploy/references/test-2-environment.md"
+   ],
+   "kind": "cmdlet",
+   "name": "Invoke-OctoCliLoginTest2",
+   "reason": "baseline 2026-11-25: not in inventory",
+   "workItem": 9799
+  },
+  {
+   "files": [
+    "skills/octo-devtools/SKILL.md"
+   ],
+   "kind": "machine-path",
+   "name": "C:\\dev",
+   "reason": "baseline 2026-11-25: machine-local path; use a placeholder",
+   "workItem": 9800
+  },
+  {
+   "files": [
+    "skills/octo-devtools/references/command-reference.md"
+   ],
+   "kind": "machine-path",
+   "name": "C:\\dev",
+   "reason": "baseline 2026-11-25: machine-local path; use a placeholder",
+   "workItem": 9800
+  },
+  {
+   "files": [
+    "skills/octo-devtools/references/workflows.md"
+   ],
+   "kind": "machine-path",
+   "name": "C:\\dev",
+   "reason": "baseline 2026-11-25: machine-local path; use a placeholder",
+   "workItem": 9800
+  },
+  {
+   "files": [
+    "skills/octo-mcp/SKILL.md"
+   ],
+   "kind": "machine-path",
+   "name": "C:\\dev",
+   "reason": "baseline 2026-11-25: machine-local path; use a placeholder",
+   "workItem": 9800
+  },
+  {
+   "files": [
+    "skills/octo-mcp/references/architecture.md"
+   ],
+   "kind": "machine-path",
+   "name": "C:\\dev",
+   "reason": "baseline 2026-11-25: machine-local path; use a placeholder",
+   "workItem": 9800
+  },
+  {
+   "files": [
+    "skills/refinery-studio/SKILL.md"
+   ],
+   "kind": "machine-path",
+   "name": "C:\\dev",
+   "reason": "baseline 2026-11-25: machine-local path; use a placeholder",
+   "workItem": 9800
+  }
+ ]
+}

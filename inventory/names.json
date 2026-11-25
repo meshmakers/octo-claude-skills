@@ -1,0 +1,5154 @@
+{
+ "cmdlets": {
+  "Add-OctoCatalogProperty": [
+   "properties"
+  ],
+  "Add-OctoEnvironmentExistingWorktree": [
+   "env",
+   "environmentPath",
+   "fail",
+   "inPlace",
+   "Json",
+   "manifest",
+   "path",
+   "present",
+   "role"
+  ],
+  "Add-OctoEnvironmentRepo": [
+   "addAffected",
+   "env",
+   "inPlace",
+   "Json",
+   "localBase",
+   "path",
+   "repo",
+   "role"
+  ],
+  "Add-OctoEnvironmentWorktree": [
+   "basePath",
+   "branchName",
+   "environmentPath",
+   "localBase",
+   "repo",
+   "role"
+  ],
+  "Add-OctoLocalCaTrust": [
+   "CaPath"
+  ],
+  "Assert-OctoCliVersion": [],
+  "Assert-OctoComposeCrateImage": [
+   "AcceptUnknownCrateVolumes",
+   "ComposeFile"
+  ],
+  "Assert-OctoMsBuildPropertiesPerRepo": [
+   "knownRepos",
+   "msbuildPropertiesPerRepo"
+  ],
+  "Backup-OctoInfrastructure": [
+   "Json",
+   "Name"
+  ],
+  "Check-GitStatusRecursively": [
+   "indentLevel",
+   "path"
+  ],
+  "Clear-OctoComposeCrateVersion": [],
+  "Clear-OctoEnvironmentStalePackageCache": [
+   "cache",
+   "dryRun",
+   "feed"
+  ],
+  "Clone-Repo": [
+   "branch",
+   "repositoryName"
+  ],
+  "Compare-BranchStatus": [
+   "branch",
+   "Details",
+   "Json",
+   "targetBranch"
+  ],
+  "Compare-CkVersionInfo": [
+   "A",
+   "B"
+  ],
+  "Compare-CkVersions": [
+   "Branch",
+   "Details",
+   "Json",
+   "OtherBranch"
+  ],
+  "Compare-OctoBuildStamp": [
+   "configuration",
+   "inputs",
+   "outputPath",
+   "stamp",
+   "tests"
+  ],
+  "Compare-OctoSemVer": [
+   "a",
+   "b"
+  ],
+  "Compare-PipelineFiles": [
+   "LocalFile",
+   "TempDir",
+   "TenantFile"
+  ],
+  "Compare-Pipelines": [
+   "ExportDir",
+   "Json",
+   "KeepExports",
+   "LocalPipelineDir",
+   "PipelineFile",
+   "TenantId"
+  ],
+  "Compile-Repo": [
+   "branch",
+   "catalogsDecided",
+   "configuration",
+   "events",
+   "laneSettings",
+   "msbuildProperties",
+   "path"
+  ],
+  "Compile-RepoCore": [
+   "branch",
+   "catalogsDecided",
+   "configuration",
+   "events",
+   "msbuildProperties",
+   "path"
+  ],
+  "Complete-OctoBuildEvents": [
+   "ElapsedSeconds",
+   "State"
+  ],
+  "ConvertFrom-OctoOverlayOutput": [
+   "output"
+  ],
+  "ConvertTo-AdoLogValue": [
+   "Property",
+   "Value"
+  ],
+  "ConvertTo-CiWasteUtc": [
+   "Value"
+  ],
+  "ConvertTo-CkModelInfo": [
+   "File",
+   "ModelId"
+  ],
+  "ConvertTo-CrateVersion": [
+   "Text"
+  ],
+  "ConvertTo-GlobRegex": [
+   "Glob"
+  ],
+  "ConvertTo-OctoAgentDocsProse": [
+   "KeepLineNumbers",
+   "StripComments",
+   "Text"
+  ],
+  "ConvertTo-OctoAgentDocsRuleEntry": [
+   "Raw"
+  ],
+  "ConvertTo-OctoBaseDriftRow": [
+   "added"
+  ],
+  "ConvertTo-OctoByteCount": [
+   "text"
+  ],
+  "ConvertTo-OctoCanonicalIPAddress": [
+   "Address"
+  ],
+  "ConvertTo-OctoMsBuildPropertyArgs": [
+   "properties"
+  ],
+  "ConvertTo-OctoSyncReport": [
+   "detailed",
+   "sync"
+  ],
+  "ConvertTo-OctoTestFilterValue": [
+   "value"
+  ],
+  "ConvertTo-OctoTestLockReport": [
+   "owner"
+  ],
+  "ConvertTo-OctoTestUtc": [
+   "value"
+  ],
+  "ConvertTo-OctoWorkItem": [
+   "workItem"
+  ],
+  "Copy-AllNuGetPackages": [
+   "branch",
+   "Json"
+  ],
+  "Copy-NuGetPackages": [
+   "branch",
+   "directory",
+   "Json",
+   "modifiedSince",
+   "nugetPath",
+   "onlyChanged"
+  ],
+  "Copy-OctoPackageFileAtomic": [
+   "source",
+   "targetDirectory"
+  ],
+  "Copy-OctoPackageFolder": [
+   "method",
+   "source",
+   "target"
+  ],
+  "Copy-OctoPackageFolderRaw": [
+   "method",
+   "source",
+   "target"
+  ],
+  "Create-LogDirectory": [
+   "branch"
+  ],
+  "Delete-LogFile": [
+   "branch",
+   "file"
+  ],
+  "Deploy-OctoOperator": [
+   "branch",
+   "ClusterName",
+   "ControllerHost",
+   "ImageTag",
+   "Json",
+   "Namespace",
+   "ReleaseName",
+   "SkipControllerTlsTrust",
+   "SkipRegistryCheck"
+  ],
+  "Enter-OctoCatalogRefreshLock": [
+   "directory",
+   "timeoutSeconds"
+  ],
+  "Enter-OctoTestLock": [
+   "LockPath",
+   "OnWait",
+   "PollMilliseconds",
+   "Run",
+   "TimeoutSeconds"
+  ],
+  "Exit-OctoTestLock": [
+   "Id",
+   "LockPath"
+  ],
+  "Export-PipelineFromTenant": [
+   "CkTypeId",
+   "ExportDir",
+   "PipelineName",
+   "RtIds"
+  ],
+  "Find-AllGitRepos": [
+   "branch",
+   "IncludeSubmodules",
+   "Json"
+  ],
+  "Find-CkModelFile": [
+   "Root"
+  ],
+  "Find-OctoAgentDocsMarker": [
+   "Marker",
+   "Text"
+  ],
+  "Find-OctoLaneRoot": [
+   "path"
+  ],
+  "Format-EntryStart": [
+   "Config",
+   "Headings"
+  ],
+  "Format-MigrationBrief": [
+   "Config",
+   "PathArgument",
+   "Repo"
+  ],
+  "Format-OctoAgentDocsArgument": [
+   "Value"
+  ],
+  "Format-OctoAgentDocsOpening": [
+   "Sentence",
+   "Width"
+  ],
+  "Format-OctoDuration": [
+   "duration"
+  ],
+  "Format-OctoTestDuration": [
+   "seconds"
+  ],
+  "Format-OctoTestLockOwner": [
+   "owner"
+  ],
+  "Format-RoutingTable": [
+   "Route",
+   "WithDescription"
+  ],
+  "Get-AiBastionStatus": [
+   "AdapterUrl",
+   "BearerToken",
+   "Json",
+   "Tenant"
+  ],
+  "Get-AllGitRepStatus": [
+   "branch",
+   "Json",
+   "NoFetch"
+  ],
+  "Get-BranchAvailability": [
+   "Fetch",
+   "Json",
+   "targetBranch"
+  ],
+  "Get-BuildAllPlan": [
+   "branchRootPath",
+   "excludeAdditional",
+   "excludeFrontend"
+  ],
+  "Get-CiWasteAdoToken": [],
+  "Get-CiWastePercentile": [
+   "P",
+   "Values"
+  ],
+  "Get-CiWasteReport": [
+   "AsOf",
+   "CdPoolId",
+   "ChainMap",
+   "CiPoolId",
+   "Hours",
+   "JobRequestCount",
+   "Json",
+   "Organization",
+   "Project"
+  ],
+  "Get-CiWasteRound": [
+   "Digits",
+   "Value"
+  ],
+  "Get-CiWasteShare": [
+   "Part",
+   "Whole"
+  ],
+  "Get-CkModelMap": [
+   "Root"
+  ],
+  "Get-ClaudeState": [
+   "Check",
+   "ClaudePath",
+   "Shim"
+  ],
+  "Get-ComposeProjectName": [
+   "ComposeFile",
+   "InfraPath"
+  ],
+  "Get-CrateManifestVersion": [
+   "ManifestPath"
+  ],
+  "Get-CrateRunningVersion": [
+   "Context",
+   "Namespace"
+  ],
+  "Get-CrateTableCounts": [
+   "Context",
+   "Namespace"
+  ],
+  "Get-CrateUpgradePlan": [
+   "Running",
+   "Target"
+  ],
+  "Get-FriendlySize": [
+   "Bytes"
+  ],
+  "Get-Frontmatter": [
+   "Content"
+  ],
+  "Get-HeadingAnchor": [
+   "Prose"
+  ],
+  "Get-HostLanIPv4": [],
+  "Get-InitChecklist": [
+   "Facts"
+  ],
+  "Get-InitNextStep": [
+   "CheckCommand",
+   "Facts"
+  ],
+  "Get-KindHostGatewayIp": [
+   "ClusterName"
+  ],
+  "Get-OctoAdditionalOrderedBuildOrder": [],
+  "Get-OctoAdoptedWorktreeEntry": [
+   "info",
+   "path",
+   "role"
+  ],
+  "Get-OctoAffectedRepoGraph": [
+   "features",
+   "repos"
+  ],
+  "Get-OctoAffectedRepos": [
+   "env",
+   "Json",
+   "target"
+  ],
+  "Get-OctoAgentDocsConstant": [
+   "Name"
+  ],
+  "Get-OctoAgentDocsRuleIdList": [],
+  "Get-OctoAgentDocsRuleTier": [
+   "Config",
+   "Id"
+  ],
+  "Get-OctoAgentDocsTierHeading": [
+   "Config",
+   "Markdown",
+   "Tier"
+  ],
+  "Get-OctoAspNetDevCertProfile": [
+   "Address",
+   "OutFile"
+  ],
+  "Get-OctoBuildOrder": [
+   "additionalRepos",
+   "branchRootPath",
+   "excludeAdditional",
+   "excludeFrontend"
+  ],
+  "Get-OctoBuildRangePlan": [
+   "globalPackagesPath",
+   "includeTests",
+   "repos"
+  ],
+  "Get-OctoBuildRangeRepos": [
+   "exclude",
+   "from",
+   "include",
+   "order",
+   "to"
+  ],
+  "Get-OctoBuildStampPath": [
+   "repo",
+   "stampRoot"
+  ],
+  "Get-OctoCandidateCommandLine": [
+   "commandLines",
+   "process"
+  ],
+  "Get-OctoCkPublishDisabledWarning": [
+   "repoNames"
+  ],
+  "Get-OctoCkRemoteCacheFiles": [],
+  "Get-OctoCliVersionInfo": [],
+  "Get-OctoCommandExecutableName": [
+   "command"
+  ],
+  "Get-OctoCommandLeaf": [
+   "token"
+  ],
+  "Get-OctoCommandLineTokens": [
+   "command"
+  ],
+  "Get-OctoComposeCrateDecision": [
+   "AcceptUnknownCrateVolumes",
+   "ComposeVersion",
+   "StoredVersions",
+   "VolumesExist"
+  ],
+  "Get-OctoComposeCrateImageVersions": [],
+  "Get-OctoComposeCrateMarkerPath": [],
+  "Get-OctoComposeCrateVersion": [
+   "ComposeFile"
+  ],
+  "Get-OctoControllerTlsProfile": [
+   "Address",
+   "OutFile",
+   "Port",
+   "ProbeAddress"
+  ],
+  "Get-OctoCrateJobLogFilter": [
+   "CrateHttpUri"
+  ],
+  "Get-OctoDevInstanceSecretKey": [],
+  "Get-OctoDevStackDaemonStatus": [
+   "Port"
+  ],
+  "Get-OctoDevStackDefaultPath": [],
+  "Get-OctoDevStackDllFromCommandLine": [
+   "CommandLine"
+  ],
+  "Get-OctoDevStackHealth": [
+   "Port"
+  ],
+  "Get-OctoDevStackLastLogLine": [
+   "Paths"
+  ],
+  "Get-OctoDevStackLaunchAgentLabel": [],
+  "Get-OctoDevStackLaunchAgentPath": [],
+  "Get-OctoDevStackLaunchAgentPlist": [
+   "Dll",
+   "Dotnet",
+   "Label",
+   "PathValue",
+   "RepoPath",
+   "StatePath",
+   "ToolsPath",
+   "Url"
+  ],
+  "Get-OctoDevStackLaunchdDomain": [],
+  "Get-OctoDevStackListener": [
+   "Port"
+  ],
+  "Get-OctoDevStackListeningPids": [
+   "Port"
+  ],
+  "Get-OctoDevStackLogonTaskArguments": [
+   "TaskName"
+  ],
+  "Get-OctoDevStackNativeCommand": [
+   "Name"
+  ],
+  "Get-OctoDevStackProcessCommandLine": [
+   "ProcessId"
+  ],
+  "Get-OctoDevStackRestartCheck": [
+   "Port"
+  ],
+  "Get-OctoDevStackServicePathValue": [
+   "PathValue"
+  ],
+  "Get-OctoDevStackServicePlatform": [],
+  "Get-OctoDevStackServicePort": [
+   "Definition"
+  ],
+  "Get-OctoDevStackServiceRepoPath": [
+   "Definition"
+  ],
+  "Get-OctoDevStackServiceState": [
+   "Port"
+  ],
+  "Get-OctoDevStackStatePath": [],
+  "Get-OctoDevStackSystemdActive": [],
+  "Get-OctoDevStackSystemdShow": [
+   "Property"
+  ],
+  "Get-OctoDevStackSystemdUnit": [
+   "Dll",
+   "Dotnet",
+   "RepoPath",
+   "StatePath",
+   "ToolsPath",
+   "Url"
+  ],
+  "Get-OctoDevStackSystemdUnitPath": [],
+  "Get-OctoDevStackToolsPath": [],
+  "Get-OctoDevStackWindowsTaskCommand": [
+   "Port",
+   "RepoPath",
+   "ToolsPath"
+  ],
+  "Get-OctoDockerCapacity": [],
+  "Get-OctoEntryAssemblyPath": [
+   "command",
+   "cwd"
+  ],
+  "Get-OctoEnvironment": [
+   "env",
+   "Json"
+  ],
+  "Get-OctoEnvironmentAffected": [
+   "basePath",
+   "manifest"
+  ],
+  "Get-OctoEnvironmentBasePath": [
+   "base"
+  ],
+  "Get-OctoEnvironmentBaseSetupHint": [],
+  "Get-OctoEnvironmentBuildSelection": [
+   "env",
+   "order",
+   "repos",
+   "skip",
+   "toolRepos"
+  ],
+  "Get-OctoEnvironmentDefaultBranchName": [
+   "env",
+   "workItem"
+  ],
+  "Get-OctoEnvironmentFeedSnapshotReport": [
+   "basePath",
+   "env",
+   "manifest"
+  ],
+  "Get-OctoEnvironmentManifestPath": [
+   "environmentPath"
+  ],
+  "Get-OctoEnvironmentMissingBaseMessage": [
+   "base",
+   "basePath"
+  ],
+  "Get-OctoEnvironmentPath": [
+   "env"
+  ],
+  "Get-OctoEnvironmentRepoSet": [
+   "basePath",
+   "manifest"
+  ],
+  "Get-OctoEnvironmentRepoSource": [
+   "basePath",
+   "repo"
+  ],
+  "Get-OctoEnvironmentRepoState": [
+   "checkMerged",
+   "repo"
+  ],
+  "Get-OctoEnvironmentRootPath": [],
+  "Get-OctoEnvironmentStaleWarnings": [
+   "buildUnchanged",
+   "changed",
+   "order",
+   "selection",
+   "upstream"
+  ],
+  "Get-OctoEnvironmentUserPropsContent": [
+   "base",
+   "basePath",
+   "env"
+  ],
+  "Get-OctoFeedPackageHashes": [
+   "excludeIds",
+   "feedPath",
+   "packageIds"
+  ],
+  "Get-OctoFileHash256": [
+   "path"
+  ],
+  "Get-OctoFileSha512": [
+   "path"
+  ],
+  "Get-OctoFrontendTestProjects": [
+   "repositoryPath"
+  ],
+  "Get-OctoGitNetworkTimeoutSeconds": [],
+  "Get-OctoGitRemoteHost": [
+   "arguments",
+   "path"
+  ],
+  "Get-OctoGlobalPackageCachePath": [],
+  "Get-OctoGlobalPackageDirectories": [
+   "globalPackagesPath",
+   "packageIds"
+  ],
+  "Get-OctoGlobalPackagesPath": [],
+  "Get-OctoIPv4SubnetLastHost": [
+   "FromEnd",
+   "Subnet"
+  ],
+  "Get-OctoIPv6SubnetLastHost": [
+   "FromEnd",
+   "Subnet"
+  ],
+  "Get-OctoInPlaceRestoreSources": [
+   "environmentFeed",
+   "repositoryPath",
+   "userPropsPaths"
+  ],
+  "Get-OctoInfrastructureBackup": [
+   "Json"
+  ],
+  "Get-OctoInfrastructureStatus": [
+   "Json"
+  ],
+  "Get-OctoInstallation": [
+   "Name"
+  ],
+  "Get-OctoKubernetesS3RelayAction": [
+   "ClusterName",
+   "ExpectedAddress",
+   "ExpectedIPv6Address",
+   "Relay"
+  ],
+  "Get-OctoKubernetesS3RelayAddress": [
+   "Network"
+  ],
+  "Get-OctoKubernetesS3RelayState": [],
+  "Get-OctoKubernetesS3StoreCredential": [
+   "ClusterName"
+  ],
+  "Get-OctoKubernetesS3StoreInfo": [],
+  "Get-OctoKubernetesStatus": [
+   "ClusterName",
+   "Json",
+   "SkipS3Probe"
+  ],
+  "Get-OctoLaneBuildSettings": [
+   "laneIsolation",
+   "laneRootPath"
+  ],
+  "Get-OctoLaneDotnetProcesses": [
+   "branchRootPath"
+  ],
+  "Get-OctoMainRepoNames": [],
+  "Get-OctoMsBuildPropertiesHash": [
+   "properties"
+  ],
+  "Get-OctoNonInteractiveSshCommand": [
+   "connectTimeoutSeconds",
+   "path"
+  ],
+  "Get-OctoPackageCacheSeedSource": [
+   "basePath"
+  ],
+  "Get-OctoPackageCopyMethod": [
+   "source",
+   "target"
+  ],
+  "Get-OctoPackageCopySkipReason": [
+   "binDirectory",
+   "file",
+   "nugetPath",
+   "repositoryRoot"
+  ],
+  "Get-OctoPackageIdFromFile": [
+   "fileName"
+  ],
+  "Get-OctoPackageScanFiles": [
+   "path"
+  ],
+  "Get-OctoPinnedBuildOrder": [],
+  "Get-OctoProcessCommandLines": [],
+  "Get-OctoProcessCwdRecords": [
+   "processIds"
+  ],
+  "Get-OctoProcessDisplayName": [
+   "command"
+  ],
+  "Get-OctoProcessesUnderFolder": [
+   "path"
+  ],
+  "Get-OctoRangePackageCaches": [
+   "laneSettings"
+  ],
+  "Get-OctoRepoBinPrefixes": [
+   "repos"
+  ],
+  "Get-OctoRepoBuildInputs": [
+   "feedPath",
+   "msbuildProperties",
+   "ownPackageIds",
+   "packageIds",
+   "path"
+  ],
+  "Get-OctoRepoBuildJobState": [
+   "job"
+  ],
+  "Get-OctoRepoBuildMode": [
+   "repo"
+  ],
+  "Get-OctoRepoPackageFiles": [
+   "path"
+  ],
+  "Get-OctoRepoPackageInfo": [
+   "path"
+  ],
+  "Get-OctoRepoRestoreSourcesOverride": [
+   "laneSettings",
+   "repositoryPath"
+  ],
+  "Get-OctoRepoSolution": [
+   "path"
+  ],
+  "Get-OctoRepoSourceState": [
+   "path"
+  ],
+  "Get-OctoRepoTimings": [
+   "build",
+   "catalogSeconds",
+   "tests"
+  ],
+  "Get-OctoReposOnPath": [
+   "graph",
+   "target"
+  ],
+  "Get-OctoRepositoryBuildEnvironment": [
+   "configuration",
+   "laneIsolation",
+   "repositoryPath"
+  ],
+  "Get-OctoRunningRepoProcesses": [
+   "repos"
+  ],
+  "Get-OctoSolutionProjects": [
+   "solutionPath"
+  ],
+  "Get-OctoSrcProjects": [
+   "projects"
+  ],
+  "Get-OctoStaleGlobalPackages": [
+   "globalPackagesPath",
+   "nugetPath"
+  ],
+  "Get-OctoStampFileHash": [
+   "path"
+  ],
+  "Get-OctoStampTextHash": [
+   "text"
+  ],
+  "Get-OctoTestBranchRepoDirectories": [
+   "Root"
+  ],
+  "Get-OctoTestBuildFiles": [
+   "projectDirectory",
+   "repositoryPath"
+  ],
+  "Get-OctoTestBuildState": [
+   "configuration",
+   "laneFeed",
+   "project",
+   "repositoryPath"
+  ],
+  "Get-OctoTestFileTime": [
+   "path"
+  ],
+  "Get-OctoTestFilterCalls": [
+   "failedNames",
+   "filter",
+   "maxLength",
+   "project"
+  ],
+  "Get-OctoTestFilterChunks": [
+   "filter",
+   "maxLength",
+   "names"
+  ],
+  "Get-OctoTestFilterName": [
+   "className",
+   "methodName",
+   "testName"
+  ],
+  "Get-OctoTestInPlaceProperties": [
+   "basePath",
+   "environmentPath",
+   "repositoryPath"
+  ],
+  "Get-OctoTestLock": [
+   "Json",
+   "LockPath"
+  ],
+  "Get-OctoTestLockPath": [],
+  "Get-OctoTestLockState": [
+   "LockPath"
+  ],
+  "Get-OctoTestLogErrors": [
+   "logFile"
+  ],
+  "Get-OctoTestNewestSource": [
+   "repositoryPath"
+  ],
+  "Get-OctoTestOutputFile": [
+   "assemblyName",
+   "configuration",
+   "framework",
+   "projectDirectory",
+   "repositoryPath"
+  ],
+  "Get-OctoTestProcessStartTime": [
+   "processId"
+  ],
+  "Get-OctoTestProjects": [
+   "repositoryPath"
+  ],
+  "Get-OctoTestReferenceAssemblyTime": [
+   "assemblyName",
+   "configuration",
+   "framework",
+   "projectDirectory",
+   "repositoryPath"
+  ],
+  "Get-OctoTestRepoFiles": [
+   "extensions",
+   "path"
+  ],
+  "Get-OctoTestResultsRoot": [
+   "lanePath",
+   "repo"
+  ],
+  "Get-OctoTestRunner": [
+   "projectDirectory",
+   "repositoryRoot"
+  ],
+  "Get-OctoTestUtcNow": [],
+  "Get-OctoToolsConfig": [
+   "Force"
+  ],
+  "Get-OctoToolsConfigPath": [],
+  "Get-OctoUpstreamRepoMap": [
+   "graph"
+  ],
+  "Get-OctoUserNuGetConfigFile": [],
+  "Get-OctoUserPropsProperties": [
+   "paths"
+  ],
+  "Get-OctoWorkspace": [
+   "Json"
+  ],
+  "Get-OctoWorkspaceLayout": [
+   "CaseSensitive",
+   "DefaultLanePath",
+   "Root"
+  ],
+  "Get-OctoWorktreeInfo": [
+   "path"
+  ],
+  "Get-PipelineFiles": [
+   "LocalPipelineDir",
+   "PipelineFile"
+  ],
+  "Get-PipelineMetadata": [
+   "FilePath"
+  ],
+  "Get-RancherKubeConfig": [
+   "Cluster",
+   "ContextName",
+   "Json",
+   "RancherApiToken",
+   "RancherUrl",
+   "SkipTlsVerify"
+  ],
+  "Get-RepoBuildMode": [
+   "builder"
+  ],
+  "Get-RepoBuilder": [
+   "path"
+  ],
+  "Get-RepositoryFile": [
+   "Repo",
+   "Rules"
+  ],
+  "Get-RepositoryPaths": [
+   "branchPath",
+   "excludeRepo"
+  ],
+  "Get-RuleRow": [
+   "Id",
+   "Rules"
+  ],
+  "Get-ScanIgnorePattern": [
+   "Rules"
+  ],
+  "Get-ServiceStatus": [],
+  "Get-ShimAdvice": [
+   "Reference"
+  ],
+  "Get-StartHere": [
+   "Findings",
+   "PathArgument",
+   "Repo"
+  ],
+  "Get-TextLine": [
+   "Content"
+  ],
+  "Hide-OctoUrlCredentials": [
+   "text"
+  ],
+  "Import-OctoImageToKind": [
+   "ClusterName",
+   "Image",
+   "Json"
+  ],
+  "Initialize-OctoAgentDocs": [
+   "Json",
+   "Path"
+  ],
+  "Initialize-OctoEnvironmentPackageCache": [
+   "env",
+   "Json",
+   "source"
+  ],
+  "Initialize-OctoKindCrateDbUser": [
+   "CrateHttpUri",
+   "Password",
+   "RetrySeconds",
+   "UserName"
+  ],
+  "Initialize-OctoKubernetesS3HostPort": [
+   "ClusterName"
+  ],
+  "Initialize-OctoLaneUserProps": [
+   "AddRestorePackagesPath",
+   "branch",
+   "Json"
+  ],
+  "Initialize-OctoRunCatalogs": [
+   "ckc",
+   "laneRootPath",
+   "maxAgeMinutes"
+  ],
+  "Install-OctoDevStackDaemonService": [
+   "HealthTimeoutSeconds",
+   "Json",
+   "NoStart",
+   "Path",
+   "Port"
+  ],
+  "Install-OctoInfrastructure": [
+   "AcceptUnknownCrateVolumes",
+   "Json"
+  ],
+  "Install-OctoKubernetes": [
+   "AssumeFreshCrateDbVolume",
+   "branch",
+   "ClusterName",
+   "CrdNamespace",
+   "CrdReleaseName",
+   "DevRegistry",
+   "ExposeLan",
+   "Json",
+   "NonInteractive",
+   "SkipCrateDbSnapshot",
+   "SkipInfra",
+   "SkipIngress",
+   "SkipOperator",
+   "SkipRegistryCheck",
+   "SkipS3Store",
+   "SkipTrustCa"
+  ],
+  "Install-OctoKubernetesS3Store": [
+   "ClusterName",
+   "RolloutTimeoutSeconds",
+   "SkipHostPort"
+  ],
+  "Invoke-AgentDocsCheck": [
+   "Fix",
+   "Root"
+  ],
+  "Invoke-Build": [
+   "configuration",
+   "DryRun",
+   "EventsFile",
+   "Json",
+   "laneIsolation",
+   "msbuildProperties",
+   "refreshCatalogs",
+   "repositoryPath"
+  ],
+  "Invoke-BuildAll": [
+   "branch",
+   "configuration",
+   "DryRun",
+   "EventsFile",
+   "excludeAdditional",
+   "excludeFrontend",
+   "Json",
+   "laneIsolation",
+   "msbuildProperties",
+   "msbuildPropertiesPerRepo",
+   "refreshCatalogs",
+   "skipCkSync",
+   "skipKill"
+  ],
+  "Invoke-BuildAllCore": [
+   "branch",
+   "configuration",
+   "DryRun",
+   "events",
+   "excludeAdditional",
+   "excludeFrontend",
+   "Json",
+   "laneIsolation",
+   "msbuildProperties",
+   "msbuildPropertiesPerRepo",
+   "refreshCatalogs",
+   "skipCkSync",
+   "skipKill"
+  ],
+  "Invoke-BuildAndStartOcto": [
+   "configuration",
+   "SystemDatabase"
+  ],
+  "Invoke-BuildCore": [
+   "configuration",
+   "events",
+   "Json",
+   "msbuildProperties",
+   "propertyArgs",
+   "refreshCatalogs",
+   "repositoryPath"
+  ],
+  "Invoke-BuildEnvironment": [
+   "buildUnchanged",
+   "Detailed",
+   "DryRun",
+   "env",
+   "EventsFile",
+   "includeTests",
+   "Json",
+   "maxParallel",
+   "refreshCatalogs",
+   "repos",
+   "skip",
+   "skipKill",
+   "syncMain",
+   "verifyTests"
+  ],
+  "Invoke-BuildMain": [
+   "configuration",
+   "DryRun",
+   "events",
+   "Json",
+   "laneIsolation",
+   "msbuildProperties",
+   "refreshCatalogs",
+   "repositoryPath"
+  ],
+  "Invoke-BuildRange": [
+   "branch",
+   "configuration",
+   "EventsCommand",
+   "EventsFile",
+   "exclude",
+   "excludeFrontend",
+   "externalRepoPaths",
+   "feedPath",
+   "from",
+   "ignoreRunningServices",
+   "include",
+   "includeTests",
+   "Json",
+   "laneIsolation",
+   "maxParallel",
+   "msbuildProperties",
+   "msbuildPropertiesPerRepo",
+   "purgeStaleCache",
+   "recordStamps",
+   "refreshCatalogs",
+   "repoInputs",
+   "repoPaths",
+   "skipCkSync",
+   "skipRepos",
+   "skipUnchanged",
+   "stopServices",
+   "to",
+   "verifyTests"
+  ],
+  "Invoke-BuildZenonPlug": [
+   "configuration",
+   "Json",
+   "repositoryPath"
+  ],
+  "Invoke-CiWasteAdoGet": [
+   "Token",
+   "Uri"
+  ],
+  "Invoke-CleanAllGitRepos": [
+   "force",
+   "Json"
+  ],
+  "Invoke-CleanupInfraContainerDisks": [
+   "Json"
+  ],
+  "Invoke-CloneMainRepos": [
+   "branch",
+   "Json"
+  ],
+  "Invoke-CrateSql": [
+   "Context",
+   "Namespace",
+   "Pod",
+   "Stmt"
+  ],
+  "Invoke-IdentityOverlay": [
+   "DryRun",
+   "Json",
+   "OctoCli",
+   "OverlayFile",
+   "OverlayName"
+  ],
+  "Invoke-KillDotnet": [
+   "action",
+   "additionalRoots",
+   "branchRootPath",
+   "Json"
+  ],
+  "Invoke-MongoPortForward": [
+   "environment"
+  ],
+  "Invoke-OctoBuildRangeCore": [
+   "branch",
+   "configuration",
+   "events",
+   "exclude",
+   "excludeFrontend",
+   "externalRepoPaths",
+   "feedPath",
+   "from",
+   "ignoreRunningServices",
+   "include",
+   "includeTests",
+   "Json",
+   "laneIsolation",
+   "maxParallel",
+   "msbuildProperties",
+   "msbuildPropertiesPerRepo",
+   "purgeStaleCache",
+   "recordStamps",
+   "refreshCatalogs",
+   "repoInputs",
+   "repoPaths",
+   "skipCkSync",
+   "skipRepos",
+   "skipUnchanged",
+   "stopServices",
+   "to",
+   "verifyTests"
+  ],
+  "Invoke-OctoBuildRangeRepo": [
+   "configuration",
+   "entry",
+   "Json",
+   "msbuildProperties"
+  ],
+  "Invoke-OctoBuildRangeRepoStep": [
+   "requestFile"
+  ],
+  "Invoke-OctoBuildRangeTests": [
+   "configuration",
+   "entry",
+   "Json",
+   "msbuildProperties"
+  ],
+  "Invoke-OctoCkcRefresh": [
+   "ckc"
+  ],
+  "Invoke-OctoCliCapture": [
+   "Arguments"
+  ],
+  "Invoke-OctoCliReconfigureLogLevel": [
+   "Json",
+   "loggerName",
+   "maxLogLevel",
+   "minLogLevel"
+  ],
+  "Invoke-OctoCrateSql": [
+   "CrateHttpUri",
+   "Secrets",
+   "Stmt",
+   "TimeoutSec"
+  ],
+  "Invoke-OctoDevStackLaunchctl": [
+   "AllowFailure",
+   "Arguments"
+  ],
+  "Invoke-OctoDevStackSystemctl": [
+   "Arguments"
+  ],
+  "Invoke-OctoDocker": [
+   "arguments"
+  ],
+  "Invoke-OctoDockerLimitPass": [
+   "Cpus",
+   "Memory",
+   "State"
+  ],
+  "Invoke-OctoDotnetRestoreAndBuild": [
+   "configuration",
+   "logFile",
+   "propertyArgs",
+   "target"
+  ],
+  "Invoke-OctoDotnetTest": [
+   "arguments",
+   "logFile",
+   "workingDirectory"
+  ],
+  "Invoke-OctoEnvironmentGh": [
+   "arguments",
+   "path"
+  ],
+  "Invoke-OctoEnvironmentGit": [
+   "arguments",
+   "noPrompt",
+   "path"
+  ],
+  "Invoke-OctoEnvironmentPackageCacheSeed": [
+   "automatic",
+   "basePath",
+   "dryRun",
+   "environmentPath",
+   "source"
+  ],
+  "Invoke-OctoEnvironmentSync": [
+   "basePath",
+   "dryRun",
+   "environmentPath"
+  ],
+  "Invoke-OctoFrontendTest": [
+   "arguments",
+   "directory",
+   "logFile"
+  ],
+  "Invoke-OctoGitProcess": [
+   "arguments",
+   "environment",
+   "path",
+   "timeoutSeconds"
+  ],
+  "Invoke-OctoModuleFunction": [
+   "arguments",
+   "module",
+   "name"
+  ],
+  "Invoke-OctoPackageCacheSeed": [
+   "dryRun",
+   "source",
+   "target"
+  ],
+  "Invoke-OctoS3Request": [
+   "Credential",
+   "Method",
+   "Region",
+   "Unsigned",
+   "Url"
+  ],
+  "Invoke-OctoTenantSweep": [
+   "AllTenants",
+   "CliArguments",
+   "Context",
+   "ContextTemplate",
+   "Exclude",
+   "IncludeOutput",
+   "Installation",
+   "Json",
+   "ShowOutput",
+   "Tenant",
+   "UriSuffix"
+  ],
+  "Invoke-OctoTestRun": [
+   "branch",
+   "build",
+   "configuration",
+   "dockerCheck",
+   "dockerCpus",
+   "dockerLock",
+   "dockerMemory",
+   "env",
+   "EventsFile",
+   "filter",
+   "includePassed",
+   "Json",
+   "lockPath",
+   "lockPollMilliseconds",
+   "lockTimeoutSeconds",
+   "maxFailures",
+   "maxFilterLength",
+   "maxPassed",
+   "minDockerFreeMemoryGiB",
+   "project",
+   "repo",
+   "rerunFailed"
+  ],
+  "Invoke-Publish": [
+   "configuration",
+   "DryRun",
+   "Json",
+   "laneIsolation",
+   "publishParameters",
+   "repositoryPath"
+  ],
+  "Invoke-PublishCore": [
+   "configuration",
+   "Json",
+   "publishParameters",
+   "repositoryPath"
+  ],
+  "Invoke-StarOrgRepos": [
+   "DryRun",
+   "Json",
+   "MaxDelaySeconds",
+   "MinDelaySeconds",
+   "Organization"
+  ],
+  "Invoke-SwitchAllBranches": [
+   "branch",
+   "IncludeSubmodules",
+   "Json",
+   "Name",
+   "Push"
+  ],
+  "Join-KubeConfigs": [
+   "externalKubeConfig"
+  ],
+  "Measure-CiWaste": [
+   "AsOf",
+   "Builds",
+   "ChainMap",
+   "Hours",
+   "JobRequests",
+   "PoolInfo"
+  ],
+  "Merge-OctoCatalogIndex": [
+   "baseJson",
+   "environmentJson"
+  ],
+  "Merge-OctoRepoMsBuildProperties": [
+   "msbuildProperties",
+   "msbuildPropertiesPerRepo",
+   "repoName"
+  ],
+  "New-AspNetDeveloperCertificate": [
+   "CertificateName",
+   "CleanExisting",
+   "DnsNames",
+   "IpAddresses",
+   "KeySize",
+   "OutputDirectory",
+   "Password",
+   "TrustCertificate",
+   "UpdateHostsFile",
+   "ValidityDays"
+  ],
+  "New-CrateUpgradeSnapshot": [
+   "Context",
+   "FromVersion",
+   "Namespace"
+  ],
+  "New-OctoActionResult": [
+   "ExitCode",
+   "Extra",
+   "Success"
+  ],
+  "New-OctoBuildEventState": [
+   "Command",
+   "Path"
+  ],
+  "New-OctoEnvironment": [
+   "addAffected",
+   "base",
+   "branchName",
+   "Detailed",
+   "env",
+   "Json",
+   "localBase",
+   "owner",
+   "repos",
+   "skipPackageCacheSeed",
+   "workItem"
+  ],
+  "New-OctoKubernetesS3StoreSecret": [
+   "ClusterName"
+  ],
+  "New-OctoRestoreConfigFile": [
+   "credentials",
+   "sources",
+   "userConfigPath"
+  ],
+  "New-OctoSolutionFilter": [
+   "name",
+   "projects",
+   "solutionPath"
+  ],
+  "New-RootCertificate": [
+   "CertificateName",
+   "KeySize",
+   "OutputDirectory",
+   "ValidityDays"
+  ],
+  "New-ServerCertificate": [
+   "CertificateName",
+   "DnsNames",
+   "KeySize",
+   "OutputDirectory",
+   "RootCertificatePath",
+   "RootKeyPath",
+   "ValidityDays"
+  ],
+  "New-TestBranch": [
+   "branch",
+   "Description",
+   "Json",
+   "MinorVersion",
+   "NoPush"
+  ],
+  "Normalize-PipelineYaml": [
+   "FilePath",
+   "OutputPath"
+  ],
+  "Protect-OctoSweepText": [
+   "Text"
+  ],
+  "Push-AllGitRepos": [
+   "branch",
+   "Json"
+  ],
+  "Push-GitRepo": [
+   "Json",
+   "repositoryPath"
+  ],
+  "Read-CkModelId": [
+   "FilePath"
+  ],
+  "Read-OctoAgentDocsBuiltInRuleset": [],
+  "Read-OctoAgentDocsText": [
+   "Path"
+  ],
+  "Read-OctoBuildStamp": [
+   "repo",
+   "stampRoot"
+  ],
+  "Read-OctoEnvironmentManifest": [
+   "env"
+  ],
+  "Read-OctoJUnitFile": [
+   "path"
+  ],
+  "Read-OctoSyncManifest": [
+   "path"
+  ],
+  "Read-OctoTestLastResult": [
+   "projectResultsPath"
+  ],
+  "Read-OctoTestLockFile": [
+   "path"
+  ],
+  "Read-OctoTestProjectFile": [
+   "path",
+   "unconditionalOnly"
+  ],
+  "Read-OctoTrxFile": [
+   "maxPassed",
+   "path"
+  ],
+  "Register-AiBastion": [
+   "AdapterUrl",
+   "BearerToken",
+   "Tenant",
+   "Ticket"
+  ],
+  "Register-OctoCliContext": [
+   "IncludeAi",
+   "IncludeReporting",
+   "Installation",
+   "Json",
+   "NoLogin",
+   "NoSwitch",
+   "TenantId",
+   "UriSuffix"
+  ],
+  "Register-OctoCliContextForTenant": [
+   "IncludeAi",
+   "IncludeReporting",
+   "Inst",
+   "Installation",
+   "Json",
+   "NoLogin",
+   "Quiet",
+   "SwitchContext",
+   "TenantId",
+   "UriSuffix"
+  ],
+  "Register-OctoDevStackLogonTask": [
+   "Arguments",
+   "Execute",
+   "TaskName",
+   "WorkingDirectory"
+  ],
+  "Remove-AspNetDeveloperCertificate": [
+   "CertificateName",
+   "CleanTrusted",
+   "Directory"
+  ],
+  "Remove-BinAndObjFolders": [
+   "Json",
+   "path"
+  ],
+  "Remove-GlobalNuGetPackages": [
+   "Json",
+   "path"
+  ],
+  "Remove-KubeConfig": [
+   "name"
+  ],
+  "Remove-OctoBuildStamp": [
+   "repo",
+   "stampRoot"
+  ],
+  "Remove-OctoEnvironment": [
+   "env",
+   "Json"
+  ],
+  "Remove-OctoGlobalPackageVersions": [
+   "directories"
+  ],
+  "Remove-OctoInfrastructureBackup": [
+   "Force",
+   "Json",
+   "Name"
+  ],
+  "Remove-OctoKubernetesS3Relay": [
+   "ClusterName"
+  ],
+  "Remove-OctoLaneNuGetPackages": [
+   "Json",
+   "laneSettings",
+   "WhatIf"
+  ],
+  "Remove-OctoLocalCaTrust": [],
+  "Remove-OctoSecretText": [
+   "Secrets",
+   "Text"
+  ],
+  "Remove-OctoTestLock": [
+   "Json",
+   "LockPath"
+  ],
+  "Remove-OctoTestLockFile": [
+   "owner",
+   "path"
+  ],
+  "Remove-OctoTestOldRuns": [
+   "keep",
+   "projectResultsPath"
+  ],
+  "Remove-TestBranch": [
+   "branch",
+   "Description",
+   "Json",
+   "LocalOnly",
+   "MinorVersion"
+  ],
+  "Request-BreakGlassKubeConfig": [
+   "Cluster",
+   "DurationHours",
+   "Json",
+   "PollIntervalSeconds",
+   "Reason",
+   "SemaphoreApiToken",
+   "SemaphoreProjectId",
+   "SemaphoreTemplateId",
+   "SemaphoreUrl",
+   "TimeoutSeconds",
+   "VaultAddr"
+  ],
+  "Reset-PackageLockFiles": [
+   "repoPath"
+  ],
+  "Resolve-CkBranchRoot": [
+   "Label",
+   "PathArg",
+   "RootPath"
+  ],
+  "Resolve-DockerVolume": [
+   "ProjectName",
+   "ShortName"
+  ],
+  "Resolve-OctoAgentDocsRepository": [
+   "Path"
+  ],
+  "Resolve-OctoBranchRootPath": [
+   "branch",
+   "root"
+  ],
+  "Resolve-OctoBuildRangeRepo": [
+   "name",
+   "order"
+  ],
+  "Resolve-OctoCkc": [
+   "laneRootPath"
+  ],
+  "Resolve-OctoDevStackLinkedFolder": [
+   "Folder"
+  ],
+  "Resolve-OctoEnvironmentBase": [
+   "localBase",
+   "source"
+  ],
+  "Resolve-OctoEnvironmentDefaultBase": [],
+  "Resolve-OctoEnvironmentDefaultBranch": [
+   "path"
+  ],
+  "Resolve-OctoEnvironmentRepoName": [
+   "basePath",
+   "repo"
+  ],
+  "Resolve-OctoLocationPath": [
+   "path"
+  ],
+  "Resolve-OctoRepoPathOverrides": [
+   "branchRootPath",
+   "noLaneWarning",
+   "order",
+   "repoPaths"
+  ],
+  "Resolve-OctoSweepOutcome": [
+   "ExitCode",
+   "Output"
+  ],
+  "Resolve-OctoSweepTenants": [
+   "AllTenants",
+   "Context",
+   "Exclude",
+   "Tenant"
+  ],
+  "Resolve-OctoTestBranchRoot": [
+   "Branch",
+   "Description",
+   "MinorVersion",
+   "RootPath"
+  ],
+  "Resolve-OctoTestProject": [
+   "name",
+   "projects"
+  ],
+  "Resolve-OctoTestTarget": [
+   "branch",
+   "env",
+   "repo"
+  ],
+  "Resolve-OctoTlsProfileFromPem": [
+   "Address",
+   "CertPath"
+  ],
+  "Resolve-RuleSet": [
+   "ConfigPath",
+   "Mode",
+   "Root"
+  ],
+  "Resolve-ServiceUri": [
+   "Key"
+  ],
+  "Restart-OctoDevStackService": [
+   "Service"
+  ],
+  "Restore-OctoBuildEnvironment": [
+   "saved"
+  ],
+  "Restore-OctoInfrastructure": [
+   "Json",
+   "Name"
+  ],
+  "Save-OctoComposeCrateVersion": [
+   "Version"
+  ],
+  "Save-OctoComposeCrateVersionFromContainers": [],
+  "Save-OctoDevStackPreviousLog": [
+   "LogPath"
+  ],
+  "Search-GitRepos": [
+   "SearchPath"
+  ],
+  "Select-OctoLaneProcesses": [
+   "branchRootPath",
+   "candidates",
+   "includeNestedLanes"
+  ],
+  "Select-OctoRepoProcessCandidates": [
+   "candidates",
+   "ownPid",
+   "repos"
+  ],
+  "Select-OctoRepoProcesses": [
+   "candidates",
+   "repos"
+  ],
+  "Send-OctoDevStackCtrlBreak": [
+   "Dll",
+   "ProcessId",
+   "TimeoutSeconds"
+  ],
+  "Send-OctoDevStackSignal": [
+   "ProcessId",
+   "Signal"
+  ],
+  "Set-OctoBuildEnvironment": [
+   "environment"
+  ],
+  "Set-OctoControllerDnsAlias": [
+   "Address",
+   "Hostname",
+   "KubeContext",
+   "Quiet"
+  ],
+  "Set-OctoKubernetesCrateDbJobLogFilter": [
+   "CrateHttpUri",
+   "RetrySeconds"
+  ],
+  "Set-OctoLocalS3StoreEnvironment": [
+   "ClusterName",
+   "Disable"
+  ],
+  "Set-OctoOwnerOnlyAccess": [
+   "directory",
+   "path"
+  ],
+  "Set-OctoTenantDatabasePrefixEnvironment": [
+   "TenantDatabasePrefix"
+  ],
+  "Set-WSLConfig": [],
+  "Split-GlobList": [
+   "Value"
+  ],
+  "Split-OctoSourceCredentials": [
+   "restoreSources"
+  ],
+  "Start-Octo": [
+   "aiService",
+   "aiWorker",
+   "assetRepoService",
+   "botService",
+   "branch",
+   "communicationControllerService",
+   "configuration",
+   "dataRefineryStudio",
+   "frontendLibraries",
+   "httpActivator",
+   "httpActivatorWorkloadAddressTemplate",
+   "identityAssetRepoOnly",
+   "identityOnly",
+   "identityService",
+   "mcpService",
+   "meshAdapter",
+   "meshAdapterId",
+   "meshAdapterTenantId",
+   "nonInteractive",
+   "platformServices",
+   "reportingService",
+   "s3Store",
+   "simulationAdapter",
+   "simulationAdapterId",
+   "simulationAdapterTenantId",
+   "SystemDatabase",
+   "TenantDatabasePrefix"
+  ],
+  "Start-OctoDevStackDaemon": [
+   "Force",
+   "Foreground",
+   "HealthTimeoutSeconds",
+   "Json",
+   "Path",
+   "Port",
+   "Rebuild",
+   "Restart"
+  ],
+  "Start-OctoDevStackDetachedUnix": [
+   "Dll",
+   "LogPath",
+   "Url",
+   "WorkingDirectory"
+  ],
+  "Start-OctoDevStackService": [
+   "Service"
+  ],
+  "Start-OctoDockerLimiter": [
+   "Cpus",
+   "Memory"
+  ],
+  "Start-OctoInfrastructure": [
+   "AcceptUnknownCrateVolumes",
+   "Json"
+  ],
+  "Start-OctoRepoBuildJob": [
+   "configuration",
+   "entry",
+   "environment",
+   "msbuildProperties",
+   "verifyTests",
+   "workDirectory"
+  ],
+  "Start-Service": [
+   "aspnetEnvironment",
+   "branch",
+   "cmd",
+   "cmdArguments",
+   "jobName",
+   "logname",
+   "workingDirectory"
+  ],
+  "Stop-Octo": [
+   "branch",
+   "Json"
+  ],
+  "Stop-OctoDevStackDaemon": [
+   "Force",
+   "Json",
+   "Port",
+   "TimeoutSeconds"
+  ],
+  "Stop-OctoDevStackService": [
+   "Service"
+  ],
+  "Stop-OctoDockerLimiter": [
+   "Limiter"
+  ],
+  "Stop-OctoInfrastructure": [
+   "Json"
+  ],
+  "Stop-OctoRepoBuildJob": [
+   "job"
+  ],
+  "Sync-AllGitRepos": [
+   "branch",
+   "Json",
+   "resetPackageLock"
+  ],
+  "Sync-AllSubmodules": [
+   "branch",
+   "Json"
+  ],
+  "Sync-GitRepo": [
+   "repositoryPath"
+  ],
+  "Sync-NuGetPackages": [
+   "branch",
+   "cleanBinFolder",
+   "Json"
+  ],
+  "Sync-OctoCkIntermediateVersions": [
+   "branch",
+   "ckc",
+   "ckPath",
+   "localCatalogRoot",
+   "privateCatalogLocation",
+   "Quiet",
+   "repositoryPath"
+  ],
+  "Sync-OctoEnvironment": [
+   "Detailed",
+   "env",
+   "Json"
+  ],
+  "Sync-OctoEnvironmentFolder": [
+   "dryRun",
+   "kind",
+   "manifestPath",
+   "source",
+   "target"
+  ],
+  "Sync-Submodule": [
+   "Json",
+   "repositoryPath"
+  ],
+  "Sync-TestBranch": [
+   "branch",
+   "Description",
+   "Json",
+   "MinorVersion",
+   "NoPush"
+  ],
+  "Sync-YamlFiles": [
+   "branchPath",
+   "excludeFiles",
+   "excludeRepo",
+   "Json",
+   "sourceDirectory"
+  ],
+  "Sync-YamlTemplates": [
+   "branch",
+   "Json",
+   "sourceRepo"
+  ],
+  "Test-AspNetDeveloperCertificate": [
+   "CertificatePath",
+   "Password",
+   "PfxPath",
+   "TestUrl"
+  ],
+  "Test-ClaudeShim": [
+   "Findings",
+   "Fix",
+   "Force",
+   "Repo",
+   "Rules"
+  ],
+  "Test-CrateSnapshotSpace": [
+   "Context",
+   "Detail",
+   "Namespace"
+  ],
+  "Test-DockerComposeInfraRunning": [],
+  "Test-DocsFolder": [
+   "Findings",
+   "Repo",
+   "Rules"
+  ],
+  "Test-EagerImport": [
+   "Findings",
+   "Repo",
+   "Rules"
+  ],
+  "Test-EntryBudget": [
+   "Findings",
+   "Repo",
+   "Rules"
+  ],
+  "Test-GitRepository": [
+   "Path"
+  ],
+  "Test-GlobMatch": [
+   "Findings",
+   "Repo",
+   "Rules"
+  ],
+  "Test-HostPortOpen": [
+   "hostName",
+   "port"
+  ],
+  "Test-InfrastructureStopped": [
+   "ComposeFile",
+   "ProjectName"
+  ],
+  "Test-InvisibleCharacter": [
+   "Findings",
+   "Repo",
+   "Rules"
+  ],
+  "Test-OctoAgentDocs": [
+   "All",
+   "Ci",
+   "ConfigPath",
+   "Explain",
+   "Fix",
+   "Force",
+   "Json",
+   "Mode",
+   "Path",
+   "RepositoryName",
+   "Rule"
+  ],
+  "Test-OctoAgentDocsShimLike": [
+   "Content"
+  ],
+  "Test-OctoBuildAllWindows": [],
+  "Test-OctoCatalogPropertySet": [
+   "properties"
+  ],
+  "Test-OctoCkPublishDisabled": [
+   "properties"
+  ],
+  "Test-OctoCrateJobLogFilterActive": [
+   "Value"
+  ],
+  "Test-OctoDevStackCommandLine": [
+   "CommandLine"
+  ],
+  "Test-OctoDevStackHealth": [
+   "Port"
+  ],
+  "Test-OctoDevStackProcessAlive": [
+   "ProcessId"
+  ],
+  "Test-OctoDevStackSamePath": [
+   "A",
+   "B"
+  ],
+  "Test-OctoDevStackServiceManager": [
+   "Kind"
+  ],
+  "Test-OctoDevStackServiceRuns": [
+   "ProcessId",
+   "Service"
+  ],
+  "Test-OctoDevStackStateLocked": [
+   "StatePath"
+  ],
+  "Test-OctoDevStackSystemdUserManager": [],
+  "Test-OctoDevStackTrustedDll": [
+   "Dll"
+  ],
+  "Test-OctoDevStackWindows": [],
+  "Test-OctoEncryption": [
+   "Json"
+  ],
+  "Test-OctoEnvironmentLaneFolder": [
+   "path"
+  ],
+  "Test-OctoEnvironmentName": [
+   "env"
+  ],
+  "Test-OctoEnvironmentRepoInPlace": [
+   "environmentPath",
+   "repo"
+  ],
+  "Test-OctoEnvironmentToolRepo": [
+   "repo"
+  ],
+  "Test-OctoEnvironmentWorkMerged": [
+   "branch",
+   "path",
+   "unpushedCommits"
+  ],
+  "Test-OctoFrontendTestProject": [
+   "project"
+  ],
+  "Test-OctoKillDotnetWindows": [],
+  "Test-OctoKindInfraRunning": [],
+  "Test-OctoKubernetesS3Store": [
+   "ClusterName",
+   "Json",
+   "SkipCopyProbe"
+  ],
+  "Test-OctoLaneFolder": [
+   "path"
+  ],
+  "Test-OctoLaneUserPropsRestorePackagesPath": [
+   "propsPath"
+  ],
+  "Test-OctoLocalPortOpen": [
+   "port"
+  ],
+  "Test-OctoNodeHasImage": [
+   "Node",
+   "Reference"
+  ],
+  "Test-OctoNodeResolves": [
+   "Name",
+   "Node"
+  ],
+  "Test-OctoPackageVersionEligible": [
+   "id",
+   "versionFolder"
+  ],
+  "Test-OctoPathInLane": [
+   "laneRoot",
+   "path"
+  ],
+  "Test-OctoPathInside": [
+   "parent",
+   "path"
+  ],
+  "Test-OctoRepoHasBuildOutput": [
+   "configuration",
+   "path"
+  ],
+  "Test-OctoRepoHasCkModel": [
+   "path"
+  ],
+  "Test-OctoRepoUsesCk": [
+   "path"
+  ],
+  "Test-OctoTestLockOwnerAlive": [
+   "owner",
+   "path"
+  ],
+  "Test-OctoTestPackageSet": [
+   "outputType",
+   "packages"
+  ],
+  "Test-OctoToolRepo": [
+   "name"
+  ],
+  "Test-OpeningSentence": [
+   "Findings",
+   "Fix",
+   "Repo",
+   "Rules"
+  ],
+  "Test-Prerequisites": [],
+  "Test-ReferenceSet": [
+   "Findings",
+   "Repo",
+   "Rules"
+  ],
+  "Test-ReferenceTarget": [
+   "Anchors",
+   "Findings",
+   "From",
+   "Kind",
+   "Rel",
+   "Repo",
+   "Target"
+  ],
+  "Test-RequiredSection": [
+   "Findings",
+   "Fix",
+   "Repo",
+   "Rules"
+  ],
+  "Test-RoutingTable": [
+   "Findings",
+   "Fix",
+   "Repo",
+   "Route",
+   "Rules"
+  ],
+  "Test-SiblingClaudeMention": [
+   "Findings",
+   "Pattern",
+   "Rel",
+   "Repo",
+   "SiblingRoot",
+   "Text"
+  ],
+  "Undo-OctoEnvironmentCreation": [
+   "created",
+   "environmentPath"
+  ],
+  "Uninstall-OctoDevStackDaemonService": [
+   "Json",
+   "Path"
+  ],
+  "Uninstall-OctoInfrastructure": [
+   "Json"
+  ],
+  "Uninstall-OctoKubernetes": [
+   "ClusterName",
+   "Force",
+   "Json",
+   "KeepCaTrust"
+  ],
+  "Uninstall-OctoKubernetesS3Store": [
+   "ClusterName",
+   "Force"
+  ],
+  "Unregister-OctoDevStackLogonTask": [
+   "TaskName"
+  ],
+  "Update-ClaudeShim": [
+   "Content",
+   "Repo"
+  ],
+  "Update-MeshmakerVersion": [
+   "branch",
+   "Json",
+   "Version"
+  ],
+  "Update-OctoCrateDb": [
+   "AssumeFreshVolume",
+   "Context",
+   "ManifestPath",
+   "Namespace",
+   "NonInteractive",
+   "SkipSnapshot"
+  ],
+  "Update-OpeningSentence": [
+   "Content",
+   "Repo"
+  ],
+  "Update-RoutingTable": [
+   "Repo",
+   "Table"
+  ],
+  "Wait-CrateHealthy": [
+   "Context",
+   "ExpectedVersion",
+   "Namespace",
+   "TimeoutSeconds"
+  ],
+  "Wait-DockerContainer": [
+   "containerId"
+  ],
+  "Wait-OctoDevStackNewDaemon": [
+   "Port",
+   "PreviousPid",
+   "TimeoutSeconds"
+  ],
+  "Wait-OctoServicePort": [
+   "IntervalMilliseconds",
+   "IsRunning",
+   "Name",
+   "Port",
+   "TimeoutSeconds"
+  ],
+  "Write-CiReport": [
+   "Findings",
+   "Repo",
+   "Rules"
+  ],
+  "Write-FindingReport": [
+   "Explain",
+   "Findings",
+   "Fix",
+   "Repo",
+   "RouteCount",
+   "Rules",
+   "StartHere"
+  ],
+  "Write-InitReport": [
+   "NextStep",
+   "RepositoryName",
+   "Row",
+   "State",
+   "Written"
+  ],
+  "Write-OctoAgentDocsText": [
+   "Content",
+   "Path"
+  ],
+  "Write-OctoBuildEvent": [
+   "Command",
+   "Data",
+   "EventName",
+   "Path"
+  ],
+  "Write-OctoBuildRangePlan": [
+   "branchRootPath",
+   "configuration",
+   "environment",
+   "feedPath",
+   "laneSettings",
+   "packageCaches",
+   "plan",
+   "propertyArgs",
+   "purgeStaleCache",
+   "repoPaths",
+   "runningProcesses",
+   "staleCache",
+   "verifyTests"
+  ],
+  "Write-OctoBuildStamp": [
+   "configuration",
+   "inputs",
+   "repo",
+   "stampRoot",
+   "tests"
+  ],
+  "Write-OctoComposeDeprecation": [
+   "Command"
+  ],
+  "Write-OctoDevStackResult": [
+   "Command",
+   "Data",
+   "ErrorMessage",
+   "Json",
+   "Success"
+  ],
+  "Write-OctoEnvironmentManifest": [
+   "environmentPath",
+   "manifest"
+  ],
+  "Write-OctoEnvironmentSyncSummary": [
+   "sync"
+  ],
+  "Write-OctoJobFile": [
+   "path",
+   "text"
+  ],
+  "Write-OctoJson": [
+   "Command",
+   "Data",
+   "Depth"
+  ],
+  "Write-OctoLaneDryRun": [
+   "buildEnvironment",
+   "command",
+   "configuration",
+   "Json",
+   "repositoryPath"
+  ],
+  "Write-OctoPackageCacheSeedSummary": [
+   "report"
+  ],
+  "Write-OctoRestoreConfigText": [
+   "path",
+   "text"
+  ],
+  "Write-OctoSyncManifest": [
+   "files",
+   "path"
+  ],
+  "Write-OctoTestRunSummary": [
+   "data"
+  ],
+  "Write-RuleReference": [
+   "Id",
+   "Json",
+   "RepositoryName",
+   "Rules"
+  ],
+  "Write-RuleRow": [
+   "Indent",
+   "Row"
+  ]
+ },
+ "excludeRepos": [
+  "octo-mesh-deployment"
+ ],
+ "generated": "2026-11-25",
+ "nodes": {
+  "AggregateConsumptionRecord": [
+   1
+  ],
+  "AggregateStreamData": [
+   1
+  ],
+  "AllocateCommunityEnergy": [
+   1
+  ],
+  "AnthropicAiQuery": [
+   1
+  ],
+  "ApplyChanges": [
+   1,
+   2
+  ],
+  "ApplyDataPointMappings": [
+   1
+  ],
+  "BackfillFromRtEntity": [
+   1
+  ],
+  "Base64Decode": [
+   1
+  ],
+  "Base64Encode": [
+   1
+  ],
+  "BufferData": [
+   1
+  ],
+  "BufferRetrievalNode": [
+   1
+  ],
+  "BuildMappingTargets": [
+   1
+  ],
+  "BuildSepaCreditTransfer": [
+   1
+  ],
+  "CheckDuplicate": [
+   1
+  ],
+  "CommitNotificationState": [
+   1
+  ],
+  "CommitSapTransaction": [
+   1
+  ],
+  "CommunityEnergyBalance": [
+   1
+  ],
+  "ComputeFileHash": [
+   1
+  ],
+  "Concat": [
+   1
+  ],
+  "ConvertDataType": [
+   1
+  ],
+  "ConvertToCsv": [
+   1
+  ],
+  "CreateAssociationUpdate": [
+   1
+  ],
+  "CreateFileSystemUpdate": [
+   1
+  ],
+  "CreateMeteringPointData": [
+   1
+  ],
+  "CreateMeteringPointUpdate": [
+   1
+  ],
+  "CreateSapPmNotification": [
+   1
+  ],
+  "CreateUpdateInfo": [
+   1
+  ],
+  "CreateZipArchive": [
+   1
+  ],
+  "DataMapping": [
+   1
+  ],
+  "DataServicesReadTable": [
+   1
+  ],
+  "DateTime": [
+   1
+  ],
+  "Demo": [
+   1
+  ],
+  "DemoTrigger": [
+   1
+  ],
+  "DeployPipeline": [
+   1
+  ],
+  "DetectStreamDataGaps": [
+   1
+  ],
+  "DilosParseAr": [
+   1
+  ],
+  "DilosParseBe": [
+   1
+  ],
+  "DilosRender": [
+   1
+  ],
+  "Distinct": [
+   1
+  ],
+  "EdaParseMessage": [
+   1
+  ],
+  "EdaReceiver": [
+   1
+  ],
+  "EdaReceiverSimulation": [
+   1
+  ],
+  "EdaStartProcess": [
+   1
+  ],
+  "EditSapPmNotification": [
+   1
+  ],
+  "ExecuteCSharp": [
+   1
+  ],
+  "ExportDataPointMappings": [
+   1
+  ],
+  "ExportMeasurementsToCsv": [
+   1
+  ],
+  "ExtractProcesses": [
+   1
+  ],
+  "FilterEnergyData": [
+   1
+  ],
+  "FilterLatestUpdateInfo": [
+   1
+  ],
+  "FinApiAuth": [
+   1
+  ],
+  "FinApiCreateWebFormImport": [
+   1
+  ],
+  "FinApiCreateWebFormImportOrUpdate": [
+   1
+  ],
+  "FinApiDeleteBankConnection": [
+   1
+  ],
+  "FinApiFetchAccounts": [
+   1
+  ],
+  "FinApiFetchBankConnections": [
+   1
+  ],
+  "FinApiFetchTransactions": [
+   1
+  ],
+  "FinApiGetWebFormStatus": [
+   1
+  ],
+  "FinApiImportBankConnection": [
+   1
+  ],
+  "FinApiSearchBanks": [
+   1
+  ],
+  "FinApiSetConfig": [
+   1
+  ],
+  "FinApiSyncBankConnection": [
+   1
+  ],
+  "Flatten": [
+   1
+  ],
+  "For": [
+   1
+  ],
+  "ForEach": [
+   1
+  ],
+  "FormatString": [
+   1
+  ],
+  "FromEmail": [
+   1
+  ],
+  "FromExecutePipelineCommand": [
+   1
+  ],
+  "FromHttpRequest": [
+   1,
+   2
+  ],
+  "FromLoxoneStateChange": [
+   1
+  ],
+  "FromMicrosoftGraph": [
+   1
+  ],
+  "FromMicrosoftGraphEmail": [
+   1
+  ],
+  "FromNotificationSchedule": [
+   1
+  ],
+  "FromPipelineDataEvent": [
+   1
+  ],
+  "FromPipelineTriggerEvent": [
+   1
+  ],
+  "FromPolling": [
+   1
+  ],
+  "FromRfcServerCall": [
+   1
+  ],
+  "FromSendNotification": [
+   1
+  ],
+  "FromSignal": [
+   1
+  ],
+  "FromTeamsBot": [
+   1
+  ],
+  "FromWatchRtEntity": [
+   1
+  ],
+  "FromZenonAml": [
+   1
+  ],
+  "FromZenonCel": [
+   1
+  ],
+  "FromZenonVariableChanged": [
+   1
+  ],
+  "GenerateAndStoreReport": [
+   1
+  ],
+  "GenerateDataPointMappings": [
+   1
+  ],
+  "GetAssociationTargets": [
+   1
+  ],
+  "GetFileSystemContent": [
+   1
+  ],
+  "GetNotificationTemplate": [
+   1
+  ],
+  "GetOrCreateRtEntitiesByType": [
+   1
+  ],
+  "GetPipelineConfigByCkTypeId": [
+   1
+  ],
+  "GetPipelineConfigByWellKnownName": [
+   1
+  ],
+  "GetProductionOrderDetails": [
+   1
+  ],
+  "GetProductionOrderList": [
+   1
+  ],
+  "GetQueryById": [
+   1
+  ],
+  "GetRtEntitiesById": [
+   1
+  ],
+  "GetRtEntitiesByType": [
+   1
+  ],
+  "GetRtEntitiesByWellKnownName": [
+   1
+  ],
+  "GetStreamData": [
+   1
+  ],
+  "GetZenonDynamicProperties": [
+   1
+  ],
+  "GetZenonDynamicProperty": [
+   1
+  ],
+  "GrafanaDeprovisionTenant": [
+   1
+  ],
+  "GrafanaProvisionTenant": [
+   1
+  ],
+  "Group": [
+   1
+  ],
+  "GroupBy": [
+   1
+  ],
+  "Hash": [
+   1
+  ],
+  "If": [
+   1
+  ],
+  "ImportDataPointMappings": [
+   1
+  ],
+  "ImportFromCamt053": [
+   1
+  ],
+  "ImportFromCsv": [
+   1
+  ],
+  "ImportFromExcel": [
+   1
+  ],
+  "Join": [
+   1
+  ],
+  "LinearScaler": [
+   1
+  ],
+  "ListFailedImportMails": [
+   1
+  ],
+  "ListMailFolders": [
+   1
+  ],
+  "ListZenonProjects": [
+   1
+  ],
+  "LlmQuery": [
+   1
+  ],
+  "Logger": [
+   1
+  ],
+  "LoxoneBrowse": [
+   1
+  ],
+  "LoxonePollTrigger": [
+   1
+  ],
+  "LoxoneReadStates": [
+   1
+  ],
+  "LoxoneStateTransform": [
+   1
+  ],
+  "MachineLearningAnomalyDetection": [
+   1
+  ],
+  "MakeHttpRequest": [
+   1
+  ],
+  "Map": [
+   1
+  ],
+  "MapToRecordArray": [
+   1
+  ],
+  "Math": [
+   1
+  ],
+  "McpToolCall": [
+   1
+  ],
+  "MergePdf": [
+   1
+  ],
+  "MinMax": [
+   1
+  ],
+  "MqttMessageTransform": [
+   1
+  ],
+  "MqttTrigger": [
+   1
+  ],
+  "ParseConsumptionRecord": [
+   1
+  ],
+  "PdfOcrExtraction": [
+   1
+  ],
+  "PlaceholderReplace": [
+   1
+  ],
+  "PrepareMeterReadings": [
+   1
+  ],
+  "PrepareNotification": [
+   1
+  ],
+  "PrintDebug": [
+   1
+  ],
+  "Project": [
+   1
+  ],
+  "QueryResultToMarkdownTable": [
+   1
+  ],
+  "ReadCSVFile": [
+   1
+  ],
+  "ReadModbusRegister": [
+   1
+  ],
+  "ReadZenonAmlMessages": [
+   1
+  ],
+  "ReadZenonArchiveData": [
+   1
+  ],
+  "ReadZenonArchiveInfo": [
+   1
+  ],
+  "ReadZenonCelMessages": [
+   1
+  ],
+  "ReadZenonVariables": [
+   1
+  ],
+  "RegisterSelfReportedMeteringPoint": [
+   1
+  ],
+  "RenderDataSheetPdf": [
+   1
+  ],
+  "RenderDelimitedText": [
+   1
+  ],
+  "RenderHtmlPdf": [
+   1
+  ],
+  "ReplyToTeamsChannel": [
+   1
+  ],
+  "RequeueFailedImportMails": [
+   1
+  ],
+  "ResolveNotificationChannel": [
+   1
+  ],
+  "ResolveNotificationPlaceholders": [
+   1
+  ],
+  "RevealSecret": [
+   1
+  ],
+  "SapLogin": [
+   1
+  ],
+  "SaveSapPmNotification": [
+   1
+  ],
+  "SaveStreamDataInArchive": [
+   1
+  ],
+  "SaveTimeRangeSeriesInArchive": [
+   1
+  ],
+  "SaveTimeRangeStreamDataInArchive": [
+   1
+  ],
+  "SearchExistingEnergyQuantities": [
+   1
+  ],
+  "SelectByPath": [
+   1
+  ],
+  "SendEMail": [
+   1,
+   2
+  ],
+  "SendMicrosoftGraphEmail": [
+   1
+  ],
+  "SendNotification": [
+   1
+  ],
+  "SetArrayOfPrimitiveValues": [
+   1
+  ],
+  "SetPipelineExecutionResult": [
+   1
+  ],
+  "SetPrimitiveValue": [
+   1
+  ],
+  "SetZenonDynamicProperty": [
+   1
+  ],
+  "SetZenonVariables": [
+   1
+  ],
+  "SftpDelete": [
+   1
+  ],
+  "SftpDownload": [
+   1
+  ],
+  "SftpList": [
+   1
+  ],
+  "SftpUpload": [
+   1
+  ],
+  "SignalSender": [
+   1
+  ],
+  "SimulateEnergyMeasurements": [
+   1,
+   2
+  ],
+  "Simulation": [
+   1
+  ],
+  "SplitConsumptionRecord": [
+   1
+  ],
+  "StatisticalAnomalyDetection": [
+   1
+  ],
+  "SumAggregation": [
+   1
+  ],
+  "Switch": [
+   1
+  ],
+  "TeamsBotReply": [
+   1
+  ],
+  "TestImportConnection": [
+   1
+  ],
+  "ToDiscord": [
+   1
+  ],
+  "ToPipelineDataEvent": [
+   1
+  ],
+  "ToWebhook": [
+   1
+  ],
+  "TransformPdf": [
+   1
+  ],
+  "TransformString": [
+   1
+  ],
+  "UpdateRecordArrayItem": [
+   1,
+   2
+  ],
+  "UpdateRtEntityIfNewer": [
+   1
+  ],
+  "ValidateDataPointCoverage": [
+   1
+  ],
+  "VerifyCaptcha": [
+   1
+  ],
+  "WeClappArWrite": [
+   1
+  ],
+  "WeClappBeWrite": [
+   1
+  ],
+  "WriteJson": [
+   1
+  ],
+  "WriteVerifiedCaller": [
+   1
+  ]
+ },
+ "octoCli": {
+  "commands": {
+   "ActivateArchive": [
+    "--identifier",
+    "-id"
+   ],
+   "AddAdIdentityProvider": [
+    "--allowSelfRegistration",
+    "--defaultGroupRtId",
+    "--enabled",
+    "--host",
+    "--name",
+    "--port",
+    "-asr",
+    "-dgid",
+    "-e",
+    "-h",
+    "-n",
+    "-p"
+   ],
+   "AddArchiveColumn": [
+    "--identifier",
+    "--indexed",
+    "--path",
+    "-id",
+    "-p",
+    "-x"
+   ],
+   "AddAuthorizationCodeClient": [
+    "--clientId",
+    "--clientUri",
+    "--frontChannelLogoutUri",
+    "--name",
+    "--redirectUri",
+    "-fclo",
+    "-id",
+    "-n",
+    "-ru",
+    "-u"
+   ],
+   "AddAzureEntryIdIdentityProvider": [
+    "--allowSelfRegistration",
+    "--client-secret-stdin",
+    "--clientId",
+    "--clientSecret",
+    "--defaultGroupRtId",
+    "--enabled",
+    "--name",
+    "--tenantId",
+    "-asr",
+    "-cid",
+    "-cs",
+    "-css",
+    "-dgid",
+    "-e",
+    "-n",
+    "-t"
+   ],
+   "AddClientCredentialsClient": [
+    "--autoProvision",
+    "--clientId",
+    "--name",
+    "--secret",
+    "--secret-stdin",
+    "-apic",
+    "-id",
+    "-n",
+    "-s",
+    "-ss"
+   ],
+   "AddClientToGroup": [
+    "--clientId",
+    "--identifier",
+    "-cid",
+    "-id"
+   ],
+   "AddClientToRole": [
+    "--clientId",
+    "--role",
+    "-id",
+    "-r"
+   ],
+   "AddComputedColumn": [
+    "--formula",
+    "--identifier",
+    "--indexed",
+    "--name",
+    "--resultType",
+    "--wait",
+    "-f",
+    "-id",
+    "-n",
+    "-r",
+    "-w",
+    "-x"
+   ],
+   "AddContext": [
+    "--aiServicesUri",
+    "--assetServicesUri",
+    "--botServicesUri",
+    "--communicationServicesUri",
+    "--identityServicesUri",
+    "--name",
+    "--reportingServicesUri",
+    "--tenantId",
+    "-aisu",
+    "-asu",
+    "-bsu",
+    "-csu",
+    "-isu",
+    "-n",
+    "-rsu",
+    "-tid"
+   ],
+   "AddDeviceCodeClient": [
+    "--clientId",
+    "--name",
+    "--secret",
+    "--secret-stdin",
+    "-id",
+    "-n",
+    "-s",
+    "-ss"
+   ],
+   "AddGroupToGroup": [
+    "--childGroupId",
+    "--identifier",
+    "-cgid",
+    "-id"
+   ],
+   "AddOAuthIdentityProvider": [
+    "--allowSelfRegistration",
+    "--client-secret-stdin",
+    "--clientId",
+    "--clientSecret",
+    "--defaultGroupRtId",
+    "--enabled",
+    "--name",
+    "--type",
+    "-asr",
+    "-cid",
+    "-cs",
+    "-css",
+    "-dgid",
+    "-e",
+    "-n",
+    "-t"
+   ],
+   "AddOctoTenantIdentityProvider": [
+    "--allowSelfRegistration",
+    "--defaultGroupRtId",
+    "--enabled",
+    "--name",
+    "--parentTenantId",
+    "-asr",
+    "-dgid",
+    "-e",
+    "-n",
+    "-ptid"
+   ],
+   "AddOpenLdapIdentityProvider": [
+    "--allowSelfRegistration",
+    "--defaultGroupRtId",
+    "--enabled",
+    "--host",
+    "--name",
+    "--port",
+    "--userAttributeName",
+    "--userBaseDn",
+    "-asr",
+    "-dgid",
+    "-e",
+    "-h",
+    "-n",
+    "-p",
+    "-uan",
+    "-ubdn"
+   ],
+   "AddScopeToClient": [
+    "--clientId",
+    "--name",
+    "-id",
+    "-n"
+   ],
+   "AddUserToGroup": [
+    "--identifier",
+    "--userId",
+    "-id",
+    "-uid"
+   ],
+   "AddUserToRole": [
+    "--role",
+    "--userName",
+    "-r",
+    "-un"
+   ],
+   "ApplyClientOverlay": [
+    "--allowedCorsOrigins",
+    "--clientId",
+    "--overlayName",
+    "--postLogoutRedirectUris",
+    "--redirectUris",
+    "-co",
+    "-id",
+    "-n",
+    "-plr",
+    "-r"
+   ],
+   "Attach": [
+    "--database",
+    "--tenantId",
+    "-db",
+    "-tid"
+   ],
+   "AuthStatus": [
+    "--show-token",
+    "-st"
+   ],
+   "BackfillRollup": [
+    "--identifier",
+    "--wait",
+    "-id",
+    "-w"
+   ],
+   "CancelQueuedExecution": [
+    "--adapterPoolRtId",
+    "--executionId",
+    "--yes",
+    "-eid",
+    "-id",
+    "-y"
+   ],
+   "CheckDependencies": [
+    "--catalogName",
+    "--modelId",
+    "-cn",
+    "-m"
+   ],
+   "CheckPipelineServiceAccountFileRoles": [],
+   "CheckUpgrade": [
+    "--catalogName",
+    "--modelId",
+    "-cn",
+    "-m"
+   ],
+   "Clean": [
+    "--tenantId",
+    "--yes",
+    "-tid",
+    "-y"
+   ],
+   "CleanClientOverlays": [
+    "--overlayName",
+    "--yes",
+    "-n",
+    "-y"
+   ],
+   "ClearCache": [
+    "--tenantId",
+    "--yes",
+    "-tid",
+    "-y"
+   ],
+   "Config": [
+    "--aiServicesUri",
+    "--assetServicesUri",
+    "--botServicesUri",
+    "--communicationServicesUri",
+    "--identityServicesUri",
+    "--reportingServicesUri",
+    "--tenantId",
+    "-aisu",
+    "-asu",
+    "-bsu",
+    "-csu",
+    "-isu",
+    "-rsu",
+    "-tid"
+   ],
+   "Create": [
+    "--blueprint",
+    "--database",
+    "--no-provision",
+    "--scratch",
+    "--tenantId",
+    "-b",
+    "-db",
+    "-np",
+    "-sc",
+    "-tid"
+   ],
+   "CreateAdminProvisioningMapping": [
+    "--roleIds",
+    "--sourceTenantId",
+    "--sourceUserId",
+    "--sourceUserName",
+    "--targetTenantId",
+    "-rids",
+    "-stid",
+    "-suid",
+    "-sun",
+    "-ttid"
+   ],
+   "CreateApiResource": [
+    "--description",
+    "--displayName",
+    "--name",
+    "--scopes",
+    "-d",
+    "-dn",
+    "-n",
+    "-s"
+   ],
+   "CreateApiScope": [
+    "--description",
+    "--displayName",
+    "--enabled",
+    "--name",
+    "-d",
+    "-dn",
+    "-e",
+    "-n"
+   ],
+   "CreateApiSecretApiResource": [
+    "--description",
+    "--expirationDate",
+    "--name",
+    "-d",
+    "-e",
+    "-n"
+   ],
+   "CreateApiSecretClient": [
+    "--clientId",
+    "--description",
+    "--expirationDate",
+    "-cid",
+    "-d",
+    "-e"
+   ],
+   "CreateDataPermission": [
+    "--description",
+    "--permissionId",
+    "-d",
+    "-pid"
+   ],
+   "CreateDataPolicy": [
+    "--actions",
+    "--enforcementMode",
+    "--permissionId",
+    "--scope",
+    "--targetCkTypeIds",
+    "-a",
+    "-m",
+    "-pid",
+    "-s",
+    "-t"
+   ],
+   "CreateEmailDomainGroupRule": [
+    "--description",
+    "--emailDomainPattern",
+    "--targetGroupRtId",
+    "-d",
+    "-edp",
+    "-tgid"
+   ],
+   "CreateExternalTenantUserMapping": [
+    "--groups",
+    "--roleIds",
+    "--sourceTenantId",
+    "--sourceUserId",
+    "--sourceUserName",
+    "-g",
+    "-rids",
+    "-stid",
+    "-suid",
+    "-sun"
+   ],
+   "CreateFixupScript": [
+    "--enabled",
+    "--file",
+    "--name",
+    "--orderNumber",
+    "--replace",
+    "-e",
+    "-f",
+    "-n",
+    "-o",
+    "-r"
+   ],
+   "CreateGroup": [
+    "--description",
+    "--name",
+    "--roleIds",
+    "-d",
+    "-n",
+    "-rids"
+   ],
+   "CreateRole": [
+    "--name",
+    "-n"
+   ],
+   "CreateUser": [
+    "--eMail",
+    "--password",
+    "--password-stdin",
+    "--userName",
+    "-e",
+    "-p",
+    "-ps",
+    "-un"
+   ],
+   "Delete": [
+    "--disable-features",
+    "--override-foreign-ownership",
+    "--tenantId",
+    "--yes",
+    "-df",
+    "-ofo",
+    "-tid",
+    "-y"
+   ],
+   "DeleteAdminProvisioningMapping": [
+    "--mappingId",
+    "--targetTenantId",
+    "-mid",
+    "-ttid"
+   ],
+   "DeleteApiResource": [
+    "--name",
+    "--yes",
+    "-n",
+    "-y"
+   ],
+   "DeleteApiScope": [
+    "--name",
+    "--yes",
+    "-n",
+    "-y"
+   ],
+   "DeleteApiSecretApiResource": [
+    "--name",
+    "--secretValue",
+    "--yes",
+    "-n",
+    "-s",
+    "-y"
+   ],
+   "DeleteApiSecretClient": [
+    "--clientId",
+    "--secretValue",
+    "--yes",
+    "-cid",
+    "-s",
+    "-y"
+   ],
+   "DeleteArchive": [
+    "--identifier",
+    "--yes",
+    "-id",
+    "-y"
+   ],
+   "DeleteClient": [
+    "--clientId",
+    "--yes",
+    "-id",
+    "-y"
+   ],
+   "DeleteDataPermission": [
+    "--permissionId",
+    "--yes",
+    "-pid",
+    "-y"
+   ],
+   "DeleteEmailDomainGroupRule": [
+    "--identifier",
+    "-id"
+   ],
+   "DeleteExternalTenantUserMapping": [
+    "--identifier",
+    "-id"
+   ],
+   "DeleteGroup": [
+    "--identifier",
+    "-id"
+   ],
+   "DeleteIdentityProvider": [
+    "--identifier",
+    "--yes",
+    "-id",
+    "-y"
+   ],
+   "DeleteRole": [
+    "--name",
+    "--yes",
+    "-n",
+    "-y"
+   ],
+   "DeleteSecretSweepDump": [
+    "--runId",
+    "--tenantId",
+    "--yes",
+    "-r",
+    "-tid",
+    "-y"
+   ],
+   "DeleteUser": [
+    "--userName",
+    "--yes",
+    "-un",
+    "-y"
+   ],
+   "DeployDataFlow": [
+    "--identifier",
+    "-id"
+   ],
+   "DeployDeploymentSite": [
+    "--deploymentSiteRtId",
+    "-id"
+   ],
+   "DeployPipeline": [
+    "--adapterId",
+    "--file",
+    "--pipelineId",
+    "-aid",
+    "-f",
+    "-pid"
+   ],
+   "DeployTriggers": [],
+   "DeployWorkload": [
+    "--workloadRtId",
+    "-id"
+   ],
+   "Detach": [
+    "--tenantId",
+    "-tid"
+   ],
+   "DisableAi": [],
+   "DisableArchive": [
+    "--identifier",
+    "-id"
+   ],
+   "DisableCommunication": [],
+   "DisableReporting": [],
+   "DisableStreamData": [],
+   "DownloadFile": [
+    "--file",
+    "--overwrite",
+    "--path",
+    "--root",
+    "--rtId",
+    "-f",
+    "-id",
+    "-o",
+    "-p",
+    "-r"
+   ],
+   "Dump": [
+    "--file",
+    "--include-archive-data",
+    "--tenantId",
+    "-f",
+    "-iad",
+    "-tid"
+   ],
+   "EnableAi": [],
+   "EnableArchive": [
+    "--identifier",
+    "-id"
+   ],
+   "EnableCommunication": [],
+   "EnableReporting": [],
+   "EnableStreamData": [],
+   "ExecutePipeline": [
+    "--identifier",
+    "--inputFile",
+    "-f",
+    "-id"
+   ],
+   "ExportArchiveData": [
+    "--archiveRtId",
+    "--fromUtc",
+    "--output",
+    "--tenantId",
+    "--toUtc",
+    "-aid",
+    "-from",
+    "-o",
+    "-tid",
+    "-to"
+   ],
+   "ExportRtByDeepGraph": [
+    "--ckTypeId",
+    "--file",
+    "--follow-associations",
+    "--runtime-identifiers",
+    "-f",
+    "-far",
+    "-id",
+    "-t"
+   ],
+   "ExportRtByQuery": [
+    "--file",
+    "--queryId",
+    "-f",
+    "-q"
+   ],
+   "FixAll": [
+    "--wait",
+    "--yes",
+    "-w",
+    "-y"
+   ],
+   "FreezeRollupArchive": [
+    "--identifier",
+    "--until",
+    "-id",
+    "-u"
+   ],
+   "GenerateOperatorCertificates": [
+    "--namespace",
+    "--output",
+    "--serverName",
+    "-n",
+    "-o",
+    "-s"
+   ],
+   "GetAdapter": [
+    "--identifier",
+    "--json",
+    "--show-secrets",
+    "-id",
+    "-j",
+    "-ss"
+   ],
+   "GetAdapterNodes": [
+    "--json",
+    "-j"
+   ],
+   "GetAdapterPoolQueue": [
+    "--adapterPoolRtId",
+    "--json",
+    "-id",
+    "-j"
+   ],
+   "GetAdapters": [
+    "--json",
+    "-j"
+   ],
+   "GetAdminProvisioningMappings": [
+    "--targetTenantId",
+    "-ttid"
+   ],
+   "GetAiCredentialsStatus": [],
+   "GetApiResources": [],
+   "GetApiScopes": [],
+   "GetApiSecretsApiResource": [
+    "--name",
+    "-n"
+   ],
+   "GetApiSecretsClient": [
+    "--clientId",
+    "-cid"
+   ],
+   "GetBlueprintHistory": [],
+   "GetClient": [
+    "--clientId",
+    "-id"
+   ],
+   "GetClientMirrors": [
+    "--clientId",
+    "-id"
+   ],
+   "GetClientRoles": [
+    "--clientId",
+    "-id"
+   ],
+   "GetClients": [],
+   "GetCommunicationLifecycle": [],
+   "GetCrossTenantGrantPermissions": [],
+   "GetDataFlowStatus": [
+    "--identifier",
+    "--json",
+    "-id",
+    "-j"
+   ],
+   "GetDataPermissions": [],
+   "GetDeploymentSites": [
+    "--json",
+    "-j"
+   ],
+   "GetEmailDomainGroupRule": [
+    "--identifier",
+    "-id"
+   ],
+   "GetEmailDomainGroupRules": [],
+   "GetExternalTenantUserMapping": [
+    "--identifier",
+    "-id"
+   ],
+   "GetExternalTenantUserMappings": [
+    "--skip",
+    "--sourceTenantId",
+    "--take",
+    "-skip",
+    "-stid",
+    "-take"
+   ],
+   "GetFiles": [
+    "--max",
+    "--path",
+    "--root",
+    "-n",
+    "-p",
+    "-r"
+   ],
+   "GetGroup": [
+    "--identifier",
+    "-id"
+   ],
+   "GetGroups": [],
+   "GetIdentityProviders": [],
+   "GetLatestPipelineExecution": [
+    "--identifier",
+    "--json",
+    "-id",
+    "-j"
+   ],
+   "GetOperation": [
+    "--json",
+    "--operationId",
+    "--wait",
+    "-id",
+    "-j",
+    "-w"
+   ],
+   "GetPipelineDebug": [
+    "--identifier",
+    "--json",
+    "-id",
+    "-j"
+   ],
+   "GetPipelineDebugPoints": [
+    "--executionId",
+    "--identifier",
+    "--json",
+    "-eid",
+    "-id",
+    "-j"
+   ],
+   "GetPipelineExecutions": [
+    "--identifier",
+    "--json",
+    "-id",
+    "-j"
+   ],
+   "GetPipelineSchema": [
+    "--adapterId",
+    "--outputFile",
+    "-aid",
+    "-o"
+   ],
+   "GetPipelineStatus": [
+    "--identifier",
+    "--json",
+    "-id",
+    "-j"
+   ],
+   "GetRoles": [],
+   "GetRollupRepairStatus": [
+    "--failOnFailed",
+    "--json",
+    "--requestId",
+    "-ff",
+    "-j",
+    "-rid"
+   ],
+   "GetTenantFeatures": [],
+   "GetTenantLifecycle": [
+    "--tenantId",
+    "-tid"
+   ],
+   "GetTenants": [
+    "--all",
+    "--recursive",
+    "-a",
+    "-r"
+   ],
+   "GetUsers": [],
+   "GetWorkloadsByChart": [
+    "--chartName",
+    "-cn"
+   ],
+   "GrantDataPermission": [
+    "--permissionId",
+    "--roleName",
+    "-pid",
+    "-r"
+   ],
+   "GraphQl": [
+    "--file",
+    "--operationName",
+    "--query",
+    "--stdin",
+    "--tenantId",
+    "--variables",
+    "-f",
+    "-on",
+    "-q",
+    "-si",
+    "-tid",
+    "-vars"
+   ],
+   "ImportArchiveData": [
+    "--archiveRtId",
+    "--input",
+    "--mode",
+    "--part-size-mib",
+    "--tenantId",
+    "--wait",
+    "-aid",
+    "-i",
+    "-m",
+    "-ps",
+    "-tid",
+    "-w"
+   ],
+   "ImportCk": [
+    "--file",
+    "--forceBreakingUpdate",
+    "--wait",
+    "-f",
+    "-fbu",
+    "-w"
+   ],
+   "ImportFromCatalog": [
+    "--catalogName",
+    "--force",
+    "--modelId",
+    "--wait",
+    "-cn",
+    "-f",
+    "-m",
+    "-w"
+   ],
+   "ImportRt": [
+    "--file",
+    "--replace",
+    "--wait",
+    "-f",
+    "-r",
+    "-w"
+   ],
+   "InstallBlueprint": [
+    "--blueprintId",
+    "--force",
+    "--forceBreakingUpdate",
+    "-b",
+    "-f",
+    "-fbu"
+   ],
+   "LibraryStatus": [
+    "--installed-only",
+    "--needs-action",
+    "-io",
+    "-na"
+   ],
+   "ListBlueprintInstallations": [],
+   "ListBlueprints": [
+    "--name",
+    "--skip",
+    "--take",
+    "-n",
+    "-s",
+    "-t"
+   ],
+   "ListCatalogModels": [
+    "--catalogName",
+    "--search",
+    "-cn",
+    "-q"
+   ],
+   "ListCatalogs": [],
+   "ListContexts": [
+    "--json",
+    "--name",
+    "-j",
+    "-n"
+   ],
+   "ListOperations": [
+    "--allOwners",
+    "--json",
+    "--methodId",
+    "--since",
+    "--skip",
+    "--state",
+    "--take",
+    "-a",
+    "-j",
+    "-m",
+    "-s",
+    "-since",
+    "-sk",
+    "-t"
+   ],
+   "ListRecomputeJobs": [
+    "--identifier",
+    "-id"
+   ],
+   "ListRollupsForArchive": [
+    "--identifier",
+    "-id"
+   ],
+   "LogIn": [
+    "--if-needed",
+    "--interactive",
+    "-i",
+    "-in"
+   ],
+   "LogInClientCredentials": [
+    "--clientId",
+    "--replace-login",
+    "--secret",
+    "--secret-stdin",
+    "-id",
+    "-rl",
+    "-s",
+    "-ss"
+   ],
+   "LookupSourceTenantUser": [
+    "--identifier",
+    "--sourceTenantId",
+    "-id",
+    "-st"
+   ],
+   "MovePipelines": [
+    "--pipelineRtIds",
+    "--redeploy",
+    "--targetAdapterRtId",
+    "--yes",
+    "-aid",
+    "-ids",
+    "-rd",
+    "-y"
+   ],
+   "PreviewBlueprintUpdate": [
+    "--failOnBlanking",
+    "--failOnBlocked",
+    "--targetVersion",
+    "--updateMode",
+    "-fb",
+    "-fob",
+    "-m",
+    "-tv"
+   ],
+   "ProvisionClientInExistingTenants": [
+    "--clientId",
+    "-id"
+   ],
+   "ProvisionClientInTenant": [
+    "--child-tenant-id",
+    "--clientId",
+    "-ctid",
+    "-id"
+   ],
+   "ProvisionCurrentUser": [
+    "--targetTenantId",
+    "-ttid"
+   ],
+   "ReRunTenantSetup": [
+    "--tenantId",
+    "-tid"
+   ],
+   "RecomputeArchive": [
+    "--from",
+    "--identifier",
+    "--rtIdScope",
+    "--to",
+    "-f",
+    "-id",
+    "-s",
+    "-t"
+   ],
+   "RecomputeDisplayNames": [
+    "--ckTypeId",
+    "--tenantId",
+    "-ck",
+    "-tid"
+   ],
+   "ReconcileTenantRegistry": [
+    "--apply",
+    "-a"
+   ],
+   "ReconfigureLogLevel": [
+    "--loggerName",
+    "--maxLogLevel",
+    "--minLogLevel",
+    "--serviceName",
+    "-ln",
+    "-maxL",
+    "-minL",
+    "-n"
+   ],
+   "RedeemAiTicket": [
+    "--accessExpiresAt",
+    "--accessToken",
+    "--refreshExpiresAt",
+    "--refreshToken",
+    "--tenantId",
+    "--ticketCode",
+    "-aex",
+    "-at",
+    "-rex",
+    "-rt",
+    "-tc",
+    "-tid"
+   ],
+   "RefreshBlueprintCatalogs": [
+    "--catalogName",
+    "-cn"
+   ],
+   "RefreshCatalogs": [
+    "--catalogName",
+    "-cn"
+   ],
+   "RemoveClientFromGroup": [
+    "--clientId",
+    "--identifier",
+    "-cid",
+    "-id"
+   ],
+   "RemoveClientFromRole": [
+    "--clientId",
+    "--role",
+    "--yes",
+    "-id",
+    "-r",
+    "-y"
+   ],
+   "RemoveComputedColumn": [
+    "--identifier",
+    "--name",
+    "-id",
+    "-n"
+   ],
+   "RemoveContext": [
+    "--name",
+    "-n"
+   ],
+   "RemoveGroupFromGroup": [
+    "--childGroupId",
+    "--identifier",
+    "-cgid",
+    "-id"
+   ],
+   "RemoveUserFromGroup": [
+    "--identifier",
+    "--userId",
+    "-id",
+    "-uid"
+   ],
+   "RemoveUserFromRole": [
+    "--role",
+    "--userName",
+    "--yes",
+    "-r",
+    "-un",
+    "-y"
+   ],
+   "RepairRollups": [
+    "--apply",
+    "--identifiers",
+    "--json",
+    "--wait",
+    "--yes",
+    "-a",
+    "-id",
+    "-j",
+    "-w",
+    "-y"
+   ],
+   "ReprotectSecrets": [
+    "--all",
+    "--mode",
+    "--tenantId",
+    "--wait",
+    "--yes",
+    "-a",
+    "-m",
+    "-tid",
+    "-w",
+    "-y"
+   ],
+   "ResetPassword": [
+    "--password",
+    "--password-stdin",
+    "--userName",
+    "--yes",
+    "-p",
+    "-ps",
+    "-un",
+    "-y"
+   ],
+   "Restore": [
+    "--database",
+    "--file",
+    "--oldDatabaseName",
+    "--override-foreign-ownership",
+    "--part-size-mib",
+    "--restore-archive-data",
+    "--tenantId",
+    "--wait",
+    "-db",
+    "-f",
+    "-ofo",
+    "-oldDb",
+    "-ps",
+    "-rad",
+    "-tid",
+    "-w"
+   ],
+   "RestoreSecretSweepDump": [
+    "--runId",
+    "--tenantId",
+    "--wait",
+    "--yes",
+    "-r",
+    "-tid",
+    "-w",
+    "-y"
+   ],
+   "RetryArchiveActivation": [
+    "--identifier",
+    "-id"
+   ],
+   "RetryComputedColumnBackfill": [
+    "--identifier",
+    "--name",
+    "--wait",
+    "-id",
+    "-n",
+    "-w"
+   ],
+   "ReviewTenantOwnership": [
+    "--stamp",
+    "-s"
+   ],
+   "RevokeAiCredentials": [
+    "--yes",
+    "-y"
+   ],
+   "RevokeDataPermission": [
+    "--permissionId",
+    "--roleName",
+    "-pid",
+    "-r"
+   ],
+   "RevokeShadowUserSessions": [
+    "--apply",
+    "--yes",
+    "-a",
+    "-y"
+   ],
+   "RevokeUserSessions": [
+    "--userName",
+    "--yes",
+    "-un",
+    "-y"
+   ],
+   "RewindRollupWatermark": [
+    "--identifier",
+    "--toBucketEnd",
+    "-id",
+    "-t"
+   ],
+   "RotateAdapterServiceAccountSecret": [
+    "--identifier",
+    "--yes",
+    "-id",
+    "-y"
+   ],
+   "RunFixupScripts": [
+    "--wait",
+    "-w"
+   ],
+   "SecretStatus": [
+    "--all",
+    "--json",
+    "--tenantId",
+    "-a",
+    "-j",
+    "-tid"
+   ],
+   "SetClientAutoProvision": [
+    "--clientId",
+    "--enabled",
+    "-e",
+    "-id"
+   ],
+   "SetCommunicationLifecycle": [
+    "--leasingEnabled",
+    "--scaleToZeroEnabled",
+    "-le",
+    "-sze"
+   ],
+   "SetCrossTenantGrantPermissions": [
+    "--none",
+    "--targetTenantIds",
+    "-none",
+    "-ttids"
+   ],
+   "SetDataPolicyEnforcementMode": [
+    "--enforcementMode",
+    "--policyRtId",
+    "-id",
+    "-m"
+   ],
+   "SetKnowledgePageStatus": [
+    "--note",
+    "--slug",
+    "--status",
+    "--tenantId",
+    "-n",
+    "-s",
+    "-st",
+    "-tid"
+   ],
+   "SetPipelineDebug": [
+    "--enabled",
+    "--identifier",
+    "-e",
+    "-id"
+   ],
+   "Setup": [
+    "--email",
+    "--password",
+    "--password-stdin",
+    "--tenantId",
+    "-e",
+    "-p",
+    "-ps",
+    "-tid"
+   ],
+   "SwitchServiceAccountsToImpersonation": [
+    "--apply",
+    "--json",
+    "--redeployDataFlows",
+    "--yes",
+    "-a",
+    "-j",
+    "-rdf",
+    "-y"
+   ],
+   "UndeployDataFlow": [
+    "--identifier",
+    "-id"
+   ],
+   "UndeployDeploymentSite": [
+    "--deploymentSiteRtId",
+    "--yes",
+    "-id",
+    "-y"
+   ],
+   "UndeployTriggers": [],
+   "UndeployWorkload": [
+    "--workloadRtId",
+    "--yes",
+    "-id",
+    "-y"
+   ],
+   "UnfreezeRollupArchive": [
+    "--acceptGaps",
+    "--identifier",
+    "-ag",
+    "-id"
+   ],
+   "UninstallBlueprint": [
+    "--blueprintName",
+    "--cascade",
+    "--dry-run",
+    "--yes",
+    "-c",
+    "-dr",
+    "-n",
+    "-y"
+   ],
+   "UnprovisionClientFromTenant": [
+    "--child-tenant-id",
+    "--clientId",
+    "--yes",
+    "-ctid",
+    "-id",
+    "-y"
+   ],
+   "UpdateApiResource": [
+    "--description",
+    "--displayName",
+    "--name",
+    "--scopes",
+    "-d",
+    "-dn",
+    "-n",
+    "-s"
+   ],
+   "UpdateApiScope": [
+    "--description",
+    "--displayName",
+    "--enabled",
+    "--name",
+    "--newName",
+    "-d",
+    "-dn",
+    "-e",
+    "-n",
+    "-nn"
+   ],
+   "UpdateApiSecretApiResource": [
+    "--description",
+    "--expirationDate",
+    "--name",
+    "--secretValue",
+    "-d",
+    "-e",
+    "-n",
+    "-s"
+   ],
+   "UpdateApiSecretClient": [
+    "--clientId",
+    "--description",
+    "--expirationDate",
+    "--secretValue",
+    "-cid",
+    "-d",
+    "-e",
+    "-s"
+   ],
+   "UpdateBlueprint": [
+    "--allow-blanking",
+    "--confirm-blanking",
+    "--dry-run",
+    "--force",
+    "--forceBreakingUpdate",
+    "--targetVersion",
+    "--updateMode",
+    "-ab",
+    "-cb",
+    "-dr",
+    "-f",
+    "-fbu",
+    "-m",
+    "-tv"
+   ],
+   "UpdateClient": [
+    "--clientId",
+    "--clientUri",
+    "--frontChannelLogoutUri",
+    "--name",
+    "--redirectUri",
+    "-fclo",
+    "-id",
+    "-n",
+    "-ru",
+    "-u"
+   ],
+   "UpdateClientRoles": [
+    "--clientId",
+    "--roleIds",
+    "-id",
+    "-rids"
+   ],
+   "UpdateComputedColumnFormula": [
+    "--formula",
+    "--identifier",
+    "--name",
+    "--wait",
+    "-f",
+    "-id",
+    "-n",
+    "-w"
+   ],
+   "UpdateEmailDomainGroupRule": [
+    "--description",
+    "--emailDomainPattern",
+    "--identifier",
+    "--targetGroupRtId",
+    "-d",
+    "-edp",
+    "-id",
+    "-tgid"
+   ],
+   "UpdateExternalTenantUserMapping": [
+    "--identifier",
+    "--roleIds",
+    "-id",
+    "-rids"
+   ],
+   "UpdateGroup": [
+    "--description",
+    "--identifier",
+    "--name",
+    "-d",
+    "-id",
+    "-n"
+   ],
+   "UpdateGroupRoles": [
+    "--identifier",
+    "--roleIds",
+    "-id",
+    "-rids"
+   ],
+   "UpdateIdentityProvider": [
+    "--allowSelfRegistration",
+    "--client-secret-stdin",
+    "--clientId",
+    "--clientSecret",
+    "--defaultGroupRtId",
+    "--enabled",
+    "--identifier",
+    "--name",
+    "-asr",
+    "-cid",
+    "-cs",
+    "-css",
+    "-dgid",
+    "-e",
+    "-id",
+    "-n"
+   ],
+   "UpdateRole": [
+    "--name",
+    "--newRoleName",
+    "-n",
+    "-nn"
+   ],
+   "UpdateSystemCkModel": [
+    "--tenantId",
+    "-tid"
+   ],
+   "UpdateUser": [
+    "--eMail",
+    "--newUserName",
+    "--userName",
+    "-e",
+    "-nun",
+    "-un"
+   ],
+   "UpdateWorkloadChartVersion": [
+    "--chartVersion",
+    "--workloadRtId",
+    "-cv",
+    "-id"
+   ],
+   "UpdateWorkloadResources": [
+    "--cpu-limit",
+    "--cpu-request",
+    "--memory-limit",
+    "--memory-request",
+    "--workloadRtId",
+    "-cl",
+    "-cr",
+    "-id",
+    "-ml",
+    "-mr"
+   ],
+   "UploadFile": [
+    "--conflict",
+    "--content-type",
+    "--create-folders",
+    "--file",
+    "--path",
+    "--root",
+    "-c",
+    "-cf",
+    "-ct",
+    "-f",
+    "-p",
+    "-r"
+   ],
+   "UseContext": [
+    "--name",
+    "-n"
+   ],
+   "ValidateRollups": [
+    "--failOnFindings",
+    "--identifiers",
+    "--json",
+    "-ff",
+    "-id",
+    "-j"
+   ]
+  },
+  "globalArguments": [
+   "--command",
+   "--context",
+   "--help",
+   "-?",
+   "-c"
+  ]
+ },
+ "repoPatterns": [
+  "octo-*"
+ ],
+ "repos": {
+  "octo-adapter-demos": {
+   "agentsMd": false,
+   "claudeMd": true,
+   "docHashes": []
+  },
+  "octo-adapter-eda": {
+   "agentsMd": false,
+   "claudeMd": true,
+   "docHashes": [
+    "3672100d780398d5",
+    "3af618a2a7ed66b3",
+    "3b27fe105fb8ccab",
+    "4787fe82c046b08b",
+    "6c837f8459d4be98",
+    "7d593037c6cfa80b",
+    "90e054e32f683a92",
+    "b1afd85ef2b0122a"
+   ]
+  },
+  "octo-adapter-finapi": {
+   "agentsMd": false,
+   "claudeMd": false,
+   "docHashes": []
+  },
+  "octo-adapter-loxone": {
+   "agentsMd": false,
+   "claudeMd": true,
+   "docHashes": [
+    "64347000cae570f5",
+    "788cd8830634bcec",
+    "9f4172be94a77786",
+    "a9ca3cec6a63ce05",
+    "b8fef65f6ca95df5",
+    "d9526d1282690bda",
+    "e275996a55190fe5",
+    "e4a2bbe1d336957a"
+   ]
+  },
+  "octo-adapter-mqtt": {
+   "agentsMd": false,
+   "claudeMd": true,
+   "docHashes": []
+  },
+  "octo-adapter-sap": {
+   "agentsMd": false,
+   "claudeMd": false,
+   "docHashes": [
+    "07fb0c8d7152aa58",
+    "1d4aaa284280eb16",
+    "3672100d780398d5",
+    "4787fe82c046b08b",
+    "4ca53116333428d7",
+    "adf1b0d11a775838",
+    "d5d7ff478da0c628",
+    "f6c71124124b88ee"
+   ]
+  },
+  "octo-adapter-weclapp": {
+   "agentsMd": false,
+   "claudeMd": true,
+   "docHashes": [
+    "1df87cb914f9328c",
+    "320db963a6a017b7",
+    "3672100d780398d5",
+    "3b974b9d2d79e422",
+    "44714228f516c1a1",
+    "45657b10e3370353",
+    "4787fe82c046b08b",
+    "5df212cc09bf78da",
+    "6c837f8459d4be98",
+    "9174c51b6d204f25",
+    "c498458154f3f35f",
+    "c972f9edeef535b1",
+    "d0c342f0a3286e9e",
+    "d4aab482e8f00d5c",
+    "ee54946199cf2649"
+   ]
+  },
+  "octo-ai-services": {
+   "agentsMd": true,
+   "claudeMd": true,
+   "docHashes": [
+    "036de4343af43575",
+    "102fded6e50168e7",
+    "1125e8eb3c9f1b59",
+    "140eef3ba41bdcf4",
+    "15b3cc68fac91f01",
+    "16529dda6856439a",
+    "1800a1204619602d",
+    "1b5d8e7473859b91",
+    "2161989d2ff7297b",
+    "22b37939e394aa32",
+    "2a6ab9cb4754ff0f",
+    "31ca0efb11aa0b8b",
+    "3911ffe00d8a8387",
+    "3d647e6d5fff7dae",
+    "44812370998b4021",
+    "48511234ac8c85b0",
+    "49d0f3e583fdb03e",
+    "4fa674c868733622",
+    "51e9254c073be7d9",
+    "53564b8822221b7e",
+    "554abd7f5a331fdc",
+    "55ba6b75d993adb2",
+    "56d9b00345c2297b",
+    "61337ab2881d6a91",
+    "61b60471cd68b066",
+    "6e68eba0a850b88d",
+    "703263d11f0ccecc",
+    "735268086c1886fc",
+    "762a57565f4bd963",
+    "792ea19f1c4664c4",
+    "7a2374022190a71d",
+    "81f250cfb17d93ae",
+    "8559f9067c0da4dc",
+    "8906efa44c81c0d6",
+    "931d3ce8d6adf2dd",
+    "9ec270be7d25fd5c",
+    "a9ca3cec6a63ce05",
+    "aa74d09648cc9c1e",
+    "b42a2e46d7f1830f",
+    "b708365b30e167a8",
+    "b9551e669528afd8",
+    "bce2af082b3806b3",
+    "be8f3cf995416b51",
+    "c4b34f7903a58767",
+    "c8beff7a9d061d2f",
+    "d658c6b87b3f21f1",
+    "d79011a69926a16b",
+    "dbff76e63ddf0c09",
+    "dd2943144beda310",
+    "e225b260e11f89b9",
+    "e3ba9a49d89baa81",
+    "e3e381dd20bfe987",
+    "ea73e6fce185a8eb",
+    "f62a27309bd93e7b",
+    "f7be1992598dd2d1"
+   ]
+  },
+  "octo-asset-repo-services": {
+   "agentsMd": true,
+   "claudeMd": true,
+   "docHashes": [
+    "0051d2cc34c06dcb",
+    "140eef3ba41bdcf4",
+    "180952528c1817af",
+    "226492555703b05f",
+    "2f304a446fad9949",
+    "348ae3d4680a9b04",
+    "3b82b92a2fd4443a",
+    "535c18d376fc2f0f",
+    "583a8001fddcc519",
+    "641fd4d07583b219",
+    "72d9a117efefd169",
+    "87bf28759c0c0a6f",
+    "8da1bba76f8ced73",
+    "9a35984481d32565",
+    "a02883609864fe7f",
+    "a9bca53372fe2d5e",
+    "b0b00866462ff9aa",
+    "c79cd096e2fad147",
+    "cd46641263879e39",
+    "cd5ee965af1162f3",
+    "e309d7414b692e34",
+    "ecb9558eeb31f3a3",
+    "ed5ee4656aa1e6ff"
+   ]
+  },
+  "octo-bot-services": {
+   "agentsMd": false,
+   "claudeMd": true,
+   "docHashes": [
+    "265ccb06735b4224"
+   ]
+  },
+  "octo-claude-biz": {
+   "agentsMd": false,
+   "claudeMd": true,
+   "docHashes": []
+  },
+  "octo-claude-pm": {
+   "agentsMd": false,
+   "claudeMd": true,
+   "docHashes": []
+  },
+  "octo-claude-skills": {
+   "agentsMd": false,
+   "claudeMd": true,
+   "docHashes": []
+  },
+  "octo-cli": {
+   "agentsMd": true,
+   "claudeMd": true,
+   "docHashes": [
+    "08f30fcd3c8a9677",
+    "0e0337feed1aabb9",
+    "140eef3ba41bdcf4",
+    "28c4452e535ec853",
+    "3435d391b6573db8",
+    "36c242f6bda5385b",
+    "583e98b91761c42b",
+    "5ca1b99821c5c874",
+    "81f66ac9a7c5649c",
+    "b82a25f18f1c2221",
+    "d4a369421d381713"
+   ]
+  },
+  "octo-common-services": {
+   "agentsMd": true,
+   "claudeMd": true,
+   "docHashes": [
+    "0303c1b17f5205be",
+    "0342a0c73e27822e",
+    "1e8d589902aaa1ee",
+    "1f5cff8b20e53053",
+    "316b6f5be1a0d33f",
+    "394f47cd73782341",
+    "49e0a0e65752e8d5",
+    "4e9de47d0c8ab462",
+    "4f05f49f69c69e58",
+    "6baa784474147db6",
+    "6dba8c0ce84f4168",
+    "6ee4326407c1b070",
+    "735a23ef1cb14169",
+    "849e4fa515ccfec1",
+    "87b3eba0d2f258cc",
+    "8c6043edcebb2628",
+    "8fc481c2670f5042",
+    "91c4fff8c35bce78",
+    "a9ca3cec6a63ce05",
+    "b95a6c46b60761c4",
+    "bea524366076c3b1",
+    "c8addad0d7b6329e",
+    "caebf1980165d3f2",
+    "ccb0df843b696d5d",
+    "e51876cfa28e356c",
+    "f38970e1861c0889",
+    "f3e3cfe71d9488fa",
+    "f8191846ab14cf12"
+   ]
+  },
+  "octo-communication-controller-services": {
+   "agentsMd": false,
+   "claudeMd": true,
+   "docHashes": [
+    "008bc06f1d307927",
+    "08aa9daa334ef04a",
+    "09aca6357a18668b",
+    "0a1ec0a2fbcce336",
+    "0eacd517cbc4bd0d",
+    "121818e1802b2e6e",
+    "16652dd8aca1c53b",
+    "1a95edf069a4136e",
+    "393587291335062a",
+    "3d5c6f7b96fc517c",
+    "44d6a57c7d9d83a3",
+    "4f86a752fcbd5b8c",
+    "67c3b37ad2b398d7",
+    "6c8e2e56acc5d71f",
+    "7c9940c52b77b8d5",
+    "a63970d71322f58f",
+    "a9ca3cec6a63ce05",
+    "b48e58c341166601",
+    "c532ba6f017d50ca",
+    "cc7aabab12650ed9",
+    "d84917d2941587a1",
+    "e10c29d55dce5d9f",
+    "f6754a4a82aa0ea8",
+    "f8977922f9c59a43"
+   ]
+  },
+  "octo-communication-operator": {
+   "agentsMd": false,
+   "claudeMd": true,
+   "docHashes": [
+    "4b6d7f075f865097",
+    "ac18f7837d2ba4a4"
+   ]
+  },
+  "octo-communication-sdk": {
+   "agentsMd": true,
+   "claudeMd": true,
+   "docHashes": [
+    "085a2d89c4ba2c27",
+    "2eb4248ed7d46800",
+    "479d686118a8495d",
+    "4894024e1a627223",
+    "4a8f35e5cec96bb7",
+    "55d2e09742df832f",
+    "5e956785d507486a",
+    "6348e35166a06c7c",
+    "6f541657715e3abe",
+    "8cd315f1d9960d5c",
+    "db618405384d9ab2",
+    "e0701a96446852c1",
+    "fcdbfe95e47efd6b"
+   ]
+  },
+  "octo-construction-kit": {
+   "agentsMd": true,
+   "claudeMd": true,
+   "docHashes": [
+    "1cef09555370b25f",
+    "373ebedf1806538a",
+    "3fec74b58b99d858",
+    "5c4c6dd2dd02cc9a",
+    "77677063a3593c6c",
+    "86dd3af4faf81d2f",
+    "871607bd915a97fe",
+    "9efd33fed7e0bf96",
+    "a92a560655e9b891"
+   ]
+  },
+  "octo-construction-kit-engine": {
+   "agentsMd": true,
+   "claudeMd": true,
+   "docHashes": [
+    "04da3af95543f3bb",
+    "152e832769c1eb51",
+    "185f07f66f6da2e2",
+    "1e1f271ea9a90f0e",
+    "20447542a75ea9df",
+    "2519f7590f1c610a",
+    "2ac771964e651f10",
+    "361a6b5f115ab69b",
+    "402d9a595b499f96",
+    "42a0dafa1a98cb3f",
+    "4b92e16cea24da2c",
+    "53c4b1e21b3082c2",
+    "5a1372dd257c299f",
+    "5beaaad8fd82464f",
+    "6d0cc9b41cb0abd8",
+    "6d1b3145bc9e54fa",
+    "6f37d60a9f68bc97",
+    "791d34ef1a69eb41",
+    "81917a62f7bb38ad",
+    "86a42ae35057b7c1",
+    "8a3aade6fd108b1e",
+    "8e1b7cbb04f934b7",
+    "8f607c7518865fac",
+    "93a4168c956900ce",
+    "9531656d6b3a1075",
+    "9a28be5341046dd6",
+    "a5f4f3bb08562b0a",
+    "ac58d4e1e819b381",
+    "b1a82083b7a62041",
+    "c496feeecdfd7305",
+    "cc5c53fe4cc9c057",
+    "cc8e181023b0b949",
+    "cdfec2b2083996fd",
+    "d531cc9763c25997",
+    "d550c967850661d1",
+    "dcd9bc5b6b91339b",
+    "e1603df4c2aa2eb2",
+    "e4b461e2332cf046",
+    "f5db126a1d8c24ce",
+    "f814065f42c89662",
+    "fb76ec22f1b18151"
+   ]
+  },
+  "octo-construction-kit-engine-mongodb": {
+   "agentsMd": true,
+   "claudeMd": true,
+   "docHashes": [
+    "0a379c3618700c99",
+    "1c2b3eda186c0281",
+    "21d0050387554e09",
+    "24b9f8f9061e2a73",
+    "2c2445374b8cba1d",
+    "3672100d780398d5",
+    "380ebe5c97f3b528",
+    "3c10a2fe89c3753f",
+    "3d69014bb592f45d",
+    "422329332ce13851",
+    "43676f9365491273",
+    "43c14bfcf72e8612",
+    "449c7220ef0511c2",
+    "4787fe82c046b08b",
+    "6c837f8459d4be98",
+    "6f37d60a9f68bc97",
+    "760f538b2ffcc572",
+    "8b4476de6a9550ed",
+    "92ffaa6c302e0262",
+    "9ff13f48a444b20f",
+    "aafabc9df44ff06f",
+    "b85d7cc3c078bad3",
+    "c79cd096e2fad147",
+    "e22c9c1ba79a3943",
+    "e2df5a669e59bddc",
+    "e37e1427ad113a2c",
+    "eb46c03cad007b07",
+    "ef293bb4aeaae6fa",
+    "f3c8b01bdba715cd"
+   ]
+  },
+  "octo-distributedEventHub": {
+   "agentsMd": false,
+   "claudeMd": true,
+   "docHashes": [
+    "b5cb61e9179386b5",
+    "ed40a5151a82b133"
+   ]
+  },
+  "octo-documentation": {
+   "agentsMd": false,
+   "claudeMd": true,
+   "docHashes": []
+  },
+  "octo-frontend-libraries": {
+   "agentsMd": false,
+   "claudeMd": false,
+   "docHashes": []
+  },
+  "octo-frontend-refinery-studio": {
+   "agentsMd": false,
+   "claudeMd": true,
+   "docHashes": [
+    "050dfdd0922f100a",
+    "062911be7a750275",
+    "0f818feceab1cdcb",
+    "2a50d8a630b5a821",
+    "300a4df69f017d6b",
+    "32f5239d36b86315",
+    "3672100d780398d5",
+    "4787fe82c046b08b",
+    "60429621a21c84db",
+    "6c837f8459d4be98",
+    "8a7e5848f1a952bc",
+    "8f30a13b811993f0",
+    "a9ca3cec6a63ce05",
+    "c761304da9e01e8d",
+    "de9945ad74f0937b",
+    "f3bbce59cea6018c",
+    "fd2f3e43dd11fcf5",
+    "ff7b18682078b321"
+   ]
+  },
+  "octo-grafana-dashboards": {
+   "agentsMd": false,
+   "claudeMd": false,
+   "docHashes": []
+  },
+  "octo-helm-core": {
+   "agentsMd": false,
+   "claudeMd": false,
+   "docHashes": []
+  },
+  "octo-helm-pro": {
+   "agentsMd": false,
+   "claudeMd": false,
+   "docHashes": []
+  },
+  "octo-identity-services": {
+   "agentsMd": true,
+   "claudeMd": true,
+   "docHashes": [
+    "04d74eb6d6ad884e",
+    "0b5ca119d2be595a",
+    "11b0a655402e2781",
+    "1251ccdfc7b13ccb",
+    "140eef3ba41bdcf4",
+    "172dd44f25c11660",
+    "17ed18489a956f32",
+    "1d7dad781c768cb7",
+    "258ba894fc845cfb",
+    "33c8556cc226e223",
+    "3672100d780398d5",
+    "49aa06f3ed785706",
+    "5da2a82d6ffdc278",
+    "64034917f718e3eb",
+    "64d9ea832efcdd44",
+    "6647ede417352e60",
+    "667859a2a9433ddc",
+    "69937c94038ee0da",
+    "6c837f8459d4be98",
+    "75141128b871a52a",
+    "7586cefb806a57c4",
+    "761636c5ae7f42c3",
+    "7695f30ad43bd011",
+    "7d49030e691730d7",
+    "97b702d9d9c8d896",
+    "9a924e85a03bd75a",
+    "9bb69ec510c5138b",
+    "a2ef33eb651306af",
+    "ae95a56566237c78",
+    "bea4cc386b995887",
+    "bf1a8164187ba96a",
+    "c0fbba1f26b08152",
+    "c22885d97fa21ad9",
+    "c68d0357f15d3d4b",
+    "cf00485facede285",
+    "d668c4928a76a6aa",
+    "d75725101ddfa366",
+    "e307b201a0710f11",
+    "f0ed9b76cb45c4b0",
+    "f1ea37d6f84339ef",
+    "f209e9690b191d4b",
+    "f4338c13367ed1ca",
+    "f8bb44a5d2884d62",
+    "ffab9a33fdab7f8f"
+   ]
+  },
+  "octo-mcp-service": {
+   "agentsMd": true,
+   "claudeMd": true,
+   "docHashes": [
+    "078defc2d93da434",
+    "12fbeac55a1c6fad",
+    "159fa43010b619d3",
+    "571fb11f87f307fe",
+    "70de428808a824a6",
+    "831529206d29cb3f",
+    "89501b53a135513f",
+    "a9ca3cec6a63ce05",
+    "ac74b088fa9e0f61",
+    "b945b28459eab909",
+    "c22885d97fa21ad9",
+    "c264878794e9c4b0",
+    "c45cc164f02aa455",
+    "d668c4928a76a6aa",
+    "e678cd3b6e47c4c0",
+    "e6cfe7e4393a2791",
+    "fb04424afd9cba07"
+   ]
+  },
+  "octo-mesh-adapter": {
+   "agentsMd": true,
+   "claudeMd": true,
+   "docHashes": [
+    "0dfa357e403bbee1",
+    "23fdcccb758c7f1b",
+    "2bf1236ba234a372",
+    "3b7c2c836282d9b6",
+    "3d0b635c3e1d6525",
+    "50135fce4db6c682",
+    "653764ce4b5de036",
+    "7ca588f26e9bfb3f",
+    "8e9c1354875e7b4e",
+    "aa806a4740d63c75",
+    "c2f7ab65a02c2a99",
+    "c58dff573024c1db",
+    "c98d4125d4383fbf",
+    "cf79bfb6f30e03c8",
+    "d3cbf1006ce9987b",
+    "d7a90e9d801f18ed",
+    "e6afa89c1ec775d8"
+   ]
+  },
+  "octo-office-integration": {
+   "agentsMd": false,
+   "claudeMd": true,
+   "docHashes": []
+  },
+  "octo-pipeline-templates": {
+   "agentsMd": false,
+   "claudeMd": true,
+   "docHashes": []
+  },
+  "octo-platform-services": {
+   "agentsMd": true,
+   "claudeMd": true,
+   "docHashes": [
+    "02577f1e18f9e744",
+    "140eef3ba41bdcf4",
+    "20547956265a9d19",
+    "4e9de47d0c8ab462",
+    "53c1944da5f667f4",
+    "6a42fc5b42c9a800",
+    "800257722e81e9cf",
+    "a9ca3cec6a63ce05",
+    "b741c0277a23ef41",
+    "c22885d97fa21ad9",
+    "c53f6ab5c824b8dc",
+    "cc1cd652fcda9349",
+    "d6dbb4f69e5662d1",
+    "e31c3691adabdb0b",
+    "e72876dd53756b68",
+    "fdb5546052b5f08f"
+   ]
+  },
+  "octo-plug-csv": {
+   "agentsMd": false,
+   "claudeMd": false,
+   "docHashes": []
+  },
+  "octo-plug-dilos": {
+   "agentsMd": false,
+   "claudeMd": true,
+   "docHashes": [
+    "1a7f3e6f6ed22cb2",
+    "53d5d804863785cd",
+    "806fe7ef225a0418",
+    "80a83372f654760f"
+   ]
+  },
+  "octo-plug-ispro-ng": {
+   "agentsMd": false,
+   "claudeMd": false,
+   "docHashes": []
+  },
+  "octo-plug-modbus": {
+   "agentsMd": false,
+   "claudeMd": false,
+   "docHashes": []
+  },
+  "octo-plug-zenon": {
+   "agentsMd": false,
+   "claudeMd": true,
+   "docHashes": [
+    "001c0aaf71e7bdb2",
+    "3672100d780398d5",
+    "4787fe82c046b08b",
+    "5c90c79aef308317",
+    "5e463cef8d755ecd",
+    "65838f5c508fed5e",
+    "6c837f8459d4be98",
+    "7c48ee64a66b91ea",
+    "961c7b55e48f4a30",
+    "9c4ffb8fe7a2cee4",
+    "b9e10e70c7f443cd",
+    "da8d63135c8b40ac",
+    "ee1073c4083e46cb"
+   ]
+  },
+  "octo-power-query": {
+   "agentsMd": false,
+   "claudeMd": true,
+   "docHashes": [
+    "00cbce1a205cdd28",
+    "66f2a9f3a5369184",
+    "d9657425e036fb0a",
+    "ff21b6b9a3a33e9d"
+   ]
+  },
+  "octo-report-services": {
+   "agentsMd": false,
+   "claudeMd": true,
+   "docHashes": []
+  },
+  "octo-sdk": {
+   "agentsMd": true,
+   "claudeMd": true,
+   "docHashes": [
+    "0331c85aa9d0aff4",
+    "140eef3ba41bdcf4",
+    "2501a7c67f64e911",
+    "3672100d780398d5",
+    "40733239a213e63c",
+    "4512c237cd8f86e2",
+    "4787fe82c046b08b",
+    "51d474fa108d76c1",
+    "56ea74e5808c3de7",
+    "59921e5ede00da5e",
+    "6c837f8459d4be98",
+    "6d3d80e7c1d426e9",
+    "88b188b4a191b36f",
+    "ac114f76d84d6c1d",
+    "b23ba73b47a63717",
+    "b897ffce9a19628f",
+    "c87a5e43444a8d87",
+    "e1992f71239fdc06",
+    "ed40a5151a82b133",
+    "f938fc80526002ac",
+    "fe12fd0042a1cf4e",
+    "ff1e4b94048020b3"
+   ]
+  },
+  "octo-tools": {
+   "agentsMd": false,
+   "claudeMd": true,
+   "docHashes": [
+    "2530fecd065670b0",
+    "3513b12e95a62dd7",
+    "3672100d780398d5",
+    "3a6cc68cfb8981ac",
+    "4633604c273386bf",
+    "4787fe82c046b08b",
+    "6c837f8459d4be98",
+    "a2dbcee1cf269406",
+    "e84ea18148d3bef5",
+    "fdb00a1f4ca39a3a"
+   ]
+  }
+ },
+ "schemaVersion": 1
+}
