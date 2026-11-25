@@ -271,12 +271,7 @@ This is **different** from the PascalCase you see in GraphQL query results (wher
 { "RtEntity": { "RtId": "cc...bb01", "CkTypeId": "Industry.Basic/Machine", "Attributes": { "MachineState": 0 } }, "RtId": "cc...bb01", "CkTypeId": "Industry.Basic/Machine", "ModOption": 0 }
 ```
 
-The top-level `RtId` is populated only when a static `rtId` is given, `rtIdPath` holds an id, or `generateRtId` made one.
-
-**The `generateRtId` rule.** `generateRtId: true` creates a new id only when `rtIdPath` is set and its value is empty; without `rtIdPath` it does nothing (the insert has no `RtId` until `ApplyChanges` writes it). The new id goes into the update item at `targetPath` (`RtId`) and is **not** written back to `rtIdPath`.
-- **Fine:** a new entity whose id a later node reads from its update item (`<targetPath>.RtId`), e.g. an HTTP API that inserts one entity and returns `$.updates[0].RtId` ([http-api-pipelines.md](../octo-app-builder/references/http-api-pipelines.md)).
-- **Never:** point `CreateAssociationUpdate@1` or another node at the `rtIdPath` of a `generateRtId` node: it stays empty and the node fails.
-- **Parent/child, associations and upserts:** resolve the ids first with `GetOrCreateRtEntitiesByType@1` or `GetRtEntitiesByWellKnownName@1` and pass them via `rtIdPath` (workflow below): the ids are at known paths before any update is built, and a re-run finds the entities instead of duplicating them.
+The top-level `RtId` is populated only when a static `rtId` is given, `rtIdPath` holds an id, or `generateRtId` made one. **The `generateRtId` rule:** `generateRtId: true` creates a new id only when `rtIdPath` is set and its value is empty (without `rtIdPath` it does nothing; the insert has no `RtId` until `ApplyChanges` writes it); the new id goes into the update item at `targetPath` (`RtId`) and is **not** written back to `rtIdPath`. Fine: a new entity whose id a later node reads from its update item (`<targetPath>.RtId`), e.g. an HTTP API that inserts one entity and returns `$.updates[0].RtId` ([http-api-pipelines.md](../octo-app-builder/references/http-api-pipelines.md)). Never point `CreateAssociationUpdate@1` or another node at the `rtIdPath` of a `generateRtId` node: it stays empty and the node fails. For parent/child, associations and upserts resolve the ids first with `GetOrCreateRtEntitiesByType@1` or `GetRtEntitiesByWellKnownName@1` and pass them via `rtIdPath` (workflow below): the ids are at known paths before any update is built, and a re-run finds the entities instead of duplicating them.
 
 ## Mandatory Associations
 
@@ -509,9 +504,6 @@ logFiles/MeshAdapter.log
 3. **Reference docs** (hand-maintained summaries, may lag): SDK nodes `references/node-reference-sdk.md`, Mesh Adapter nodes `references/node-reference-mesh.md`
 4. **DataContext mechanics** (paths, write modes, field filters, iterations): `references/data-context-guide.md`
 5. **Real examples** (annotated pipelines): `references/pipeline-examples.md`
-6. **On a tenant** (MCP client, no skill files or source code): with the opt-in blueprint `System.Ai.Builder` this skill
-   is installed as knowledge pages; open them with `knowledge_search` / `knowledge_get` and cite them as `[slug]`. Start
-   page `pipeline-index`, which lists every `pipeline-` page (basics, DataContext, entity updates, node references
-   `pipeline-nodes-*`, examples `pipeline-examples-*`).
+6. **On a tenant** (MCP client, no skill files or source code): with the opt-in blueprint `System.Ai.Builder` this skill is installed as knowledge pages; open them with `knowledge_search` / `knowledge_get` and cite them as `[slug]`. Start page `pipeline-index`, which lists every `pipeline-` page (basics, DataContext, entity updates, node references `pipeline-nodes-*`, examples `pipeline-examples-*`).
 
 **If there is ANY doubt about a node's properties or behavior, read the source code. Do not guess.**
