@@ -194,7 +194,7 @@ transformations:
             ckTypeId: Acme.Crm/Contact
             rtIdPath: $.DocumentRtId
             attributeUpdates:
-              - attributeName: Name
+              - attributeName: name
                 attributeValueType: String
                 valuePath: $.Document.Attributes.Name
           - type: ApplyChanges@2
