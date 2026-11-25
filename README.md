@@ -124,6 +124,8 @@ A refresh with findings pushes an inventory against which some skills fail. In t
 1. Take the Bugs the run filed (`Skill drift: <skill> …`, one per skill).
 2. Either fix the skills on their own story branches (they ride in the same batch), or accept the findings for now: on a story branch of the Bug (`<user>/AB#<Bug ID>_<desc>`, never the refresh branch) add one entry per finding to `inventory/allowlist.json` with `kind`, `name`, `files` (the repository path of the skill file, e.g. `skills/octo/SKILL.md`), `reason` `baseline <date>: <Bug title>` and `workItem` = the Bug ID. Commit with `AB#<Bug ID> Chore: …` and push the story branch; it rides in the same batch.
 3. Check that `python3 scripts/check_skill_drift.py --summary` exits 0 on the batch branch with these changes, then re-run the docs batch so its PR picks them up; the drift check step turns green.
-4. The owner removes the baseline entries when fixing the skill and closes the Bug.
+4. The owner removes the baseline entries when fixing the skill and closes the Bug. While a skill's findings are only baselined, the weekly run leaves its Bug open and does not ask to close it.
+
+When the **Unit tests** step is red because the refresh brought a cmdlet with a new verb outside the approved list, add the verb to `OCTO_TOOLS_VERBS` in `scripts/check_skill_drift.py` on a story branch that rides in the same batch.
 
 Release history lives in [CHANGELOG.md](CHANGELOG.md).

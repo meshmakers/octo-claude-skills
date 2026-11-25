@@ -135,6 +135,20 @@ class RefreshTest(unittest.TestCase):
         texts = [text for item, text in self.boards.comments if item == ops_bug]
         self.assertTrue(any("finds no name any more" in t for t in texts), texts)
 
+    def test_baselined_findings_leave_the_bug_open_without_a_close_comment(self):
+        # AB#9840: a baseline entry accepts the finding, but the skill still names the old cmdlet.
+        self.rename_cmdlet()
+        self.run_refresh("2026-01-12")
+        ops_bug = self.boards.find_open_bug("ops-skill")
+        allow = {"entries": [{"kind": "cmdlet", "name": "Invoke-DemoBuild", "files": ["skills/ops-skill/SKILL.md"],
+                              "reason": "baseline 2026-01-12: drift Bug", "workItem": ops_bug}]}
+        (self.skills / "inventory" / "allowlist.json").write_text(json.dumps(allow))
+        self.boards.comments.clear()
+        code, log = self.run_refresh("2026-01-19")
+        self.assertEqual(code, 0, log)
+        self.assertEqual([t for item, t in self.boards.comments if item == ops_bug], [])
+        self.assertIn(f"ops-skill: findings baselined in the allow-list, Bug {ops_bug} left open", log)
+
     def test_failed_run_comments_on_the_platform_ops_sustain_feature(self):
         shutil.rmtree(self.src / "octo-tools")
         code, log = self.run_refresh("2026-01-12")

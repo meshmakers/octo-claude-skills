@@ -221,8 +221,12 @@ class DryRunBoards:
 
 
 def file_findings(boards, findings: list[dict], owners: dict[str, str], targets: dict[str, dict],
-                  skills: list[str], date: str) -> list[str]:
-    """Create or update one Bug per skill with findings; comment on open Bugs of clean skills."""
+                  skills: list[str], date: str, baselined: set[str] | frozenset = frozenset()) -> list[str]:
+    """Create or update one Bug per skill with findings; comment on open Bugs of clean skills.
+
+    ``baselined``: skills without open findings that still have findings accepted by a baseline
+    entry of the allow-list. Their Bug stays open and gets no "verify and close" comment (AB#9840).
+    """
     log = []
     by_skill: dict[str, list[dict]] = {}
     for f in findings:
@@ -233,7 +237,9 @@ def file_findings(boards, findings: list[dict], owners: dict[str, str], targets:
         target = targets.get(owner or "")
         existing = boards.find_open_bug(skill)
         if not items:
-            if existing:
+            if existing and skill in baselined:
+                log.append(f"{skill}: findings baselined in the allow-list, Bug {existing} left open")
+            elif existing:
                 boards.comment(existing, f"{COMMENT_PREFIX} {date}: the drift check finds no name any more in "
                                          f"skill {skill}. Verify and close this Bug.")
                 log.append(f"{skill}: clean, commented on Bug {existing}")
@@ -440,9 +446,15 @@ def run(args, boards=None) -> int:
             )
             if errors:
                 raise RunFailed(f"drift check errors: {'; '.join(errors)}")
+            # Findings accepted only by a baseline entry are not fixed: their skill is not clean.
+            raw, _, _, _ = check_skill_drift.run(
+                skills_root, names_path, skills_root / "inventory" / "allowlist.json", skills_root / "OWNERS",
+                _dt.date.fromisoformat(date), 14, ignore_baseline=True,
+            )
+            baselined = {pathlib.PurePosixPath(f.file).parts[1] for f in raw}
             owners = check_skill_drift.load_owners(skills_root / "OWNERS")
             log = file_findings(boards, [f.__dict__ for f in findings], owners, owner_targets(teams),
-                                sorted(counts), date)
+                                sorted(counts), date, baselined)
             for line in log:
                 print(line)
             print(f"{len(findings)} finding(s) in {sum(1 for c in counts.values() if c['findings'])} skill(s)",
