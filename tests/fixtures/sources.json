@@ -1,0 +1,11 @@
+{
+ "cliRepo": "octo-cli",
+ "cmdletRepo": "octo-tools",
+ "excludeRepos": [],
+ "nodeRepoPatterns": [
+  "octo-*"
+ ],
+ "repoPatterns": [
+  "octo-*"
+ ]
+}

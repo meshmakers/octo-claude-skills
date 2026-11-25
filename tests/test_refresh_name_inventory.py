@@ -1,0 +1,160 @@
+"""Tests of scripts/refresh_name_inventory.py: rename in a fixture tree -> inventory, check, Bugs (AB#9741).
+
+The run uses the fixture source tree instead of clones and an in-memory Azure Boards
+double instead of the Azure CLI; nothing is pushed.
+
+Run:  python3 -m unittest discover -s tests -v
+"""
+import argparse
+import contextlib
+import io
+import json
+import pathlib
+import shutil
+import sys
+import tempfile
+import unittest
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+FIXTURES = ROOT / "tests" / "fixtures"
+sys.path.insert(0, str(ROOT / "scripts"))
+
+import refresh_name_inventory as refresh  # noqa: E402
+
+
+class FakeBoards:
+    """In-memory stand-in for AzureBoards."""
+
+    def __init__(self):
+        self.bugs = {}       # id -> dict(title, area, repro, parent, state)
+        self.comments = []   # (id, text)
+        self.next_id = 1000
+
+    def find_open_bug(self, skill):
+        prefix = refresh.BUG_TITLE_PREFIX.format(skill=skill)
+        for bug_id, bug in sorted(self.bugs.items()):
+            if bug["title"].startswith(prefix) and bug["state"] not in ("Closed", "Removed"):
+                return bug_id
+        return None
+
+    def create_bug(self, title, area, repro, parent):
+        self.next_id += 1
+        self.bugs[self.next_id] = {"title": title, "area": area, "repro": repro, "parent": parent, "state": "New"}
+        return self.next_id
+
+    def update_bug(self, bug_id, title, repro):
+        self.bugs[bug_id].update(title=title, repro=repro)
+
+    def comment(self, item_id, text):
+        self.comments.append((item_id, text))
+
+
+def skill(root, name, body):
+    folder = root / "skills" / name
+    folder.mkdir(parents=True)
+    (folder / "SKILL.md").write_text(f"---\nname: {name}\ndescription: \"fixture\"\n---\n\n{body}\n")
+
+
+class RefreshTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = pathlib.Path(tempfile.mkdtemp())
+        self.src = self.tmp / "src"
+        shutil.copytree(FIXTURES / "monorepo", self.src)
+        self.skills = self.tmp / "skills-repo"
+        (self.skills / "inventory").mkdir(parents=True)
+        (self.skills / "inventory" / "allowlist.json").write_text('{"entries": []}')
+        (self.skills / "OWNERS").write_text("ops-skill Heimdall\ncore-skill Thor\nclean-skill Thor\n")
+        skill(self.skills, "ops-skill", "Build with `Invoke-DemoBuild -repo x`.")
+        skill(self.skills, "core-skill", "```powershell\nInvoke-DemoBuild -configuration DebugL\n```")
+        skill(self.skills, "clean-skill", "Start with `Start-DemoStack -nonInteractive $true`.")
+        self.boards = FakeBoards()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def run_refresh(self, date):
+        args = argparse.Namespace(
+            date=date, teams_json=str(FIXTURES / "teams.json"), org="https://example.invalid", file_bugs=True,
+            monorepo=str(self.src), work_dir=str(self.tmp / "work"), keep=True, source_tree=str(self.src),
+            skills_tree=str(self.skills), user="tester", work_item="1", push=False,
+        )
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = refresh.run(args, boards=self.boards)
+        return code, out.getvalue() + err.getvalue()
+
+    def rename_cmdlet(self):
+        module = self.src / "octo-tools" / "modules" / "Demo-Build.psm1"
+        module.write_text(module.read_text().replace("Invoke-DemoBuild", "Invoke-DemoCompile"))
+
+    def inventory(self):
+        return json.loads((self.skills / "inventory" / "names.json").read_text())
+
+    def test_clean_run_files_nothing(self):
+        code, log = self.run_refresh("2026-01-05")
+        self.assertEqual(code, 0, log)
+        self.assertIn("Invoke-DemoBuild", self.inventory()["cmdlets"])
+        self.assertEqual(self.boards.bugs, {})
+
+    def test_renamed_cmdlet_fails_every_skill_naming_it_with_one_bug_each_and_updates_on_rerun(self):
+        self.assertEqual(self.run_refresh("2026-01-05")[0], 0)
+        self.rename_cmdlet()
+
+        code, log = self.run_refresh("2026-01-12")
+        self.assertEqual(code, 0, log)
+        cmdlets = self.inventory()["cmdlets"]
+        self.assertNotIn("Invoke-DemoBuild", cmdlets)
+        self.assertIn("Invoke-DemoCompile", cmdlets)
+        self.assertEqual(self.inventory()["generated"], "2026-01-12")
+
+        bugs = sorted(self.boards.bugs.values(), key=lambda b: b["title"])
+        self.assertEqual(len(bugs), 2, log)
+        core, ops = bugs
+        self.assertTrue(core["title"].startswith("Skill drift: core-skill "))
+        self.assertEqual((core["parent"], core["area"]), (101, "Fixture\\Core"))
+        self.assertTrue(ops["title"].startswith("Skill drift: ops-skill "))
+        self.assertEqual((ops["parent"], ops["area"]), (104, "Fixture\\Ops"))
+        self.assertIn("Invoke-DemoBuild", ops["repro"])
+        self.assertIn("skills/ops-skill/SKILL.md:6", ops["repro"])
+
+        code, log = self.run_refresh("2026-01-19")
+        self.assertEqual(code, 0, log)
+        self.assertEqual(len(self.boards.bugs), 2, "second run must update, not create")
+        self.assertEqual(sum(1 for item, _ in self.boards.comments if item in self.boards.bugs), 2)
+
+    def test_fixed_skill_gets_a_comment_on_its_open_bug(self):
+        self.rename_cmdlet()
+        self.run_refresh("2026-01-12")
+        ops_bug = self.boards.find_open_bug("ops-skill")
+        skill_md = self.skills / "skills" / "ops-skill" / "SKILL.md"
+        skill_md.write_text(skill_md.read_text().replace("Invoke-DemoBuild", "Invoke-DemoCompile"))
+        self.run_refresh("2026-01-19")
+        texts = [text for item, text in self.boards.comments if item == ops_bug]
+        self.assertTrue(any("finds no name any more" in t for t in texts), texts)
+
+    def test_failed_run_comments_on_the_platform_ops_sustain_feature(self):
+        shutil.rmtree(self.src / "octo-tools")
+        code, log = self.run_refresh("2026-01-12")
+        self.assertEqual(code, 3)
+        self.assertEqual(self.boards.bugs, {})
+        self.assertEqual(len(self.boards.comments), 1)
+        item, text = self.boards.comments[0]
+        self.assertEqual(item, 104)
+        self.assertIn("refresh failed", text)
+
+    def test_owner_targets_read_from_teams_json(self):
+        teams = json.loads((FIXTURES / "teams.json").read_text())
+        targets = refresh.owner_targets(teams)
+        self.assertEqual(targets["Thor"]["feature"], 101)
+        self.assertEqual(targets["Heimdall"]["areaPath"], "Fixture\\Ops")
+
+
+class HelperTest(unittest.TestCase):
+    def test_https_url(self):
+        self.assertEqual(refresh.https_url("git@github.com:org/repo.git"), "https://github.com/org/repo.git")
+        self.assertEqual(refresh.https_url("https://user:secret@github.com/org/repo.git"),
+                         "https://github.com/org/repo.git")
+
+
+if __name__ == "__main__":
+    unittest.main()
