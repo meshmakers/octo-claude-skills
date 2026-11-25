@@ -2,6 +2,213 @@
 
 Nodes provided by the **Mesh Adapter** (`octo-mesh-adapter`) — one of several adapter implementations sharing the unified `System.Communication/Adapter` CK type. These nodes are available on any adapter that includes the Mesh Adapter SDK. Use `NodeName@Version` syntax in YAML (e.g., `GetRtEntitiesByType@1`).
 
+## Cross-tenant settings (`targetTenant`, `targetTenants`)
+
+A pipeline is registered in one tenant and, without these settings, reads and writes only that tenant. A few data
+nodes can reach **another tenant of the same subtree**. Both conditions must hold, otherwise the node fails with
+`CROSS_TENANT_FORBIDDEN` and nothing of the target is read or written:
+
+1. the target is in the **relation** the node names, computed from the platform's tenant registry at run time;
+2. the node's identity holds the right **in the target**, proven by the identity service (token exchange) and
+   evaluated with the target's own roles. Roles of the pipeline's tenant never cross over.
+
+| Node | Setting |
+|---|---|
+| `GetRtEntitiesByType@1`, `GetRtEntitiesById@1`, `GetRtEntitiesByWellKnownName@1` | `targetTenant` (read one other tenant) |
+| `GetRtEntitiesByType@1`, `GetRtEntitiesById@1` | `targetTenants` (read several child tenants) |
+| `ApplyChanges@2` | `targetTenant` (write one other tenant), `targetTenants` (one-way master-data sync into the children) |
+| `ApplyChanges@1`, every other node | none — the key is unknown and fails the pipeline when it is loaded |
+
+**`targetTenant`**
+
+| Property | Type | Description |
+|---|---|---|
+| `relation` | enum | required: `Parent` (the parent; no id), `Sibling` (another child of the same parent), `Child` (a direct child) |
+| `tenantId` | string | `Sibling`/`Child`: the target tenant |
+| `tenantIdPath` | string | instead of `tenantId`: JSONPath to the id in the data context; checked like a configured id |
+
+A `Parent` with an id, a `Sibling`/`Child` without one, or both `tenantId` and `tenantIdPath` is a configuration error.
+
+**`targetTenants`**
+
+| Property | Type | Description |
+|---|---|---|
+| `relation` | enum | required, only `Child` |
+| `tenantIds` | string[] | optional; without it every registered direct child at run time (registry cached up to 30 s); an empty list is an error |
+| `onRefused` | enum | read nodes only: `Fail` (default; one refused tenant fails the execution, nothing of any tenant is read) or `Report` (refused tenants listed in `RefusedTenants`, the others read). `System` identity and configuration errors fail also with `Report` |
+
+`targetTenant` and `targetTenants` cannot be combined. `GetRtEntitiesByWellKnownName@1` has no `targetTenants`.
+
+**Always refused**: the system tenant as source or target (two top-level tenants are no siblings), grandparents,
+cousins, nephews, grandchildren and deeper, unregistered or detached tenants, the own tenant through the setting.
+Ids are trimmed and compared case-insensitively. "Not registered", "outside the relation" and "no right" give the
+same message; the reason is only in the adapter log.
+
+**Identity** (`identity` of the node):
+
+| Identity | Proof in the target | Provisioned in the target |
+|---|---|---|
+| `Caller` with a user | caller token exchanged for a token of the target | Child target: user mapping of the parent user; Parent/Sibling target: source tenant permits the target + grant of the user |
+| `Caller` without a user (schedule, watch, event) | falls back to `ServiceAccount` | as below |
+| `ServiceAccount` | service-account token exchanged for a token of the target | shadow client `xt_{sourceTenant}_{clientId}`: public, no secret, token exchange as only grant, no redirect URIs, no offline access, with the target's roles; Parent/Sibling target: source tenant permits the target; mirrored clients refused |
+| `System` | — | always refused, at deploy (controller) and at run time |
+
+Deploy gate (communication controller): `identity: System` with a target setting is refused; a `tenantIdPath` under
+`$.body`, `$.query`, `$.files` or `$.headers` is refused with `ServiceAccount` (and with `Caller` in a pipeline that can
+run without a signed-in caller) and allowed with a warning when every trigger is `FromHttpRequest@2` without
+`allowAnonymous`.
+
+**Read with `targetTenant`**: the read runs on the target with the proven session; Hidden attributes are judged with
+the target's CK model. Output shape as without the setting.
+
+```yaml
+- type: GetRtEntitiesByType@1
+  ckTypeId: Acme.Accounting/Account
+  identity: Caller
+  targetTenant:
+    relation: Parent
+  targetPath: $.accounts
+```
+
+**Read with `targetTenants` (consolidation)**: every target is opened before the first read; paging, filters and sort
+orders apply per tenant. Output at `targetPath`:
+
+```json
+{
+  "Items": [ { "RtId": "...", "Attributes": { "InvoiceAmount": 100.0 }, "SourceTenantId": "companya" } ],
+  "TotalCount": 3,
+  "Tenants": [ { "TenantId": "companya", "TotalCount": 2 }, { "TenantId": "companyb", "TotalCount": 1 } ],
+  "RefusedTenants": [ { "TenantId": "companyc", "ErrorCode": "CROSS_TENANT_FORBIDDEN" } ]
+}
+```
+
+```yaml
+- type: GetRtEntitiesByType@1
+  ckTypeId: Acme.Accounting/Invoice
+  identity: Caller
+  targetTenants:
+    relation: Child
+    onRefused: Report
+  targetPath: $.invoices
+- type: SumAggregation@1
+  targetPath: $.figures.companya
+  aggregations:
+    - path: $.invoices.Items[*]
+      filterPath: $.SourceTenantId
+      comparisonValue: companya
+      aggregationPath: $.Attributes.InvoiceAmount
+      value: 1
+```
+
+**Write with `targetTenant`** (`ApplyChanges@2`): the target is opened first (also in a dry run, before any check);
+the batch is judged with the target's CK model and without the run's method marker (MethodOnly attributes, inserts of
+a type whose method replaces the generic create and identity association edges are refused); every association end
+must be inserted by the batch or exist in the target (else `CROSS_TENANT_FORBIDDEN`); one transaction in the target.
+An engine validation error in the target fails with `CROSS_TENANT_WRITE_FAILED` (`VALIDATION_FAILED`); an own-tenant
+write still only logs it.
+
+```yaml
+- type: ApplyChanges@2
+  entityUpdatesPath: $._inserts
+  identity: ServiceAccount
+  targetTenant:
+    relation: Sibling
+    tenantIdPath: $.invoice.Items[0].Attributes.RecipientTenantId
+```
+
+**Master-data sync with `targetTenants`** (`ApplyChanges@2`, `relation: Child`, no `onRefused`):
+
+- runs in the source (group) tenant behind `FromWatchRtEntity@1` on its own entities, as `ServiceAccount`;
+- the copy keeps the source RtId and gets the System record `RtSyncOrigin` (`SourceTenantId`, `SourceRtId`,
+  `SyncedAt`; System 2.10.0), stamped by the node (any origin in the input is dropped); idempotency key = source
+  tenant + source RtId; per entity: no copy → insert, own copy → update, DELETE → delete the copy;
+- an entity under that RtId without this source's origin refuses the whole target (`SYNC_OWNED_ENTITY`);
+- one transaction per target; failed targets do not stop the others; afterwards the node fails with
+  `CROSS_TENANT_WRITE_FAILED` naming each failed target with its code (`CROSS_TENANT_FORBIDDEN`, `SYNC_OWNED_ENTITY`,
+  `ATTRIBUTE_WRITE_RESTRICTED`, `VALIDATION_FAILED`, `WRITE_CONFLICT`, `WRITE_FAILED`) and the written ones;
+- not supported: `associationUpdatesPath`, `onDuplicateKey: Report`, record array item updates, secret clears
+  (configuration error before any target is opened); dry run lists the plan per target;
+- in the child, nobody else may set `RtSyncOrigin` or change, delete or archive a copy (engine rule for every writer,
+  `SYNC_OWNED_ENTITY`); change the data in the source.
+
+Deletions in the source: the default delete archives (update event, `$.Document.RtState` `1`); an erase is a delete
+event only with `includeDeletes: true` (`$.UpdateType` `8`, `$.Document` null, id at `$.DocumentRtId`). Enums are
+numbers in the data context:
+
+```yaml
+triggers:
+  - type: FromWatchRtEntity@1
+    ckTypeId: Acme.Crm/Contact
+    updateTypes: All
+    includeDeletes: true
+transformations:
+  - type: If@1                       # erased
+    path: $.UpdateType
+    operator: Equals
+    valueType: Integer
+    value: 8
+    transformations:
+      - type: CreateUpdateInfo@1
+        targetPath: $._erased
+        targetValueKind: Array
+        updateKind: DELETE
+        ckTypeId: Acme.Crm/Contact
+        rtIdPath: $.DocumentRtId
+      - type: ApplyChanges@2
+        identity: ServiceAccount
+        entityUpdatesPath: $._erased
+        targetTenants:
+          relation: Child
+  - type: If@1                       # archived (default delete)
+    path: $.Document.RtState
+    operator: Equals
+    valueType: Integer
+    value: 1
+    transformations:
+      - type: CreateUpdateInfo@1
+        targetPath: $._archived
+        targetValueKind: Array
+        updateKind: DELETE
+        ckTypeId: Acme.Crm/Contact
+        rtIdPath: $.DocumentRtId
+      - type: ApplyChanges@2
+        identity: ServiceAccount
+        entityUpdatesPath: $._archived
+        targetTenants:
+          relation: Child
+  - type: If@1                       # created or changed
+    path: $.UpdateType
+    operator: NotEquals
+    valueType: Integer
+    value: 8
+    transformations:
+      - type: If@1
+        path: $.Document.RtState
+        operator: NotEquals
+        valueType: Integer
+        value: 1
+        transformations:
+          - type: CreateUpdateInfo@1
+            targetPath: $._sync
+            targetValueKind: Array
+            updateKind: UPDATE
+            ckTypeId: Acme.Crm/Contact
+            rtIdPath: $.DocumentRtId
+            attributeUpdates:
+              - attributeName: Name
+                attributeValueType: String
+                valuePath: $.Document.Attributes.Name
+          - type: ApplyChanges@2
+            identity: ServiceAccount
+            entityUpdatesPath: $._sync
+            targetTenants:
+              relation: Child
+```
+
+The same sync contract (key, owner marker, per-target transaction, failure report) is reused by other target writers,
+first by the PostgreSQL target (AB#8674). Public page: docs.meshmakers.cloud, Technology Guide, Identity & Access
+Management, "Pipelines across a Tenant Subtree".
+
 ## Extract Nodes
 
 ### GetRtEntitiesByType@1
@@ -21,6 +228,8 @@ Retrieve runtime entities by CK type ID, or by CK **interface** ID (all implemen
 | `documentMode` | enum | Extend | Extend/Replace |
 | `targetValueKind` | enum | Simple | Simple/Array |
 | `targetValueWriteMode` | enum | Overwrite | Overwrite/Append/Prepend/Merge |
+| `targetTenant` | object | optional | Read another tenant of the subtree (see *Cross-tenant settings*) |
+| `targetTenants` | object | optional | Read several child tenants (see *Cross-tenant settings*) |
 
 Each `sortOrders` entry has `attributeName` (the attribute to sort by — **not** `attributePath`) and `sortOrder` (`Ascending`/`Descending`). `GetAssociationTargets@1` uses the same `SortOrderDto` shape.
 
@@ -73,6 +282,8 @@ Retrieve specific entities by their IDs.
 | `take` | int | optional | Take count |
 | `fieldFilters` | array | optional | Field filters |
 | `targetPath` | string | required | Where to store results |
+| `targetTenant` | object | optional | Read another tenant of the subtree (see *Cross-tenant settings*) |
+| `targetTenants` | object | optional | Read several child tenants (see *Cross-tenant settings*) |
 
 ```yaml
 - type: GetRtEntitiesById@1
@@ -96,6 +307,7 @@ Look up entities by well-known name. Enriches source data with matching entity I
 | `modOperationPath` | string | **required** (`$.modOperation` in the UI) | Where to write mod operation (0=Insert, 1=Update) |
 | `generateInsertOperation` | bool | false | Generate Insert op if entity not found |
 | `attributeTargetPath` | string | optional | Path to write entity attributes as dictionary |
+| `targetTenant` | object | optional | Look up in another tenant of the subtree (see *Cross-tenant settings*); no `targetTenants` |
 
 ```yaml
 - type: GetRtEntitiesByWellKnownName@1
@@ -1281,6 +1493,8 @@ Apply both entity and association updates with transactional support.
 |----------|------|---------|-------------|
 | `entityUpdatesPath` | string | optional | JSONPath to entity updates |
 | `associationUpdatesPath` | string | optional | JSONPath to association updates |
+| `targetTenant` | object | optional | Write into another tenant of the subtree (see *Cross-tenant settings*) |
+| `targetTenants` | object | optional | One-way master-data sync into the child tenants (see *Cross-tenant settings*) |
 
 ```yaml
 - type: ApplyChanges@2
@@ -1500,8 +1714,9 @@ Trigger pipeline on real-time entity changes (MongoDB change streams).
 | `rtId` | string | optional | Specific entity to watch |
 | `beforeFieldFilters` | array | optional | Filters on state before change |
 | `fieldFilters` | array | optional | Filters on state after change |
+| `includeDeletes` | bool | false | Opt-in for delete events: only with `true` **and** `Delete` in `updateTypes` does a delete run the pipeline (`$.UpdateType` 8, `$.Document` null, id at `$.DocumentRtId`). Without pre-images on the collection the watch must name the collection root and no field filter, otherwise the trigger does not start |
 
-The trigger places the changed entity into `$.Document` in the data context.
+The trigger places the changed entity into `$.Document` in the data context and its id at `$.DocumentRtId`.
 
 ```yaml
 triggers:

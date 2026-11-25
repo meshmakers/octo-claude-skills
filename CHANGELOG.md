@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added
+
+- **`pipeline-expert`** — documents the cross-tenant node settings of Feature AB#8673 (AB#9772): new section *Cross-tenant settings* in `references/node-reference-mesh.md` with `targetTenant` (`relation` `Parent` | `Sibling` | `Child`, `tenantId`, `tenantIdPath`) on `GetRtEntitiesByType@1`, `GetRtEntitiesById@1`, `GetRtEntitiesByWellKnownName@1` and `ApplyChanges@2`; `targetTenants` (`relation: Child`, optional `tenantIds`) for the consolidated read (`onRefused: Fail | Report`, multi-tenant result with `SourceTenantId`, `Tenants`, `RefusedTenants`) and for the one-way master-data sync of `ApplyChanges@2` (owner marker `RtSyncOrigin`, idempotency key source tenant + source RtId, `SYNC_OWNED_ENTITY`, `CROSS_TENANT_WRITE_FAILED` after all targets); the always-refused tenants, the identity rules (`Caller` or `ServiceAccount` with rights provisioned in the target, shadow client `xt_{sourceTenant}_{clientId}`, `System` always refused), the deploy gate and examples. `FromWatchRtEntity@1` gains `includeDeletes` and `$.DocumentRtId`. `SKILL.md` adds a *Crossing tenants* row to the Load table, the settings in the Extract and Load tables and the triggers `targetTenant` and `cross-tenant`. New `##` heading `Cross-tenant settings` in `references/node-reference-mesh.md` (about 9,800 characters): the System.Ai.Builder page plan must place it in the next sync. Needs a Mesh Adapter with Feature AB#8673.
+
 ## [0.28.18] — 2026-11-24
 
 ### Changed
