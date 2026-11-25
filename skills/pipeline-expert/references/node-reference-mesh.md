@@ -25,7 +25,7 @@ nodes can reach **another tenant of the same subtree**. Both conditions must hol
 |---|---|---|
 | `relation` | enum | required: `Parent` (the parent; no id), `Sibling` (another child of the same parent), `Child` (a direct child) |
 | `tenantId` | string | `Sibling`/`Child`: the target tenant |
-| `tenantIdPath` | string | instead of `tenantId`: JSONPath to the id in the data context; checked like a configured id |
+| `tenantIdPath` | string | instead of `tenantId`: JSONPath to the id in the data context; only with `identity: Caller` (refused at deploy with `ServiceAccount` or `System`; at run time only with a verified caller) |
 
 A `Parent` with an id, a `Sibling`/`Child` without one, or both `tenantId` and `tenantIdPath` is a configuration error.
 
@@ -49,14 +49,13 @@ same message; the reason is only in the adapter log.
 | Identity | Proof in the target | Provisioned in the target |
 |---|---|---|
 | `Caller` with a user | caller token exchanged for a token of the target | Child target: user mapping of the parent user; Parent/Sibling target: source tenant permits the target + grant of the user |
-| `Caller` without a user (schedule, watch, event) | falls back to `ServiceAccount` | as below |
+| `Caller` without a user (schedule, watch, event) | falls back to `ServiceAccount`; a `tenantIdPath` is refused | as below |
 | `ServiceAccount` | service-account token exchanged for a token of the target | shadow client `xt_{sourceTenant}_{clientId}`: public, no secret, token exchange as only grant, no redirect URIs, no offline access, with the target's roles; Parent/Sibling target: source tenant permits the target; mirrored clients refused |
 | `System` | — | always refused, at deploy (controller) and at run time |
 
-Deploy gate (communication controller): `identity: System` with a target setting is refused; a `tenantIdPath` under
-`$.body`, `$.query`, `$.files` or `$.headers` is refused with `ServiceAccount` (and with `Caller` in a pipeline that can
-run without a signed-in caller) and allowed with a warning when every trigger is `FromHttpRequest@2` without
-`allowAnonymous`.
+Deploy gate (communication controller): `identity: System` with a target setting is refused; `ServiceAccount` with a
+`tenantIdPath` is refused whatever the path; `Caller` with a `tenantIdPath` deploys with a warning and is refused at
+run time unless a verified caller exists (never for a schedule, watch or event).
 
 **Read with `targetTenant`**: the read runs on the target with the proven session; Hidden attributes are judged with
 the target's CK model. Output shape as without the setting.
@@ -110,7 +109,7 @@ write still only logs it.
 ```yaml
 - type: ApplyChanges@2
   entityUpdatesPath: $._inserts
-  identity: ServiceAccount
+  identity: Caller
   targetTenant:
     relation: Sibling
     tenantIdPath: $.invoice.Items[0].Attributes.RecipientTenantId
