@@ -44,11 +44,11 @@ A published version lives in one root only. The rules, the
 (`octo-construction-kit-engine`), `docs/ck-publishing.md` (*Two catalog roots*) and
 `docs/system-ck-models.md`.
 
-**Shared-environment gate.** Never publish a `ck-models/v3/` model into a catalog test-2
-reads, and never `ImportCk` it on a test-2 tenant, before **every** service of test-2 runs
-an engine at or above the model's `minEngineVersion` (the CK v2 engine). Check
+**Shared-environment gate.** Never publish a `ck-models/v3/` model into a catalog a shared
+environment reads, and never `ImportCk` it on a tenant there, before **every** service of that
+environment runs an engine at or above the model's `minEngineVersion` (the CK v2 engine). Check
 `minEngineVersion` in the compiled output (`./ck/out/ck-<name>.yaml`) before you publish;
-when you cannot confirm the engine version of test-2's services, ask the environment's
+when you cannot confirm the engine version of the environment's services, ask the environment's
 owner instead of publishing. Never bump or republish a model to get past a refusal.
 
 ### Shortcut: skip the catalog entirely
