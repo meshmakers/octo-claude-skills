@@ -14,6 +14,10 @@ All notable changes to the octo-claude-skills plugin. Format loosely follows [Ke
 - **`octo-commit`** — Step 5 no longer leaves unpushed commits of the starting branch out of the PR (AB#6360): it lists `origin/main..HEAD`, branches from `HEAD` and runs `git rebase --autostash origin/main` for commits that belong to the work, cherry-picks with a named stash otherwise, aborts and asks on a conflict, and says that resetting the starting branch needs the user's go.
 - **`octo-deploy`** — step 1 states the CK v2 environment check before the publish commands, and names the shared catalog and the environment owner (AB#6362).
 
+### Fixed
+
+- **Drift check and weekly refresh** (AB#9840) — a cmdlet renamed away from a verb outside the approved list (e.g. the last `Clone-*` cmdlet) no longer lets a stale mention pass: `OCTO_TOOLS_VERBS` keeps those verbs, and a unit test fails when the inventory brings a new one. The refresh finds the open Bug of a skill by its exact title key, so `octo` never updates the Bug of `octo-agent` (tested against a stubbed Azure CLI). The workflow runs the inventory scan, unit tests, drift check and frontmatter steps even when an earlier one failed, and the unit tests no longer check the committed skills (the drift check step does); the README says how a refresh batch with findings is merged. An allow-list entry whose name contains any glob character needs `files`. README: a squash-batched refresh branch is continued until the batch deletes it.
+
 ## [0.28.18] — 2026-11-24
 
 ### Changed

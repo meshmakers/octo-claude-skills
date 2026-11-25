@@ -54,6 +54,8 @@ import scan_inventory_secrets  # noqa: E402
 BUG_TAG = "skill-drift"
 BUG_TITLE = "Skill drift: {skill} names {count} name(s) that do not exist"
 BUG_TITLE_PREFIX = "Skill drift: {skill} "
+# The title key of a drift Bug: the skill is the whole word after "Skill drift: " (skill names have no spaces).
+BUG_TITLE_RE = re.compile(r"^Skill drift: (\S+)\s")
 COMMENT_PREFIX = "[skill-drift]"
 DEFAULT_ORG = "https://dev.azure.com/meshmakers"
 TEAMS_JSON_GLOB = "~/.claude/plugins/cache/octo-claude-pm/octo-claude-pm/*/skills/backlog-conventions/references/teams.json"
@@ -119,6 +121,12 @@ def owner_targets(teams: dict) -> dict[str, dict]:
     return targets
 
 
+def bug_title_skill(title: str) -> str | None:
+    """The skill a drift Bug title names, or None when the title is not one of BUG_TITLE."""
+    match = BUG_TITLE_RE.match(title.strip())
+    return match.group(1) if match else None
+
+
 def findings_html(skill: str, findings: list[dict], date: str) -> str:
     rows = "".join(
         f"<tr><td>{html.escape(f['file'])}:{f['line']}</td><td>{html.escape(f['kind'])}</td>"
@@ -154,17 +162,29 @@ class AzureBoards:
         return json.loads(result.stdout or "null")
 
     def find_open_bug(self, skill: str) -> int | None:
+        """The open drift Bug of exactly this skill (lowest ID), or None.
+
+        WIQL ``CONTAINS`` is only a coarse filter (Azure DevOps may trim or tokenise the literal, so
+        'Skill drift: octo ' can also return the Bug of octo-agent). The skill is taken from each
+        returned title with BUG_TITLE_RE and compared exactly (AB#9840).
+        """
         title = BUG_TITLE_PREFIX.format(skill=skill).replace("'", "''")
         wiql = (
-            "SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '" + self.project.replace("'", "''") +
+            "SELECT [System.Id], [System.Title] FROM WorkItems WHERE [System.TeamProject] = '" +
+            self.project.replace("'", "''") +
             "' AND [System.WorkItemType] = 'Bug' AND [System.Tags] CONTAINS '" + BUG_TAG +
             "' AND [System.Title] CONTAINS '" + title + "' AND [System.State] NOT IN ('Closed', 'Removed') "
             "ORDER BY [System.Id]"
         )
         rows = self._az("boards", "query", "--wiql", wiql, "--project", self.project)
+        ids = []
         for row in rows or []:
-            return int(row["id"])
-        return None
+            title_of_row = (row.get("fields") or {}).get("System.Title")
+            if title_of_row is None:
+                raise RunFailed(f"az boards query returned no title for work item {row.get('id')}")
+            if bug_title_skill(title_of_row) == skill:
+                ids.append(int(row["id"]))
+        return min(ids) if ids else None
 
     def create_bug(self, title: str, area: str, repro: str, parent: int) -> int:
         item = self._az("boards", "work-item", "create", "--type", "Bug", "--title", title, "--area", area,
