@@ -26,20 +26,28 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+      - id: python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
 
-      - name: Unit tests (fixture skills, fixture source trees)
-        run: python3 -m unittest discover -s tests -v
-
+      # Every check below runs even when an earlier one failed (AB#9840): a weekly refresh that brings drift
+      # findings must still get its inventory scan and frontmatter validation, and each step reports on its own.
+      # The committed skills are checked only by the "Drift check" step, not by the unit tests.
       - name: Inventory holds names only
+        if: ${{ !cancelled() && steps.python.outcome == 'success' }}
         run: python3 scripts/scan_inventory_secrets.py inventory/names.json
 
+      - name: Unit tests (fixture skills, fixture source trees)
+        if: ${{ !cancelled() && steps.python.outcome == 'success' }}
+        run: python3 -m unittest discover -s tests -v
+
       - name: Drift check (fails on findings not in the baseline; warns when the inventory is older than 14 days)
+        if: ${{ !cancelled() && steps.python.outcome == 'success' }}
         run: python3 scripts/check_skill_drift.py --summary
 
       - name: Skill frontmatter
+        if: ${{ !cancelled() && steps.python.outcome == 'success' }}
         # validate_skill_frontmatter.py parses YAML; PyYAML is its only dependency.
         run: |
           python3 -m pip install --quiet "pyyaml>=6,<7"

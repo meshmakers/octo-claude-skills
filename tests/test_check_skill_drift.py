@@ -195,11 +195,39 @@ class ScannerRulesTest(unittest.TestCase):
             _, out, _ = run_check(root, "--json", inventory=path)
         self.assertEqual([f["name"] for f in json.loads(out)["findings"]], ["Clone-OldRepos"])
 
+    def test_last_cmdlet_with_a_non_approved_verb_renamed_is_still_a_finding(self):
+        # AB#9840: the fixture inventory has no Clone-* cmdlet any more (Clone-DemoRepos was renamed to
+        # Copy-DemoRepos); a skill that still names Clone-DemoRepos must fail, not pass silently.
+        with tempfile.TemporaryDirectory() as tmp:
+            inv = json.loads(INVENTORY.read_text())
+            inv["cmdlets"]["Copy-DemoRepos"] = []
+            self.assertFalse(any(name.startswith("Clone-") for name in inv["cmdlets"]))
+            path = pathlib.Path(tmp) / "names.json"
+            path.write_text(json.dumps(inv))
+            root = pathlib.Path(tmp) / "repo"
+            shutil.copytree(FIXTURES / "check-valid", root)
+            (root / "skills" / "demo" / "SKILL.md").write_text("---\nname: demo\ndescription: \"x\"\n---\n"
+                                                              "`Copy-DemoRepos` replaces\n\n"
+                                                              "```powershell\nClone-DemoRepos -all\n```\n")
+            code, out, _ = run_check(root, "--json", inventory=path)
+        self.assertEqual(code, 1)
+        self.assertEqual([(f["line"], f["kind"], f["name"]) for f in json.loads(out)["findings"]],
+                         [(8, "cmdlet", "Clone-DemoRepos")])
+
+    def test_every_verb_of_the_committed_inventory_is_kept_statically(self):
+        # A refresh that brings a cmdlet with a new non-approved verb fails here until the verb is added to
+        # OCTO_TOOLS_VERBS; otherwise renaming that cmdlet later would take the verb out of the check.
+        inv = json.loads((ROOT / "inventory" / "names.json").read_text())
+        static = set(check_skill_drift.VERBS) | set(check_skill_drift.OCTO_TOOLS_VERBS)
+        missing = sorted({name.split("-", 1)[0] for name in inv["cmdlets"]} - static)
+        self.assertEqual(missing, [], "add these verbs to OCTO_TOOLS_VERBS in scripts/check_skill_drift.py")
+
     def test_bare_wildcard_entry_without_files_is_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = pathlib.Path(tmp) / "repo"
             shutil.copytree(FIXTURES / "check-valid", root)
-            for entry in ({"kind": "*", "name": "Foo@1"}, {"kind": "node", "name": "*"}):
+            for entry in ({"kind": "*", "name": "Foo@1"}, {"kind": "node", "name": "*"},
+                          {"kind": "cmdlet", "name": "Invoke-*"}, {"kind": "node", "name": "Demo?@1"}):
                 allow = {"entries": [{**entry, "reason": "x", "workItem": 3}]}
                 (root / "inventory" / "allowlist.json").write_text(json.dumps(allow))
                 code, _, err = run_check(root)
@@ -221,14 +249,16 @@ class StalenessTest(unittest.TestCase):
         self.assertNotIn("days old", err)
 
 
-class RepositorySelfCheckTest(unittest.TestCase):
-    """The committed skills pass against the committed inventory and baseline."""
+class WildcardWithFilesTest(unittest.TestCase):
+    def test_glob_name_limited_by_files_is_accepted(self):
+        allow = check_skill_drift.AllowList({"entries": [{"kind": "cmdlet", "name": "Invoke-*", "files": ["x.md"],
+                                                          "reason": "x", "workItem": 3}]})
+        self.assertTrue(allow.allows("cmdlet", "Invoke-Old", "x.md"))
+        self.assertFalse(allow.allows("cmdlet", "Invoke-Old", "y.md"))
 
-    def test_repository_skills_pass(self):
-        out, err = io.StringIO(), io.StringIO()
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            code = check_skill_drift.main(["--root", str(ROOT), "--max-age-days", "100000"])
-        self.assertEqual(code, 0, out.getvalue())
+
+# The committed skills against the committed inventory are not a unit test: the "Drift check" step of
+# .github/workflows/skill-drift.yml runs them, so a refresh with findings fails that step only (AB#9840).
 
 
 if __name__ == "__main__":

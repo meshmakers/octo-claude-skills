@@ -33,9 +33,9 @@ class FakeBoards:
         self.next_id = 1000
 
     def find_open_bug(self, skill):
-        prefix = refresh.BUG_TITLE_PREFIX.format(skill=skill)
+        # Same title key as AzureBoards.find_open_bug (tested against a stubbed az in AzureBoardsTest).
         for bug_id, bug in sorted(self.bugs.items()):
-            if bug["title"].startswith(prefix) and bug["state"] not in ("Closed", "Removed"):
+            if refresh.bug_title_skill(bug["title"]) == skill and bug["state"] not in ("Closed", "Removed"):
                 return bug_id
         return None
 
@@ -134,6 +134,20 @@ class RefreshTest(unittest.TestCase):
         self.run_refresh("2026-01-19")
         texts = [text for item, text in self.boards.comments if item == ops_bug]
         self.assertTrue(any("finds no name any more" in t for t in texts), texts)
+
+    def test_baselined_findings_leave_the_bug_open_without_a_close_comment(self):
+        # AB#9840: a baseline entry accepts the finding, but the skill still names the old cmdlet.
+        self.rename_cmdlet()
+        self.run_refresh("2026-01-12")
+        ops_bug = self.boards.find_open_bug("ops-skill")
+        allow = {"entries": [{"kind": "cmdlet", "name": "Invoke-DemoBuild", "files": ["skills/ops-skill/SKILL.md"],
+                              "reason": "baseline 2026-01-12: drift Bug", "workItem": ops_bug}]}
+        (self.skills / "inventory" / "allowlist.json").write_text(json.dumps(allow))
+        self.boards.comments.clear()
+        code, log = self.run_refresh("2026-01-19")
+        self.assertEqual(code, 0, log)
+        self.assertEqual([t for item, t in self.boards.comments if item == ops_bug], [])
+        self.assertIn(f"ops-skill: findings baselined in the allow-list, Bug {ops_bug} left open", log)
 
     def test_failed_run_comments_on_the_platform_ops_sustain_feature(self):
         shutil.rmtree(self.src / "octo-tools")
@@ -236,6 +250,7 @@ class RefreshBranchTest(unittest.TestCase):
                                             env=env).stdout.strip()
 
     def commit(self, name, text, message):
+        (self.seed / name).parent.mkdir(parents=True, exist_ok=True)
         (self.seed / name).write_text(text)
         self.git("-C", str(self.seed), "add", name)
         self.git("-C", str(self.seed), "commit", "--quiet", "-m", message)
@@ -259,7 +274,7 @@ class RefreshBranchTest(unittest.TestCase):
 
     def test_waiting_branch_is_continued_with_todays_main_merged(self):
         self.git("-C", str(self.seed), "checkout", "--quiet", "-b", self.branch)
-        self.commit("names.json", "week 1\n", "refresh 1")
+        self.commit("inventory/names.json", "week 1\n", "refresh 1")
         self.git("-C", str(self.seed), "push", "--quiet", "origin", self.branch)
         self.git("-C", str(self.seed), "checkout", "--quiet", "main")
         self.commit("skill.md", "fixed text\n", "main 2: skill fixed")
@@ -268,25 +283,155 @@ class RefreshBranchTest(unittest.TestCase):
         clone, continued = self.prepare("a")
         self.assertTrue(continued)
         self.assertEqual((clone / "skill.md").read_text(), "fixed text\n")
-        self.assertEqual((clone / "names.json").read_text(), "week 1\n")
+        self.assertEqual((clone / "inventory/names.json").read_text(), "week 1\n")
 
-    def test_batched_branch_restarts_from_main(self):
+    def squash_batch(self, delete_branch):
+        """The docs batch as main allows it: a squash merge; afterwards the batch deletes the story branch."""
         self.git("-C", str(self.seed), "checkout", "--quiet", "-b", self.branch)
-        self.commit("names.json", "week 1\n", "refresh 1")
+        self.commit("inventory/names.json", "week 1\n", "refresh 1")
         self.git("-C", str(self.seed), "push", "--quiet", "origin", self.branch)
         self.git("-C", str(self.seed), "checkout", "--quiet", "main")
-        self.git("-C", str(self.seed), "merge", "--quiet", "--no-ff", "-m", "batch", self.branch)
+        self.git("-C", str(self.seed), "merge", "--quiet", "--squash", self.branch)
+        self.git("-C", str(self.seed), "commit", "--quiet", "-m", "batch (squash)")
         self.commit("skill.md", "fixed text\n", "main 3")
         self.git("-C", str(self.seed), "push", "--quiet", "origin", "main")
+        if delete_branch:
+            self.git("-C", str(self.seed), "push", "--quiet", "origin", "--delete", self.branch)
 
+    def test_batched_and_deleted_branch_restarts_from_main(self):
+        self.squash_batch(delete_branch=True)
         clone, continued = self.prepare("b")
         self.assertFalse(continued)
         self.assertEqual((clone / "skill.md").read_text(), "fixed text\n")
+        self.assertEqual((clone / "inventory/names.json").read_text(), "week 1\n")
+
+    def test_squash_batched_branch_not_yet_deleted_is_continued_with_main_merged(self):
+        # A squash merge never makes the branch an ancestor of main: until the batch deletes it, the
+        # branch is continued; main is merged in, so the check still sees today's skills.
+        self.squash_batch(delete_branch=False)
+        clone, continued = self.prepare("d")
+        self.assertTrue(continued)
+        self.assertEqual((clone / "skill.md").read_text(), "fixed text\n")
+        self.assertEqual((clone / "inventory/names.json").read_text(), "week 1\n")
+
+    def test_allow_list_entry_on_the_refresh_branch_fails_the_run(self):
+        # AB#9840: baseline entries belong on a story branch; on the refresh branch an entry its owner
+        # removed on main would come back with the next batch.
+        self.git("-C", str(self.seed), "checkout", "--quiet", "-b", self.branch)
+        self.commit("inventory/names.json", "week 1\n", "refresh 1")
+        self.commit("inventory/allowlist.json", '{"entries": ["baseline"]}\n', "baseline on the refresh branch")
+        self.git("-C", str(self.seed), "push", "--quiet", "origin", self.branch)
+        with self.assertRaises(refresh.RunFailed) as ctx:
+            self.prepare("e")
+        self.assertIn("inventory/allowlist.json", str(ctx.exception))
+
+    def test_entry_removed_on_main_after_a_squash_batch_does_not_come_back(self):
+        self.git("-C", str(self.seed), "checkout", "--quiet", "-b", self.branch)
+        self.commit("inventory/names.json", "week 1\n", "refresh 1")
+        self.commit("inventory/allowlist.json", '{"entries": ["baseline"]}\n', "baseline on the refresh branch")
+        self.git("-C", str(self.seed), "push", "--quiet", "origin", self.branch)
+        self.git("-C", str(self.seed), "checkout", "--quiet", "main")
+        self.git("-C", str(self.seed), "merge", "--quiet", "--squash", self.branch)
+        self.git("-C", str(self.seed), "commit", "--quiet", "-m", "batch (squash)")
+        self.commit("inventory/allowlist.json", '{"entries": []}\n', "owner fixed the skill, entry removed")
+        self.git("-C", str(self.seed), "push", "--quiet", "origin", "main")
+        with self.assertRaises(refresh.RunFailed) as ctx:
+            self.prepare("f")
+        self.assertIn("inventory/allowlist.json", str(ctx.exception))
 
     def test_no_branch_starts_from_main(self):
         clone, continued = self.prepare("c")
         self.assertFalse(continued)
         self.assertEqual((clone / "skill.md").read_text(), "old text\n")
+
+
+class AzureBoardsTest(unittest.TestCase):
+    """AzureBoards against a stubbed Azure CLI: the real dedupe of open drift Bugs (AB#9840)."""
+
+    OCTO_AGENT = {"id": 10, "fields": {"System.Id": 10,
+                                       "System.Title": "Skill drift: octo-agent names 2 name(s) that do not exist"}}
+    OCTO = {"id": 20, "fields": {"System.Id": 20, "System.Title": "Skill drift: octo names 1 name(s) that do not exist"}}
+    OCTO_LATER = {"id": 30, "fields": {"System.Id": 30,
+                                       "System.Title": "Skill drift: octo names 4 name(s) that do not exist"}}
+
+    def setUp(self):
+        self.calls = []
+        self.rows = []
+        self.original = refresh.subprocess.run
+        refresh.subprocess.run = self.fake_run
+        self.boards = refresh.AzureBoards("https://example.invalid", "Proj")
+
+    def tearDown(self):
+        refresh.subprocess.run = self.original
+
+    def fake_run(self, cmd, **_kwargs):
+        self.calls.append(cmd)
+        if cmd[:3] == ["az", "boards", "query"]:
+            out = self.rows
+        elif cmd[:4] == ["az", "boards", "work-item", "create"]:
+            out = {"id": 99}
+        else:
+            out = {}
+        return subprocess.CompletedProcess(cmd, 0, stdout=json.dumps(out), stderr="")
+
+    def wiql(self):
+        cmd = self.calls[-1]
+        return cmd[cmd.index("--wiql") + 1]
+
+    def test_both_bugs_returned_each_skill_gets_its_own(self):
+        self.rows = [self.OCTO_AGENT, self.OCTO]
+        self.assertEqual(self.boards.find_open_bug("octo"), 20)
+        self.assertEqual(self.boards.find_open_bug("octo-agent"), 10)
+
+    def test_only_the_longer_skill_bug_exists_the_shorter_skill_has_none(self):
+        self.rows = [self.OCTO_AGENT]
+        self.assertIsNone(self.boards.find_open_bug("octo"))
+
+    def test_two_open_bugs_of_the_same_skill_take_the_lowest_id(self):
+        self.rows = [self.OCTO_LATER, self.OCTO_AGENT, self.OCTO]
+        self.assertEqual(self.boards.find_open_bug("octo"), 20)
+
+    def test_row_without_title_fails_the_run_instead_of_guessing(self):
+        self.rows = [{"id": 20, "fields": {"System.Id": 20}}]
+        with self.assertRaises(refresh.RunFailed):
+            self.boards.find_open_bug("octo")
+
+    def test_query_selects_title_and_filters_tag_project_and_open_states(self):
+        self.boards.find_open_bug("octo")
+        wiql = self.wiql()
+        self.assertIn("[System.Title]", wiql.split("FROM")[0])
+        self.assertIn("[System.Tags] CONTAINS 'skill-drift'", wiql)
+        self.assertIn("[System.TeamProject] = 'Proj'", wiql)
+        self.assertIn("NOT IN ('Closed', 'Removed')", wiql)
+        self.assertIn("'Skill drift: octo '", wiql)
+
+    def test_file_findings_creates_a_bug_for_octo_and_leaves_the_octo_agent_bug_alone(self):
+        self.rows = [self.OCTO_AGENT]
+        findings = [{"file": "skills/octo/SKILL.md", "line": 3, "kind": "cmdlet", "name": "Clone-Repo",
+                     "detail": "not in inventory"}]
+        targets = {"Thor": {"feature": 101, "areaPath": "Fixture\\Core", "team": "core"}}
+        log = refresh.file_findings(self.boards, findings, {"octo": "Thor", "octo-agent": "Thor"}, targets,
+                                    ["octo"], "2026-01-12")
+        writes = [c for c in self.calls if c[:3] != ["az", "boards", "query"]]
+        self.assertEqual(writes[0][:4], ["az", "boards", "work-item", "create"], writes)
+        self.assertFalse(any("--id" in c and c[c.index("--id") + 1] == "10" for c in writes), writes)
+        self.assertEqual(log, ["octo: 1 finding(s), created Bug 99 under Feature 101"])
+
+    def test_file_findings_updates_the_octo_bug_when_both_exist(self):
+        self.rows = [self.OCTO_AGENT, self.OCTO]
+        findings = [{"file": "skills/octo/SKILL.md", "line": 3, "kind": "cmdlet", "name": "Clone-Repo",
+                     "detail": "not in inventory"}]
+        targets = {"Thor": {"feature": 101, "areaPath": "Fixture\\Core", "team": "core"}}
+        log = refresh.file_findings(self.boards, findings, {"octo": "Thor"}, targets, ["octo"], "2026-01-12")
+        updated = [c[c.index("--id") + 1] for c in self.calls if "--id" in c]
+        self.assertEqual(set(updated), {"20"}, self.calls)
+        self.assertEqual(log, ["octo: 1 finding(s), updated Bug 20"])
+
+    def test_bug_title_skill_is_the_exact_title_key(self):
+        title = refresh.BUG_TITLE.format(skill="octo-agent", count=3)
+        self.assertEqual(refresh.bug_title_skill(title), "octo-agent")
+        self.assertIsNone(refresh.bug_title_skill("Skill drift: octo"))
+        self.assertIsNone(refresh.bug_title_skill("Re: Skill drift: octo names 1 name(s) that do not exist"))
 
 
 class HelperTest(unittest.TestCase):
