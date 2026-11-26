@@ -66,9 +66,9 @@ this order; each has a checkable outcome.
 
 **Check first: CK v2 models need a CK v2 environment.** `octo-ckc Publish` puts a model with `ckLanguage: 2`,
 range-retaining dependencies or a `minEngineVersion` under `ck-models/v3/` instead of `ck-models/v2/`; engines before
-CK v2 do not see it. Before you run the publish command below, confirm that every service on test-2 runs an engine
-at or above the model's `minEngineVersion`; if not, do not publish it to a catalog test-2 reads and do not import it
-there, and if you cannot confirm the engine version, ask the environment's owner — see *Two catalog roots* in
+CK v2 do not see it. Before you run the publish command below, confirm that every service of the shared environment runs an
+engine at or above the model's `minEngineVersion`; if not, do not publish it to a catalog that environment reads and do
+not import it there, and if you cannot confirm the engine version, ask the environment's owner — see *Two catalog roots* in
 [references/publishing.md](references/publishing.md).
 
 ```bash
@@ -215,7 +215,7 @@ no leaked fields) against the hosts of the target cluster, then the browser flow
 | 6 | Mutating the wrong environment | Context confusion. `AuthStatus` before every mutating step; the context name (`<cluster>_<tenant>` vs `local_<tenant>`) is the tell. |
 | 7 | Adapter stuck `Unregistered`/`Pending` forever, no pod, no error | The parent **deployment site is Undeployed** — workload deploy triggers fired before it is up are silently lost. Deploy it first (`DeployDeploymentSite -id 670…001`), then re-run `DeployWorkload -id 670…002`. |
 | 8 | Wrong tag deployed after a new image push | Same-tag pushes don't restart pods. Either bump the tag (new tag in the seed + new blueprint version + push + publish + `RefreshBlueprintCatalogs` + `UpdateBlueprint` + `DeployWorkload`) or undeploy/redeploy the workload. |
-| 9 | `InstallBlueprint` or `ImportCk` refuses the CK model with message 126 (`CkModelRequiresNewerEngine`), or the model is "not found" although it was published | A CK v2 model (`ck-models/v3/`, `minEngineVersion`) on a service with an older engine. Do not bump or republish the model to get past it; wait until every service of test-2 runs the CK v2 engine ([references/publishing.md](references/publishing.md)). Server-side detail: `/octo-logs`. |
+| 9 | `InstallBlueprint` or `ImportCk` refuses the CK model with message 126 (`CkModelRequiresNewerEngine`), or the model is "not found" although it was published | A CK v2 model (`ck-models/v3/`, `minEngineVersion`) on a service with an older engine. Do not bump or republish the model to get past it; wait until every service of the target environment runs the CK v2 engine ([references/publishing.md](references/publishing.md)). Server-side detail: `/octo-logs`. |
 
 ## References
 

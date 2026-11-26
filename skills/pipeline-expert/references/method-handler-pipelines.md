@@ -69,7 +69,6 @@ transformations:
     targetValueKind: Array
     updateKind: INSERT
     ckTypeId: Sample.Booking/SlotBooking
-    generateRtId: true
     attributeUpdates:
       - { attributeName: SlotKey, attributeValueType: String, valuePath: $.slotKey }
       - { attributeName: BookedBy, attributeValueType: String, valuePath: $.parameters.bookedBy }

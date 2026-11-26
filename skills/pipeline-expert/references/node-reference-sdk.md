@@ -710,17 +710,21 @@ Each aggregation item:
 | `path` | string | Source objects path |
 | `aggregationPath` | string | Path to numeric values |
 | `value` | double | Multiplier/weight (use -1 for subtraction) |
-| `filterPath` | string | Optional filter field path |
-| `comparisonValue` | string | Optional filter value (string comparison) |
+| `filterPath` | string or null | Filter field path; the key is required, `null` means no filter |
+| `comparisonValue` | string or null | Filter value (string comparison); the key is required, `null` without a filter |
 
 ```yaml
 - type: SumAggregation@1
   targetPath: $.total
   aggregations:
     - path: $.debits[*]
+      filterPath: null        # required keys, null = no filter
+      comparisonValue: null
       aggregationPath: $.Amount
       value: 1
     - path: $.credits[*]
+      filterPath: null
+      comparisonValue: null
       aggregationPath: $.Amount
       value: -1
 ```

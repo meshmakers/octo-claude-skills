@@ -195,6 +195,8 @@ transformations:
     updateKind: Insert
     ckTypeId: Demo.Tickets/Ticket          # unversioned in pipeline YAML
     rtIdPath: $.newTicketRtId              # empty path + generateRtId → new ObjectId
+    # generateRtId is right here: one new entity, no node reads its rtIdPath; the id is read back
+    # from the update item ($.updates[0].RtId). Parent/child or upserts: GetOrCreateRtEntitiesByType@1.
     generateRtId: true
     targetPath: $.updates
     targetValueWriteMode: Append
