@@ -496,7 +496,6 @@ logFiles/MeshAdapter.log
 6. **Read the handler source code** for the failing node to understand what conditions cause the error — search for the error message text in the handler class
 
 ## References
-
 **Priority order** when understanding a node:
 
 1. **C# source code** (ground truth) — config classes for properties/defaults, handlers for behavior. See "Source Code Research".
