@@ -509,7 +509,7 @@ Create `EntityUpdateInfo` objects for database operations (Insert/Update/Delete)
 
 > **WARNING: Attribute Name Casing** — `attributeName` must match the CK model's exact casing (typically camelCase: `name`, `machineState`, `operatingHours`). Do NOT assume PascalCase. Look up the correct names with the MCP tool `get_type_schema`<!-- developer-machine --> (or `ck_explorer.py preflight <type>`)<!-- /developer-machine -->.
 
-> **Intended workflow:** Use `GetOrCreateRtEntitiesByType@1` or `GetRtEntitiesByWellKnownName@1` upstream to resolve/generate RtIds (via `rtIdTargetPath`), then pass the ID here via `rtIdPath`. This makes the RtId available for `CreateAssociationUpdate` path references downstream. Avoid `generateRtId: true` when you need to reference the ID in associations.
+> **Intended workflow:** Use `GetOrCreateRtEntitiesByType@1` or `GetRtEntitiesByWellKnownName@1` upstream to resolve/generate RtIds (via `rtIdTargetPath`), then pass the ID here via `rtIdPath`. This makes the RtId available for `CreateAssociationUpdate` path references downstream. `generateRtId: true` only fills an empty `rtIdPath` value inside the update item, never the path itself: use it only for an entity nothing else in the run references (the `generateRtId` rule of the pipeline-expert skill).
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -517,7 +517,7 @@ Create `EntityUpdateInfo` objects for database operations (Insert/Update/Delete)
 | `updateKindPath` | string | optional | JSONPath to operation type |
 | `rtIdPath` | string | optional | JSONPath to RtId |
 | `rtId` | string | optional | Static RtId |
-| `generateRtId` | bool | false | Auto-generate RtId if missing |
+| `generateRtId` | bool | false | New RtId when the `rtIdPath` value is empty; only in the update item, not written to `rtIdPath` |
 | `ckTypeId` | string | optional | CK type ID |
 | `ckTypeIdPath` | string | optional | JSONPath to CK type ID |
 | `timestampPath` | string | optional | JSONPath to timestamp |
@@ -1300,7 +1300,7 @@ Where the request goes is **not a node setting**. It is the optional attribute `
 | Claude on Microsoft Foundry | `Anthropic` | `https://<resource>.services.ai.azure.com/anthropic` | deployment name |
 | OpenAI | `OpenAiCompatible` | `https://api.openai.com/v1` | OpenAI model id |
 | Azure OpenAI (v1 API) | `OpenAiCompatible` | `https://<resource>.openai.azure.com/openai/v1` | deployment name |
-| Ollama (local, keyless) | `OpenAiCompatible` | `http://127.0.0.1:11434/v1` (no `apiKey`) | e.g. `qwen2.5:7b-instruct` |
+| Ollama (local, keyless) | `OpenAiCompatible` | `http://<ollama-host>:11434/v1`, the host as the adapter reaches it (no `apiKey`) | e.g. `qwen2.5:7b-instruct` |
 
 Plain `http` works for loopback only, so an Ollama in the cluster needs https. `AnthropicAiQuery@1` does not read `providerEndpoint`.
 

@@ -604,6 +604,8 @@ transformations:
                 targetPath: $.key.data.sum
                 aggregations:
                   - path: $.key.quantities[*]
+                    filterPath: null          # no filter, but the key must be present
+                    comparisonValue: null
                     aggregationPath: $.Values[2]
                     value: 1
 
@@ -663,7 +665,8 @@ transformations:
                 targetPath: $.updates._items
                 updateKind: Insert
                 ckTypeId: EnergyCommunity/BillingDocumentLineItem
-                generateRtId: true
+                rtIdPath: $.key.data.lineItemRtId   # empty: generateRtId needs rtIdPath to create the id
+                generateRtId: true                  # the association below reads it from the update item
                 attributeUpdates:
                   - attributeName: GrossAmount
                     attributeValueType: Double
