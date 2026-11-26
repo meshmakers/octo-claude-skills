@@ -85,8 +85,7 @@ own query uses only System types, and its sample items table stays off until the
 
 ## Current limitations
 
-These gaps of the tools are known; work around them as described until the tools are fixed (AB#9355, AB#9356,
-AB#9789, AB#9406).
+These gaps of the tools are known; work around them as described until the tools are fixed.
 
 - **Scaffold paths after `init.sh`.** `apply_custom_app_scaffold` writes every file below `src/custom-app/`, the folder
   name before `init.sh`. Replace `src/custom-app/` with `src/<app>/` in every path it returns, and pass the three edit
