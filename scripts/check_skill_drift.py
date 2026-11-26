@@ -42,6 +42,12 @@ VERBS = (
     "Unpublish Unregister Update Use Wait Watch Write Manage"
 ).split()
 
+# Verbs outside the approved list that octo-tools uses (or used). They stay here even when the inventory no
+# longer has a cmdlet with that verb: otherwise renaming the last Clone-* cmdlet would take the verb out of
+# the pattern and a stale Clone-Repo in a skill would pass silently (AB#9840). A refresh that brings a new
+# verb fails tests/test_check_skill_drift.py until the verb is added here.
+OCTO_TOOLS_VERBS = "Check Clone Compile Create Delete Normalize".split()
+
 # Parameters every advanced PowerShell function accepts.
 COMMON_PARAMETERS = {
     p.lower()
@@ -134,8 +140,10 @@ class Inventory:
         self.generated = data.get("generated", "")
         self.cmdlets = {name.lower(): (name, [p.lower() for p in params])
                         for name, params in data.get("cmdlets", {}).items()}
-        # Approved verbs plus every verb octo-tools uses (Check-, Clone-, ...), so their renames are seen too.
-        verbs = set(VERBS) | {name.split("-", 1)[0] for name, _ in self.cmdlets.values()}
+        # Approved verbs, the verbs octo-tools uses or used (OCTO_TOOLS_VERBS, so a rename away from a verb is
+        # still seen) and every verb of the current inventory.
+        self.verbs = set(VERBS) | set(OCTO_TOOLS_VERBS) | {name.split("-", 1)[0] for name, _ in self.cmdlets.values()}
+        verbs = self.verbs
         self.cmdlet_re = re.compile(
             r"(?<![\w$.-])(" + "|".join(sorted(verbs, key=len, reverse=True)) + r")-([A-Z][A-Za-z0-9]+)(?![\w-])"
         )
@@ -176,7 +184,8 @@ class AllowList:
             if not isinstance(work_item, int) or isinstance(work_item, bool) or work_item <= 0:
                 raise ConfigError(f"allow-list entry {number} ({entry['name']}): needs the workItem (integer ID) "
                                   "that tracks it")
-            if not entry.get("files") and (entry["kind"] == "*" or not entry["name"].strip("*?")):
+            # Any glob character counts: "Invoke-*" without files would silence every Invoke-* finding.
+            if not entry.get("files") and (entry["kind"] == "*" or any(c in entry["name"] for c in "*?[")):
                 raise ConfigError(f"allow-list entry {number} ({entry['name']}): a wildcard kind or name needs "
                                   "'files' to limit it")
             self.entries.append(entry)

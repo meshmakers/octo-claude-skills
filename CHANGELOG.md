@@ -2,6 +2,12 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.28.21] — 2026-11-26
+
+### Fixed
+
+- **Drift check and weekly refresh** (AB#9840) — a cmdlet renamed away from a verb outside the approved list (e.g. the last `Clone-*` cmdlet) no longer lets a stale mention pass: `OCTO_TOOLS_VERBS` keeps those verbs, and a unit test fails when the inventory brings a new one. The refresh finds the open Bug of a skill by its exact title key, so `octo` never updates the Bug of `octo-agent` (tested against a stubbed Azure CLI). The workflow runs the inventory scan, unit tests, drift check and frontmatter steps even when an earlier one failed, and the unit tests no longer check the committed skills (the drift check step does); the README says how a refresh batch with findings is merged. An allow-list entry whose name contains any glob character needs `files`. A continued refresh branch that differs from `main` outside `inventory/names.json` fails the run instead of being pushed (an allow-list entry on it would come back after its owner removed it); baseline entries go on a story branch of the Bug, and a skill whose findings are only baselined keeps its Bug open without a "verify and close" comment. README: a squash- or rebase-batched refresh branch is continued until the batch deletes it.
+
 ## [0.28.20] — 2026-11-25
 
 ### Added

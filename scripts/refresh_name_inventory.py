@@ -54,6 +54,8 @@ import scan_inventory_secrets  # noqa: E402
 BUG_TAG = "skill-drift"
 BUG_TITLE = "Skill drift: {skill} names {count} name(s) that do not exist"
 BUG_TITLE_PREFIX = "Skill drift: {skill} "
+# The title key of a drift Bug: the skill is the whole word after "Skill drift: " (skill names have no spaces).
+BUG_TITLE_RE = re.compile(r"^Skill drift: (\S+)\s")
 COMMENT_PREFIX = "[skill-drift]"
 DEFAULT_ORG = "https://dev.azure.com/meshmakers"
 TEAMS_JSON_GLOB = "~/.claude/plugins/cache/octo-claude-pm/octo-claude-pm/*/skills/backlog-conventions/references/teams.json"
@@ -119,6 +121,12 @@ def owner_targets(teams: dict) -> dict[str, dict]:
     return targets
 
 
+def bug_title_skill(title: str) -> str | None:
+    """The skill a drift Bug title names, or None when the title is not one of BUG_TITLE."""
+    match = BUG_TITLE_RE.match(title.strip())
+    return match.group(1) if match else None
+
+
 def findings_html(skill: str, findings: list[dict], date: str) -> str:
     rows = "".join(
         f"<tr><td>{html.escape(f['file'])}:{f['line']}</td><td>{html.escape(f['kind'])}</td>"
@@ -154,17 +162,29 @@ class AzureBoards:
         return json.loads(result.stdout or "null")
 
     def find_open_bug(self, skill: str) -> int | None:
+        """The open drift Bug of exactly this skill (lowest ID), or None.
+
+        WIQL ``CONTAINS`` is only a coarse filter (Azure DevOps may trim or tokenise the literal, so
+        'Skill drift: octo ' can also return the Bug of octo-agent). The skill is taken from each
+        returned title with BUG_TITLE_RE and compared exactly (AB#9840).
+        """
         title = BUG_TITLE_PREFIX.format(skill=skill).replace("'", "''")
         wiql = (
-            "SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '" + self.project.replace("'", "''") +
+            "SELECT [System.Id], [System.Title] FROM WorkItems WHERE [System.TeamProject] = '" +
+            self.project.replace("'", "''") +
             "' AND [System.WorkItemType] = 'Bug' AND [System.Tags] CONTAINS '" + BUG_TAG +
             "' AND [System.Title] CONTAINS '" + title + "' AND [System.State] NOT IN ('Closed', 'Removed') "
             "ORDER BY [System.Id]"
         )
         rows = self._az("boards", "query", "--wiql", wiql, "--project", self.project)
+        ids = []
         for row in rows or []:
-            return int(row["id"])
-        return None
+            title_of_row = (row.get("fields") or {}).get("System.Title")
+            if title_of_row is None:
+                raise RunFailed(f"az boards query returned no title for work item {row.get('id')}")
+            if bug_title_skill(title_of_row) == skill:
+                ids.append(int(row["id"]))
+        return min(ids) if ids else None
 
     def create_bug(self, title: str, area: str, repro: str, parent: int) -> int:
         item = self._az("boards", "work-item", "create", "--type", "Bug", "--title", title, "--area", area,
@@ -201,8 +221,12 @@ class DryRunBoards:
 
 
 def file_findings(boards, findings: list[dict], owners: dict[str, str], targets: dict[str, dict],
-                  skills: list[str], date: str) -> list[str]:
-    """Create or update one Bug per skill with findings; comment on open Bugs of clean skills."""
+                  skills: list[str], date: str, baselined: set[str] | frozenset = frozenset()) -> list[str]:
+    """Create or update one Bug per skill with findings; comment on open Bugs of clean skills.
+
+    ``baselined``: skills without open findings that still have findings accepted by a baseline
+    entry of the allow-list. Their Bug stays open and gets no "verify and close" comment (AB#9840).
+    """
     log = []
     by_skill: dict[str, list[dict]] = {}
     for f in findings:
@@ -213,7 +237,9 @@ def file_findings(boards, findings: list[dict], owners: dict[str, str], targets:
         target = targets.get(owner or "")
         existing = boards.find_open_bug(skill)
         if not items:
-            if existing:
+            if existing and skill in baselined:
+                log.append(f"{skill}: findings baselined in the allow-list, Bug {existing} left open")
+            elif existing:
                 boards.comment(existing, f"{COMMENT_PREFIX} {date}: the drift check finds no name any more in "
                                          f"skill {skill}. Verify and close this Bug.")
                 log.append(f"{skill}: clean, commented on Bug {existing}")
@@ -314,9 +340,15 @@ def prepare_skills_clone(skills_url: str, work: pathlib.Path, branch: str) -> tu
     """Clone this repository and prepare the refresh branch on top of today's default branch.
 
     The drift check must see today's skills, OWNERS and allow-list. A refresh branch that
-    still waits for the docs batch is continued (so there is only one), with the default
-    branch merged into it; a branch whose tip is already in the default branch (batched,
-    not yet deleted) is restarted from the default branch, which is a fast-forward of it.
+    still exists on the remote is continued (so there is only one), with the default branch
+    merged into it; only a branch whose tip is an ancestor of the default branch is restarted
+    from it. The default branch takes squash or rebase merges, so a batched branch is continued
+    until the docs batch deletes it.
+
+    The refresh branch carries nothing but inventory/names.json (regenerated right after). After
+    the merge it may differ from the default branch only in that file; anything else (e.g. an
+    allow-list entry committed on the branch, which would come back after its owner removed it
+    on the default branch) fails the run instead of being pushed (AB#9840).
     """
     clone = work / "octo-claude-skills"
     git(*clone_args(), "clone", "--quiet", "--no-tags", https_url(skills_url), str(clone))
@@ -329,8 +361,15 @@ def prepare_skills_clone(skills_url: str, work: pathlib.Path, branch: str) -> tu
                                 cwd=clone, capture_output=True).returncode == 0
         if not merged:
             git("checkout", "--quiet", "-b", branch, f"origin/{branch}", cwd=clone)
-            # names.json is regenerated right after; "-X ours" only settles a conflict in it.
+            # names.json is regenerated right after; "-X ours" settles a conflict in it. A conflict
+            # anywhere else is caught by the check below, which compares the result with the default branch.
             git("merge", "--quiet", "--no-edit", "-X", "ours", f"origin/{default}", cwd=clone)
+            other = [p for p in git("diff", "--name-only", f"origin/{default}", "HEAD", cwd=clone).splitlines()
+                     if p and p != "inventory/names.json"]
+            if other:
+                raise RunFailed(f"refresh branch {branch} differs from {default} outside inventory/names.json "
+                                f"({', '.join(sorted(other))}); move those changes to a story branch and delete "
+                                "or fix the refresh branch")
             return clone, True
     git("checkout", "--quiet", "-b", branch, cwd=clone)
     return clone, False
@@ -407,9 +446,15 @@ def run(args, boards=None) -> int:
             )
             if errors:
                 raise RunFailed(f"drift check errors: {'; '.join(errors)}")
+            # Findings accepted only by a baseline entry are not fixed: their skill is not clean.
+            raw, _, _, _ = check_skill_drift.run(
+                skills_root, names_path, skills_root / "inventory" / "allowlist.json", skills_root / "OWNERS",
+                _dt.date.fromisoformat(date), 14, ignore_baseline=True,
+            )
+            baselined = {pathlib.PurePosixPath(f.file).parts[1] for f in raw}
             owners = check_skill_drift.load_owners(skills_root / "OWNERS")
             log = file_findings(boards, [f.__dict__ for f in findings], owners, owner_targets(teams),
-                                sorted(counts), date)
+                                sorted(counts), date, baselined)
             for line in log:
                 print(line)
             print(f"{len(findings)} finding(s) in {sum(1 for c in counts.values() if c['findings'])} skill(s)",
