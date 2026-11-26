@@ -109,4 +109,4 @@ AB#9789, AB#9406).
 2. `npm run codegen:check`, `npm run lint`, `npm run test:ci` and `npm run build:prod` pass in `src/<app>/`.
 3. `npm start`, sign in on the login page of the tenant, open the scaffolded page: its table shows the entities that
    `query_entities` lists for the same type. A sign-in error page means a wrong client id or redirect URI (step 4); a
-   certificate error means the browser does not trust the stack's root CA or the dev certificate (step 6).
+   certificate error means the browser does not trust the dev certificate (step 6).
