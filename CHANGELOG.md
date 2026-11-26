@@ -4,6 +4,26 @@ All notable changes to the octo-claude-skills plugin. Format loosely follows [Ke
 
 ## [Unreleased]
 
+### Fixed
+
+- **Drift check and weekly refresh** (AB#9840) — a cmdlet renamed away from a verb outside the approved list (e.g. the last `Clone-*` cmdlet) no longer lets a stale mention pass: `OCTO_TOOLS_VERBS` keeps those verbs, and a unit test fails when the inventory brings a new one. The refresh finds the open Bug of a skill by its exact title key, so `octo` never updates the Bug of `octo-agent` (tested against a stubbed Azure CLI). The workflow runs the inventory scan, unit tests, drift check and frontmatter steps even when an earlier one failed, and the unit tests no longer check the committed skills (the drift check step does); the README says how a refresh batch with findings is merged. An allow-list entry whose name contains any glob character needs `files`. A continued refresh branch that differs from `main` outside `inventory/names.json` fails the run instead of being pushed (an allow-list entry on it would come back after its owner removed it); baseline entries go on a story branch of the Bug, and a skill whose findings are only baselined keeps its Bug open without a "verify and close" comment. README: a squash- or rebase-batched refresh branch is continued until the batch deletes it.
+
+## [0.28.20] — 2026-11-25
+
+### Added
+
+- **`pipeline-expert`** — documents the cross-tenant node settings of Feature AB#8673 (AB#9772): new section *Cross-tenant settings* in `references/node-reference-mesh.md` with `targetTenant` (`relation` `Parent` | `Sibling` | `Child`, `tenantId`, `tenantIdPath`) on `GetRtEntitiesByType@1`, `GetRtEntitiesById@1`, `GetRtEntitiesByWellKnownName@1` and `ApplyChanges@2`; `targetTenants` (`relation: Child`, optional `tenantIds`) for the consolidated read (`onRefused: Fail | Report`, multi-tenant result with `SourceTenantId`, `Tenants`, `RefusedTenants`) and for the one-way master-data sync of `ApplyChanges@2` (owner marker `RtSyncOrigin`, idempotency key source tenant + source RtId, `SYNC_OWNED_ENTITY`, `CROSS_TENANT_WRITE_FAILED` after all targets); the always-refused tenants, the identity rules (`Caller` or `ServiceAccount` with rights provisioned in the target, shadow client `xt_{sourceTenant}_{clientId}`, `System` always refused), the deploy gate and examples. `FromWatchRtEntity@1` gains `includeDeletes` and `$.DocumentRtId`. `SKILL.md` adds a *Crossing tenants* row to the Load table, the settings in the Extract and Load tables and the triggers `targetTenant` and `cross-tenant`.  Needs a Mesh Adapter with Feature AB#8673.
+
+### Changed
+
+- **README** — new section *Updates* (AB#6367, Feature AB#6352): the update commands (`/plugin marketplace update octo-claude-skills`, `/plugin update octo-claude-skills@octo-claude-skills`, `/reload-plugins`, and the `claude plugin` shell form) and what the version notice at session start means that `octo-claude-pm` shows when this plugin is behind its released version.
+
+## [0.28.19] — 2026-11-25
+
+### Changed
+
+- **`octo-devtools`** - removed the "Not released yet" notes from `SKILL.md`, `references/workflows.md` section 5 and `references/command-reference.md`: octo-tools PR #61 (AB#9259) is merged (4f7582e3), so the 0.x line directory behaviour described there is the current one.
+
 ### Added
 
 - **Drift check** (AB#6366, Feature AB#6352) — `scripts/check_skill_drift.py` (standard library only) checks every skill (`skills/**/*.md`, `skills/*/evals/*.json`) against the committed name inventory `inventory/names.json`: octo-tools cmdlets and parameters, octo-cli commands and arguments, pipeline nodes with version, `<repo>/AGENTS.md|CLAUDE.md|docs/…` paths, `C:\dev` paths and `<repo>/CLAUDE.md` pointers for repositories with AGENTS.md. It reports file, line, kind, name and owner, groups findings by owner and exits 1; it warns when the inventory is older than 14 days. `OWNERS` lists the owning PO agent of all 13 skills; a skill without owner fails the check. `inventory/allowlist.json` holds deliberate mentions and the baseline of the 41 findings of the first run, each with its tracking work item (AB#6353, AB#9797, AB#9798, AB#9799, AB#9800); an entry without a work item is refused. The first GitHub Actions workflow `.github/workflows/skill-drift.yml` runs the unit tests, the inventory scan, the drift check and the frontmatter validation on every PR and push to `main`. README and CLAUDE.md state the same-change rule and how to run the check.
@@ -13,10 +33,6 @@ All notable changes to the octo-claude-skills plugin. Format loosely follows [Ke
 
 - **`octo-commit`** — Step 5 no longer leaves unpushed commits of the starting branch out of the PR (AB#6360): it lists `origin/main..HEAD`, branches from `HEAD` and runs `git rebase --autostash origin/main` for commits that belong to the work, cherry-picks with a named stash otherwise, aborts and asks on a conflict, and says that resetting the starting branch needs the user's go.
 - **`octo-deploy`** — step 1 states the CK v2 environment check before the publish commands, and names the shared catalog and the environment owner (AB#6362).
-
-### Fixed
-
-- **Drift check and weekly refresh** (AB#9840) — a cmdlet renamed away from a verb outside the approved list (e.g. the last `Clone-*` cmdlet) no longer lets a stale mention pass: `OCTO_TOOLS_VERBS` keeps those verbs, and a unit test fails when the inventory brings a new one. The refresh finds the open Bug of a skill by its exact title key, so `octo` never updates the Bug of `octo-agent` (tested against a stubbed Azure CLI). The workflow runs the inventory scan, unit tests, drift check and frontmatter steps even when an earlier one failed, and the unit tests no longer check the committed skills (the drift check step does); the README says how a refresh batch with findings is merged. An allow-list entry whose name contains any glob character needs `files`. A continued refresh branch that differs from `main` outside `inventory/names.json` fails the run instead of being pushed (an allow-list entry on it would come back after its owner removed it); baseline entries go on a story branch of the Bug, and a skill whose findings are only baselined keeps its Bug open without a "verify and close" comment. README: a squash- or rebase-batched refresh branch is continued until the batch deletes it.
 
 ## [0.28.18] — 2026-11-24
 
