@@ -156,5 +156,5 @@ Helm, reconcilers and resource managers (mocked at the abstraction boundary):
 - The operator's agent docs (`CLAUDE.md`, later `AGENTS.md` + `docs/`) — one section per behaviour named in SKILL.md.
 - `docs/E2E-SMOKE-TEST.md` — manual central-operator smoke-test runbook.
 - `docs/DEPLOYMENT-MANAGEMENT-CONCEPT.md` — application deployment management, version lifecycle, reverse-sync contract.
-- `octo-communication-controller-services/CLAUDE.md` — controller counterpart; the `/operatorHub` SignalR contract lives there.
+- `octo-communication-controller-services/AGENTS.md` — controller counterpart; the `/operatorHub` SignalR contract lives there.
 - Monorepo root `CLAUDE.md` — global build configs, multi-tenancy, naming.

@@ -336,7 +336,7 @@ Interactive blocking applies to `Start-Octo` (without `-nonInteractive $true`) a
 
 ### Natural language mapping
 - "rebuild after my change" / "build the engine and what uses it" → `Invoke-BuildRange -branch branches/main -from <changed repo> -to <last consumer> -WhatIf`, then without `-WhatIf`, then `-verifyTests` before hand-off
-- "why does the build fail with NU1101/NU1102 on 999.0.0" → the chain is out of sync: `Invoke-BuildAll -branch branches/main -configuration DebugL -excludeFrontend $true`
+- "why does the build fail with NU1101/NU1102 on 999.0.0" → first the read-only check `Test-OctoBuildChain -branch branches/main` (with `-BuildLog <log>` when you have the failed log): it names wrong branches, missing or outdated packages and stale cache folders and prints the smallest `Invoke-BuildRange` that fixes them; only when that does not help, the full reset `Invoke-BuildAll -branch branches/main -configuration DebugL -excludeFrontend $true`
 - "run the tests of X" → `Invoke-OctoTestRun -branch branches/main -repo <X>` (`-rerunFailed` to repeat only failures)
 - "build everything" / "build all" / "full reset" → `Invoke-BuildAll -branch branches/main -configuration DebugL`
 - "build without frontend" / "build backend" → `Invoke-BuildAll -branch branches/main -configuration DebugL -excludeFrontend $true`

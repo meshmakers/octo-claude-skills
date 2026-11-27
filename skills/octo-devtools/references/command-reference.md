@@ -43,6 +43,17 @@ Build a single repository. **Does NOT handle NuGet package propagation between r
 - **Safety:** Mutating (local)
 - **WARNING:** Never manually chain `Invoke-Build` + `Copy-NuGetPackages` — use `Invoke-BuildRange` for multi-repo builds
 
+### `Test-OctoBuildChain`
+Read-only "build doctor" for a lane: why does the DebugL build fail (NU1101/NU1102, odd restore results) and which is the smallest `Invoke-BuildRange` that fixes it. It never builds, copies, purges, switches branches or fetches; it runs only read-only git commands and prints each fix as a command without running it.
+- `-branch` (string): lane folder relative to `$rootPath` (default: the checkout the profile runs in); the printed `Invoke-BuildRange` commands carry the same `-branch`
+- `-LaneRoot` (string): absolute checkout root instead of `-branch` (not both)
+- `-BuildLog` (string): a build log; its NU1101/NU1102/NU1103 package ids are mapped to the producing repository and the failed consumer
+- `-GlobalPackagesPath` (string[]): package cache(s) to check instead of the ones the lane restores into
+- `-Json` (switch): one JSON document (command `Test-OctoBuildChain`) with `summary.recommendedFix` and `findings[]`
+- Findings (`check`): `branch` (a chain repository not on `main`; not checked in a feature environment), `dirty`, `missingPackage` (the NU1101 case), `outdatedPackage`, `staleCache`, `buildLog`, `notGit`. `$LASTEXITCODE` is 1 when a blocking finding exists, else 0.
+- **Safety:** Read-only
+- **Examples:** `Test-OctoBuildChain -branch branches/main`; `Test-OctoBuildChain -BuildLog ./build.log -Json | ConvertFrom-Json`
+
 ### `Invoke-OctoTestRun`
 The test runner: `dotnet test` (or `ng test` for an Angular workspace) per test project of one repository, without a full rebuild; Docker-heavy projects run under a machine-wide test lock. The build cmdlets never run tests.
 - `-env` (string) or `-branch` (string): the feature environment or lane
