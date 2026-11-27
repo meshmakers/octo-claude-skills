@@ -43,6 +43,17 @@ Build a single repository. **Does NOT handle NuGet package propagation between r
 - **Safety:** Mutating (local)
 - **WARNING:** Never manually chain `Invoke-Build` + `Copy-NuGetPackages` — use `Invoke-BuildRange` for multi-repo builds
 
+### `Test-OctoBuildChain`
+Read-only "build doctor" for a lane: why does the DebugL build fail (NU1101/NU1102, odd restore results) and which is the smallest `Invoke-BuildRange` that fixes it. It never builds, copies, purges, switches branches or fetches; it runs only read-only git commands and prints each fix as a command without running it.
+- `-branch` (string): lane folder relative to `$rootPath` (default: the checkout the profile runs in); the printed `Invoke-BuildRange` commands carry the same `-branch`
+- `-LaneRoot` (string): absolute checkout root instead of `-branch` (not both)
+- `-BuildLog` (string): a build log; its NU1101/NU1102/NU1103 package ids are mapped to the producing repository and the failed consumer
+- `-GlobalPackagesPath` (string[]): package cache(s) to check instead of the ones the lane restores into
+- `-Json` (switch): one JSON document (command `Test-OctoBuildChain`) with `summary.recommendedFix` and `findings[]`
+- Findings (`check`): `branch` (a chain repository not on `main`; not checked in a feature environment), `dirty`, `missingPackage` (the NU1101 case), `outdatedPackage`, `staleCache`, `buildLog`, `notGit`. `$LASTEXITCODE` is 1 when a blocking finding exists, else 0.
+- **Safety:** Read-only
+- **Examples:** `Test-OctoBuildChain -branch branches/main`; `Test-OctoBuildChain -BuildLog ./build.log -Json | ConvertFrom-Json`
+
 ### `Invoke-OctoTestRun`
 The test runner: `dotnet test` (or `ng test` for an Angular workspace) per test project of one repository, without a full rebuild; Docker-heavy projects run under a machine-wide test lock. The build cmdlets never run tests.
 - `-env` (string) or `-branch` (string): the feature environment or lane
@@ -97,6 +108,7 @@ Start OctoMesh services. Each service is controlled by its own **Boolean** param
 - `-simulationAdapter` (Boolean, default `$false`): Simulation Adapter
 - `-s3Store` (Boolean, default `$true`): when the kind cluster's local S3 store is installed and answers, the Bot Service uses it as artifact store; otherwise (or with `$false`) the file system store
 - `-httpActivator` (Boolean, default `$false`): the Communication Controller's HTTP activator that wakes hibernated on-demand workloads (only useful with a kind cluster whose workload ingresses route to it)
+- `-httpActivatorWorkloadAddressTemplate` (string, default `https://{release}.localhost`): where the activator forwards a request once the workload is awake. The default goes back in through the ingress because the in-cluster `http://{release}` is not reachable from a host process; the local dev root CA must be trusted (`Add-OctoLocalCaTrust`). The first request after hibernation wakes the workload but gets a 503; a retry a few seconds later succeeds
 
 **Scope shortcuts** (Boolean, default `$false`):
 - `-identityOnly` (Boolean): start ONLY the Identity Service (forces all other services off)
@@ -111,6 +123,7 @@ Start OctoMesh services. Each service is controlled by its own **Boolean** param
 - `-configuration` (string, default `Release`): build configuration to launch from — use `DebugL` for local dev
 - `-branch` (string): branch sub-folder under the workspace root
 - `-SystemDatabase` (string, default `OctoSystem`): MongoDB system database name
+- `-TenantDatabasePrefix` (string, default empty): MongoDB tenant-database prefix of this instance (`OCTO_SYSTEM__TENANTDATABASEPREFIX`). Use it together with a `-SystemDatabase` of its own when a second local instance shares the MongoDB: tenants created without an explicit database name get `<prefix><tenantId>`, explicit names without the prefix are refused. Empty sets nothing. Example: `Start-Octo -SystemDatabase "OctoSystem_s2" -TenantDatabasePrefix "s2_" -nonInteractive $true -configuration DebugL`
 
 `Start-Octo` automatically sets `OCTO_STREAMDATA__ENABLED=true` (per-tenant stream-data gate) and a deterministic dev AI encryption key, so those no longer need to be set manually.
 
@@ -184,7 +197,7 @@ Delete a named infrastructure backup.
 
 ## Local Kubernetes (kind) dev environment
 
-Alternative to the docker-compose infrastructure: MongoDB / RabbitMQ / CrateDB, the CRDs, and the Communication Operator run inside a local kind cluster (.NET services still run as host processes via `Start-Octo`). **Mutually exclusive with docker-compose infra — both bind the same host ports; `Install-OctoKubernetes` refuses to run while compose infra containers are up.** Requires `kind`, `helm`, `kubectl`, and `docker` on PATH. Full runbook: `C:\dev\meshmakers\octo-tools\kubernetes\README.md`; from-scratch: `C:\dev\meshmakers\octo-tools\kubernetes\QUICKSTART.md`.
+Alternative to the docker-compose infrastructure: MongoDB / RabbitMQ / CrateDB, the CRDs, and the Communication Operator run inside a local kind cluster (.NET services still run as host processes via `Start-Octo`). **Mutually exclusive with docker-compose infra — both bind the same host ports; `Install-OctoKubernetes` refuses to run while compose infra containers are up.** Requires `kind`, `helm`, `kubectl`, and `docker` on PATH. Full runbook: `kubernetes/README.md` in the `octo-tools` repository; from-scratch: `kubernetes/QUICKSTART.md` there.
 
 ### `Install-OctoKubernetes`
 Create the kind cluster + CRDs Helm chart + namespaces + in-cluster infra + ingress-nginx/cert-manager + the `mm-cloud-issuer` CA, then deploy the Communication Operator. Idempotent.

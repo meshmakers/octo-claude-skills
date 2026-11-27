@@ -325,7 +325,7 @@ transformations:
             ckTypeId: Industry.Manufacturing/ProductionOrder
             rtWellKnownNamePath: $.key.Header.OrderNumber
             attributeUpdates:
-              - attributeName: OrderNumber
+              - attributeName: orderNumber
                 attributeValueType: String
                 valuePath: $.key.Header.OrderNumber
 
@@ -337,10 +337,10 @@ transformations:
             ckTypeId: Industry.Manufacturing/ProductionOrderItem
             rtWellKnownNamePath: $.key.orderItemId
             attributeUpdates:
-              - attributeName: ItemNumber
+              - attributeName: itemNumber
                 attributeValueType: Int
                 valuePath: $.key.Operation.SequenceNumber
-              - attributeName: PlannedQuantity
+              - attributeName: plannedQuantity
                 attributeValueType: Double
                 valuePath: $.key.Operation.Quantity
 
@@ -443,7 +443,7 @@ transformations:
                 ckTypeIdPath: $.key.ckTypeId
                 timestampPath: $.key.Timestamp
                 attributeUpdates:
-                  - attributeName: BooleanValue
+                  - attributeName: booleanValue
                     attributeValueType: Boolean
                     valuePath: $.key.Value
                 targetPath: $.key._entityUpdates
@@ -457,7 +457,7 @@ transformations:
                 ckTypeIdPath: $.key.ckTypeId
                 timestampPath: $.key.Timestamp
                 attributeUpdates:
-                  - attributeName: StringValue
+                  - attributeName: stringValue
                     attributeValueType: String
                     valuePath: $.key.Value
                 targetPath: $.key._entityUpdates
@@ -471,7 +471,7 @@ transformations:
                 ckTypeIdPath: $.key.ckTypeId
                 timestampPath: $.key.Timestamp
                 attributeUpdates:
-                  - attributeName: IntValue
+                  - attributeName: intValue
                     attributeValueType: Int
                     valuePath: $.key.Value
                 targetPath: $.key._entityUpdates
@@ -485,7 +485,7 @@ transformations:
                 ckTypeIdPath: $.key.ckTypeId
                 timestampPath: $.key.Timestamp
                 attributeUpdates:
-                  - attributeName: DoubleValue
+                  - attributeName: doubleValue
                     attributeValueType: Double
                     valuePath: $.key.Value
                 targetPath: $.key._entityUpdates
@@ -668,16 +668,16 @@ transformations:
                 rtIdPath: $.key.data.lineItemRtId   # empty: generateRtId needs rtIdPath to create the id
                 generateRtId: true                  # the association below reads it from the update item
                 attributeUpdates:
-                  - attributeName: GrossAmount
+                  - attributeName: grossAmount
                     attributeValueType: Double
                     valuePath: $.key.data.grossAmount
-                  - attributeName: NetAmount
+                  - attributeName: netAmount
                     attributeValueType: Double
                     valuePath: $.key.data.netAmount
-                  - attributeName: TaxAmount
+                  - attributeName: taxAmount
                     attributeValueType: Double
                     valuePath: $.key.data.taxAmount
-                  - attributeName: UnitPrice
+                  - attributeName: unitPrice
                     attributeValueType: Double
                     valuePath: $.key.data.unitPrice
 
@@ -823,10 +823,10 @@ transformations:
                 ckTypeIdPath: $.key.ckType
                 rtIdPath: $.key.RtId
                 attributeUpdates:
-                  - attributeName: PartitionFactor
+                  - attributeName: partitionFactor
                     attributeValueType: Int
                     valuePath: $.key.ParticipationFactor
-                  - attributeName: State
+                  - attributeName: state
                     attributeValueType: Enum
                     valuePath: $.key.State
 
@@ -842,10 +842,10 @@ transformations:
                 updateKind: Insert
                 ckTypeId: EnergyCommunity/EdaMeteringPoint
                 attributeUpdates:
-                  - attributeName: MeteringPointNumber
+                  - attributeName: meteringPointNumber
                     attributeValueType: String
                     valuePath: $.key.MeteringPointNumber
-                  - attributeName: PartitionFactor
+                  - attributeName: partitionFactor
                     attributeValueType: Int
                     valuePath: $.key.ParticipationFactor
 
@@ -944,13 +944,13 @@ transformations:
         ckTypeId: Demo.MeterReadings/MeterReading
         rtWellKnownNamePath: $.key.readingKey
         attributeUpdates:
-          - attributeName: MeterNumber
+          - attributeName: meterNumber
             attributeValueType: String
             valuePath: $.key.meterNumber
-          - attributeName: ReadingMonth
+          - attributeName: readingMonth
             attributeValueType: String
             valuePath: $.key.month
-          - attributeName: ConsumptionKwh
+          - attributeName: consumptionKwh
             attributeValueType: Double
             valuePath: $.key.consumptionKwh
 
@@ -990,6 +990,6 @@ printf 'Authorization: Bearer %s\n' "$OCTO_TOKEN" | curl -X POST "https://<mesh-
 - Build the natural key with `Concat@1` on every row (`path: $.rows[*]`, `concatSubPath`), then let `GetRtEntitiesByWellKnownName@1` find existing entities by that key: it writes `rtId`, `ckTypeId` and `modOperation` on each row (all three target paths are **required** properties), and `generateInsertOperation: true` turns a missing entity into an Insert with a new rtId.
 - In `ForEach@1`, `CreateUpdateInfo@1` takes the kind from `updateKindPath` (Insert or Update per row) and sets `rtWellKnownNamePath` to the key, so the next import finds the same entity.
 - `Flatten@1` collects the per-row updates into one array for a single `ApplyChanges@2` call (one transaction).
-- `attributeName` is the name as the model declares it; this example model declares PascalCase names, most models use camelCase (see the casing warning of `CreateUpdateInfo@1`), so look them up with `get_type_schema`.
+- `attributeName` is the attribute name in camelCase as `get_type_schema` lists it (see the casing warning of `CreateUpdateInfo@1`); every attribute the type does not mark `isOptional: true` must be set on an Insert.
 - One meter and month per file: two rows with the same key are both looked up as missing and both become Inserts with the same `rtWellKnownName`. Reject or merge such rows before the lookup when a file can contain them.
 - The HTTP answer is the data root minus the request envelope, so shape it: `Project@1` with `clear: true` keeps only `$.imported`.

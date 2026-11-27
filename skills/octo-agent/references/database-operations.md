@@ -96,6 +96,7 @@ db.CkModel.find({ modelState: 2 })
 ```javascript
 db.CkModel.find({ _id: "Basic-2.0.1" })
 ```
+(`Basic-2.0.1` is an example id; list the installed ids with `db.CkModel.find({}, { _id: 1, modelState: 1 })`.)
 
 #### Count Runtime Entities Per Type
 ```javascript

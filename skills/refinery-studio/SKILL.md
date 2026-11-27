@@ -24,7 +24,7 @@ legacy interface. New frontend feature work belongs in Refinery Studio.
 
 ## CRITICAL: where the app actually lives
 
-The git repo root (`C:\dev\meshmakers\octo-frontend-refinery-studio`) is **not**
+The git repo root (`octo-frontend-refinery-studio/`) is **not**
 the npm project. The app package is one level down:
 
 ```

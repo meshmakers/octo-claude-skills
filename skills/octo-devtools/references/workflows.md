@@ -4,7 +4,7 @@ Multi-step workflows for typical development scenarios.
 
 > **Agent note:** Whenever Claude or a CI job starts services, ALWAYS use `Start-Octo -nonInteractive $true` and stop them with `Stop-Octo` from a separate invocation. Never use `Invoke-BuildAndStartOcto` from an agent session — it chains into the interactive `Start-Octo` and blocks indefinitely. The interactive `Start-Octo` (no `-nonInteractive`) is only for a human running it directly in a terminal.
 
-> **Which lane:** `-branch` is a lane folder relative to `$rootPath`. With the profile loaded from the `octo-tools` checkout at the workspace root (`$rootPath` = the workspace root - the setup feature environments need), pass `-branch branches/main` to build main; without `-branch` the cmdlets build `$rootPath` itself. With a profile loaded from inside the main checkout (`$rootPath` = `branches/main`) omit `-branch` and use `-path $rootPath` for `Remove-BinAndObjFolders` - `branches/main` would point at a nested folder there. The same applies to `Sync-AllGitRepos -branch` and `Invoke-BuildRange -branch`. The `Invoke-BuildAll` / `Sync-AllGitRepos` examples below omit it.
+> **Which lane:** `-branch` is a lane folder relative to `$rootPath`. With the profile loaded from the `octo-tools` checkout at the workspace root (`$rootPath` = the workspace root - the setup feature environments need), pass `-branch branches/main` to build main; without `-branch` the cmdlets build `$rootPath` itself. With a profile loaded from inside the main checkout (`$rootPath` = `branches/main`) omit `-branch` and use `-path $rootPath` for `Remove-BinAndObjFolders` - `branches/main` would point at a nested folder there. The same applies to `Sync-AllGitRepos -branch` and `Invoke-BuildRange -branch`. Sections 2a and 12 name the lane on every step (workspace-root profile); the other examples below omit it.
 
 ## 1. First-Time Setup
 
@@ -52,12 +52,14 @@ A human working interactively in a terminal can instead build + start in one ste
 
 ## 2a. Inner loop after a change in the build chain
 
+Written for the workspace-root profile (see *Which lane* above): every step names the lane with `-branch branches/main`. From a profile loaded inside the main checkout, `-branch main` works the same on every step that resolves `-branch` like `Invoke-BuildAll` (`Invoke-BuildRange`, `Invoke-OctoTestRun`: a value equal to the leaf folder of `$rootPath` means `$rootPath` itself); omit it for `Start-Octo`. `Invoke-OctoTestRun` always needs `-branch` or `-env`.
+
 ```
-1. Invoke-BuildRange -from octo-construction-kit-engine -to octo-common-services -include octo-asset-repo-services -WhatIf   # the plan
-2. Invoke-BuildRange -from octo-construction-kit-engine -to octo-common-services -include octo-asset-repo-services -stopServices
-3. Start-Octo -nonInteractive $true -configuration DebugL                                                                    # verify
-4. Invoke-BuildRange -from octo-construction-kit-engine -to octo-common-services -include octo-asset-repo-services -verifyTests # tests compile
-5. Invoke-OctoTestRun -branch branches/main -repo octo-construction-kit-engine                                              # run the tests
+1. Invoke-BuildRange -branch branches/main -from octo-construction-kit-engine -to octo-common-services -include octo-asset-repo-services -WhatIf      # the plan
+2. Invoke-BuildRange -branch branches/main -from octo-construction-kit-engine -to octo-common-services -include octo-asset-repo-services -stopServices
+3. Start-Octo -branch branches/main -nonInteractive $true -configuration DebugL                                                                       # verify
+4. Invoke-BuildRange -branch branches/main -from octo-construction-kit-engine -to octo-common-services -include octo-asset-repo-services -verifyTests # tests compile
+5. Invoke-OctoTestRun -branch branches/main -repo octo-construction-kit-engine                                                                       # run the tests
 ```
 
 Restores fail with NU1101/NU1102 on a `999.0.0` package: the chain is out of sync — `Invoke-BuildAll -configuration DebugL -excludeFrontend $true`. `-purgeStaleCache` removes cache folders that hold another build of a `999.0.0` package.
@@ -224,7 +226,7 @@ Tear down (destroys all cluster data):
 Uninstall-OctoKubernetes                           # Add -KeepCaTrust to keep the local CA trusted
 ```
 
-Full runbook: `C:\dev\meshmakers\octo-tools\kubernetes\README.md`; from-scratch: `C:\dev\meshmakers\octo-tools\kubernetes\QUICKSTART.md`.
+Full runbook: `kubernetes/README.md` in the `octo-tools` repository; from-scratch: `kubernetes/QUICKSTART.md` there.
 
 ## 11. Build Without Frontend
 
@@ -236,11 +238,13 @@ Invoke-BuildAll -configuration DebugL -excludeFrontend $true
 
 ## 12. Release Preparation
 
+Same layout as section 2a: `-branch branches/main` on every step. From a profile loaded inside the main checkout, drop `-branch` on steps 1, 2, 5 and 6 (`Get-AllGitRepStatus`, `Sync-AllGitRepos`, `Update-MeshmakerVersion` and `Sync-YamlTemplates` join `-branch` to `$rootPath` as it is, so `-branch main` would point at a nested `main/main`); `-branch main` works only for `Invoke-BuildAll` and `Invoke-OctoTestRun`.
+
 ```
-1. Get-AllGitRepStatus                             # Ensure clean state
-2. Sync-AllGitRepos                                # Pull latest
-3. Invoke-BuildAll -configuration DebugL           # Full build
-4. Invoke-OctoTestRun -branch branches/main -repo <repo>   # per repository
-5. Update-MeshmakerVersion                         # Bump version numbers
-6. Sync-YamlTemplates                              # Sync CI/CD templates
+1. Get-AllGitRepStatus -branch branches/main                       # Ensure clean state
+2. Sync-AllGitRepos -branch branches/main                          # Pull latest
+3. Invoke-BuildAll -branch branches/main -configuration DebugL     # Full build
+4. Invoke-OctoTestRun -branch branches/main -repo <repo>           # per repository
+5. Update-MeshmakerVersion -branch branches/main -Version <x.y.z>  # Bump version numbers
+6. Sync-YamlTemplates -branch branches/main -sourceRepo <repo>     # Sync CI/CD templates from <repo>/devops-build
 ```

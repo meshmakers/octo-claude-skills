@@ -250,7 +250,7 @@ A CK method declared `execution.handler: pipeline` is implemented by a pipeline 
 
 ## Attribute Name Casing in CreateUpdateInfo
 
-**CRITICAL:** The `attributeName` field in `CreateUpdateInfo@1` must use the **exact casing from the CK model definition** — typically **camelCase** (e.g., `name`, `machineState`, `operatingHours`).
+**CRITICAL:** The `attributeName` field in `CreateUpdateInfo@1` is the attribute name **in camelCase, exactly as `get_type_schema` lists it** (e.g., `name`, `machineState`, `operatingHours`). A type that declares `name: DueDate` has the attribute `dueDate`. **Required attributes:** every attribute of a type is required unless the type marks it `isOptional: true`. An Insert sets every required attribute, or the type marks the attribute optional. Neither `validate_pipeline_definition` nor a dry run (which suppresses the `ApplyChanges` write) reports a missing required attribute, so check every Insert against `get_type_schema`.
 
 This is **different** from the PascalCase you see in GraphQL query results (where attributes appear as `$.key.Attributes.Name`). The distinction:
 
@@ -418,11 +418,11 @@ For annotated real-world examples covering all these patterns, read `references/
 
 ## Deploying and Testing Pipelines
 
-After writing pipeline YAML, use the **`octo` skill** to deploy and test it. This skill handles YAML authoring; the `octo` skill handles all operational commands (deployment, execution, status, debugging).
+After writing pipeline YAML, use the **`octo` skill** to deploy and test it. This skill handles YAML authoring; the `octo` skill handles all operational commands (deployment, execution, status, debugging). **The target adapter must run**: `GetAdapters` (MCP `get_adapters`) shows it deployed and `Online`. A new tenant starts with its deployment site and adapter `Undeployed`: the developer deploys the site first (`DeployDeploymentSite -id <site rtId>`), then the adapter (`DeployWorkload -id <adapter rtId>`). An agent without the mandate to change adapters asks the developer.
 
 ### Typical deployment workflow
 
-1. **Create runtime entities** via `octo-cli -c ImportRt -f <file> -w`:
+1. **Create runtime entities** via `octo-cli -c ImportRt -f <file> -w` (MCP `import_runtime_model` takes only an uploaded file: `prepare_file_upload` plus an HTTP `PUT`; without an HTTP client, ask the developer to run the `ImportRt` command with their own login):
    - A `System.Communication/DataFlow` entity (logical grouping)
    - A `System.Communication/Pipeline` entity with `ParentChild` association to the DataFlow and `Executes` association to the target Adapter
    - Optionally a `System.Communication/PipelineTrigger` with `ParentChild` to the DataFlow and `Triggers` association to the Pipeline(s)

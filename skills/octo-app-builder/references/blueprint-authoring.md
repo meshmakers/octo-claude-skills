@@ -43,7 +43,9 @@ attributes:
 ```
 
 `types/ticket.yaml` — derive from `${System}/Entity-1`; reference own attributes as
-`${this}/<AttrId>-1`; `name:` is what pipelines/queries use:
+`${this}/<AttrId>-1`. `name:` becomes the attribute name in camelCase (`Name` → `name`, `RedeemedAt` → `redeemedAt`),
+as `get_type_schema` lists it; `attributeName` in pipelines uses that form. Every attribute is required unless it is
+marked `isOptional: true`:
 
 ```yaml
 $schema: https://schemas.meshmakers.cloud/construction-kit-elements.schema.json
