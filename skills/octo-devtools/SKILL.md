@@ -45,7 +45,7 @@ OctoMesh is a monorepo where repos produce NuGet packages (`999.0.0` in DebugL) 
 | Cmdlet | What it does | Use it for |
 |---|---|---|
 | `Invoke-BuildRange -from <repo> [-to <repo>]` | Rebuilds only the slice of the build order between `-from` and `-to` (`src/` projects only), copies the changed packages into `<lane>/nuget` and purges exactly those from the lane's package cache | **The everyday inner loop** after a change in a library or service of the chain |
-| `Invoke-BuildAll` | Full reset: wipes `<lane>/nuget` and the `meshmakers.*/999.0.0` cache folders, forces a restore, builds every repo with its tests in build order | After a fresh clone, a pull or a branch switch; restores failing with NU1101/NU1102 on a `999.0.0` package (chain out of sync) |
+| `Invoke-BuildAll` | Full reset: wipes `<lane>/nuget` and the `meshmakers.*/999.0.0` cache folders, forces a restore, builds every repo's whole solution in build order (test projects compiled, not run) | After a fresh clone, a pull or a branch switch; restores failing with NU1101/NU1102 on a `999.0.0` package (chain out of sync) |
 | `Invoke-Build -repositoryPath <repo>` | One repository, no package propagation | A change inside one service repo that produces no package another repo consumes |
 
 **The build order** is defined in one place only: octo-tools `modules/OctoBuildOrder.psm1` (`Get-OctoBuildOrder -branchRootPath <lane>` prints it). `Invoke-BuildAll` and `Invoke-BuildRange` share it — never chain `Invoke-Build` calls by hand or copy packages manually.
@@ -225,7 +225,7 @@ An alternative to the docker-compose infra: MongoDB / RabbitMQ / CrateDB, the CR
 
 | Cmdlet | Description | Safety |
 |---|---|---|
-| `Register-OctoCliContext -Installation <name> -TenantId <tenant>[,<tenant>...]` | **The** login cmdlet: registers the octo-cli context `<installation>[_<suffix>]_<tenant>` for an installation of your octo-tools config (`installations.json`, e.g. `local`), switches to it and logs in; `-NoSwitch`, `-NoLogin`, `-IncludeReporting`, `-IncludeAi`, `-UriSuffix`, `-Json`. It replaced the removed per-environment login helpers | Mutating |
+| `Register-OctoCliContext -Installation <name> -TenantId <tenant>[,<tenant>...]` | **The** login cmdlet: registers the octo-cli context `<installation>[_<suffix>]_<tenant>` for an installation of your octo-tools config (`installations.json`, e.g. `local`), switches to it (one tenant only; with several it never switches) and logs in; `-NoSwitch`, `-NoLogin`, `-IncludeReporting`, `-IncludeAi`, `-UriSuffix`, `-Json`. It replaced the removed per-environment login helpers | Mutating |
 | `Invoke-OctoTenantSweep -CliArguments '-c','<Command>',... (-Installation <i> \| -ContextTemplate <t> \| -Context <c>) (-Tenant a,b \| -AllTenants)` | Run one octo-cli command across many tenants (one context per tenant); never reads or prints a token; `-WhatIf` | Mutating (remote, as the command) |
 | `Get-OctoToolsConfig` / `Get-OctoInstallation -Name <name>` | Read your octo-tools config (installations, registry, Rancher/Vault/Semaphore addresses) — never print it into a shared log | Read-only |
 | `Invoke-IdentityOverlay [-OverlayFile <yaml>] [-DryRun]` | Add the local-dev redirect URIs of an overlay file to the blueprint-managed identity clients (`octo-cli -c ApplyClientOverlay`, idempotent); uses the active context | Mutating |
@@ -344,7 +344,7 @@ Interactive blocking applies to `Start-Octo` (without `-nonInteractive $true`) a
 - "rebuild after pull" / "sync and build" → `Sync-AllGitRepos -branch branches/main` then `Invoke-BuildAll -branch branches/main -configuration DebugL -excludeFrontend $true`
 - "git status" / "repo status" → `Get-AllGitRepStatus`
 - "pull latest" / "sync repos" → `Sync-AllGitRepos -branch branches/main`
-- "push everything" / "publish my work" → not `Push-AllGitRepos`: push the work branch of each changed repository and open a pull request (see "Publishing work"); with `octo-claude-pm` installed its `agent-operating-rules` decide
+- "push everything" / "publish my work" → not `Push-AllGitRepos` (see "Publishing work"); with `octo-claude-pm` installed its `agent-operating-rules` decide
 - "start services" / "start octo" → `Start-Octo -nonInteractive $true -configuration DebugL` (agent default; never block the session)
 - "stop services" / "stop octo" → `Stop-Octo`
 - "start infra" / "start docker" → `Start-OctoInfrastructure`

@@ -25,7 +25,7 @@ Fast partial rebuild of a slice of the build order — the inner loop. Per repos
 - **Example:** `Invoke-BuildRange -branch branches/main -from octo-construction-kit-engine -to octo-common-services -include octo-asset-repo-services -verifyTests`
 
 ### `Invoke-BuildAll`
-Full reset build: wipes `<lane>/nuget` and the `meshmakers.*/999.0.0` folders of the lane's package cache, forces a restore and builds every repository with its tests in build order. Use it after a fresh clone, a pull or a branch switch, and when restores fail with NU1101/NU1102 on a `999.0.0` package; use `Invoke-BuildRange` for everyday changes.
+Full reset build: wipes `<lane>/nuget` and the `meshmakers.*/999.0.0` folders of the lane's package cache, forces a restore and builds every repository's whole solution in build order (test projects are compiled, not run — tests run with `Invoke-OctoTestRun`). Use it after a fresh clone, a pull or a branch switch, and when restores fail with NU1101/NU1102 on a `999.0.0` package; use `Invoke-BuildRange` for everyday changes.
 - `-configuration` (string, default `Release`): **always pass `DebugL` for local development**
 - `-branch` (string): lane folder relative to `$rootPath`
 - `-excludeAdditional` (bool): Skip additional/optional repos — builds only the core dependency chain. **Must pass `$true` explicitly** (e.g., `-excludeAdditional $true`), not bare flag. **Not a time-saving shortcut:** it skips the service repos, so a changed contract package reaches `nuget/` while the services still consume the previous one and fail later at startup or runtime. Use it only when you deliberately want the libraries alone.

@@ -173,7 +173,7 @@ The former per-environment login helpers were removed from octo-tools; `Register
 
 ## 9. Push Changes
 
-Work reaches `main` through pull requests from work branches. Push the work branch of each changed repository with git and open the pull request; with the `octo-claude-pm` plugin installed its `agent-operating-rules` decide when and how (branch per Feature, docs batch, chain pushes). `Push-AllGitRepos` (every `octo-*`/`mm-*` repo of the lane) and `Push-GitRepo -repositoryPath <repo>` push whatever is checked out — review with `Get-AllGitRepStatus` first and use them only when that is really what you want.
+Work reaches `main` through pull requests from work branches. With the `octo-claude-pm` plugin installed its `agent-operating-rules` decide when and how work is pushed; otherwise follow the repository's own contribution rules. `Push-AllGitRepos` (every `octo-*`/`mm-*` repo of the lane) and `Push-GitRepo -repositoryPath <repo>` push whatever is checked out — review with `Get-AllGitRepStatus` first and use them only when that is really what you want.
 
 ## 10. Infrastructure Maintenance (docker-compose, deprecated)
 
