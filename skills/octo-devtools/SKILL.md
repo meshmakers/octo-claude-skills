@@ -164,7 +164,7 @@ The local kind cluster (`Install-OctoKubernetes`, next section) is the supported
 
 ### Local Kubernetes (kind) dev environment
 
-An alternative to the docker-compose infra: MongoDB / RabbitMQ / CrateDB, the CRDs, and the Communication Operator run inside a local [kind](https://kind.sigs.k8s.io/) cluster (the .NET services still run as host processes via `Start-Octo`). **The two infra modes share the same host ports and CANNOT run at the same time** — `Install-OctoKubernetes` refuses to start while docker-compose infra containers are up. Full runbook: `C:\dev\meshmakers\octo-tools\kubernetes\README.md`; from-scratch setup: `C:\dev\meshmakers\octo-tools\kubernetes\QUICKSTART.md`.
+An alternative to the docker-compose infra: MongoDB / RabbitMQ / CrateDB, the CRDs, and the Communication Operator run inside a local [kind](https://kind.sigs.k8s.io/) cluster (the .NET services still run as host processes via `Start-Octo`). **The two infra modes share the same host ports and CANNOT run at the same time** — `Install-OctoKubernetes` refuses to start while docker-compose infra containers are up. Full runbook: `kubernetes/README.md` in the `octo-tools` repository; from-scratch setup: `kubernetes/QUICKSTART.md` there.
 
 | Cmdlet | Description | Safety |
 |---|---|---|

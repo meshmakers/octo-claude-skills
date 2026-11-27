@@ -226,7 +226,7 @@ Tear down (destroys all cluster data):
 Uninstall-OctoKubernetes                           # Add -KeepCaTrust to keep the local CA trusted
 ```
 
-Full runbook: `C:\dev\meshmakers\octo-tools\kubernetes\README.md`; from-scratch: `C:\dev\meshmakers\octo-tools\kubernetes\QUICKSTART.md`.
+Full runbook: `kubernetes/README.md` in the `octo-tools` repository; from-scratch: `kubernetes/QUICKSTART.md` there.
 
 ## 11. Build Without Frontend
 
