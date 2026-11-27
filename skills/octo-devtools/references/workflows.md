@@ -238,7 +238,7 @@ Invoke-BuildAll -configuration DebugL -excludeFrontend $true
 
 ## 12. Release Preparation
 
-Same layout as section 2a: `-branch branches/main` on every step.
+Same layout as section 2a: `-branch branches/main` on every step. From a profile loaded inside the main checkout, drop `-branch` on steps 1, 2, 5 and 6 (`Get-AllGitRepStatus`, `Sync-AllGitRepos`, `Update-MeshmakerVersion` and `Sync-YamlTemplates` join `-branch` to `$rootPath` as it is, so `-branch main` would point at a nested `main/main`); `-branch main` works only for `Invoke-BuildAll` and `Invoke-OctoTestRun`.
 
 ```
 1. Get-AllGitRepStatus -branch branches/main                       # Ensure clean state
