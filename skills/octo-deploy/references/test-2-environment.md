@@ -49,9 +49,9 @@ octo-cli -c AuthStatus --context test-2_<tenantId>
 ```
 
 Notes:
-- The legacy `Invoke-OctoCliLoginTest2` cmdlet names contexts `test2_…` (no
-  hyphen) — a DIFFERENT name than `Register-OctoCliContext`'s `test-2_…`. Don't
-  mix; prefer `Register-OctoCliContext`.
+- `Register-OctoCliContext` is the only login cmdlet; the former per-environment
+  helper was removed from octo-tools. An old context named `test2_…` (no hyphen)
+  on your machine comes from that helper — use the `test-2_…` context instead.
 - Context discipline: prefer `--context test-2_<tenantId>` (or `export
   OCTO_CLI_CONTEXT=test-2_<tenantId>`) on every call so you don't depend on — or
   mutate — the global active context, which a parallel session could flip.

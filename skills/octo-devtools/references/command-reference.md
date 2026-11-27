@@ -1,31 +1,60 @@
 # OctoMesh PowerShell Cmdlet Reference
 
-Complete catalog of cmdlets available after loading `octo-tools/modules/profile.ps1`.
+Catalog of the cmdlets this skill drives, available after loading `octo-tools/modules/profile.ps1`. The authoritative, complete list with every parameter is octo-tools `CLAUDE.md` ("Common Development Commands") and each module's param block; check there when a parameter below does not work.
 
 ## Build & Compilation
 
+The build order of `Invoke-BuildAll` and `Invoke-BuildRange` is defined only in octo-tools `modules/OctoBuildOrder.psm1` (`Get-OctoBuildOrder -branchRootPath <lane>` prints it).
+
+### `Invoke-BuildRange`
+Fast partial rebuild of a slice of the build order — the inner loop. Per repository: `dotnet build` of the `src/` projects only (no forced restore), copy of the packages `<lane>/nuget` lacks or holds older, purge of exactly those `999.0.0` folders from the lane's package cache. Fails fast at the first failing repository.
+- `-from` (string, **Mandatory**) / `-to` (string, default = `-from`): first and last repository of the range; exact name, name without `octo-`, or a unique part
+- `-branch` (string): lane folder relative to `$rootPath` (see SKILL.md "Which lane")
+- `-configuration` (string, default `DebugL`): package copy and purge only run for DebugL
+- `-include` / `-exclude` (string[]): add repositories outside the range / skip repositories inside it
+- `-verifyTests` (switch): after each `src/` build, compile the projects outside `src/` (tests, samples) without running them — use before every hand-off; a plain run compiles no test project
+- `-includeTests` (switch): build whole solutions instead of `src/` only
+- `-stopServices` (switch): send `Stop-Octo` and wait when services of the range run; `-ignoreRunningServices` (switch): build anyway. Without either it refuses to start while such services run
+- `-purgeStaleCache` (switch): delete cache `999.0.0` folders whose recorded hash differs from `<lane>/nuget` (otherwise only reported)
+- `-excludeFrontend` (bool, default `$true`)
+- `-laneIsolation` (`Auto` | `On` | `Off`, default `Auto`): lane-local package cache when `<lane>/Octo.User.props` declares `RestorePackagesPath`
+- `-msbuildProperties` / `-msbuildPropertiesPerRepo` (hashtable): extra MSBuild properties for every / single repositories; use the per-repo form for `OctoPublishCkModel = 'false'`
+- `-skipCkSync` (switch): skip the sync of intermediate CK versions into the lane's local catalog
+- `-WhatIf`: print the plan only. `-Json`: one JSON document
+- **Safety:** Mutating (local)
+- **Example:** `Invoke-BuildRange -branch branches/main -from octo-construction-kit-engine -to octo-common-services -include octo-asset-repo-services -verifyTests`
+
 ### `Invoke-BuildAll`
-Build repositories in dependency order with automatic NuGet package propagation between repos. **This is the default build command** — use it whenever changes might affect NuGet packages or when building after pull/branch switch.
-- `-configuration` (string): Build configuration — `DebugL` (local dev), `Debug`, `Release`. **Always use `DebugL` for local development.**
-- `-branch` (string): Branch name for NuGet package resolution
+Full reset build: wipes `<lane>/nuget` and the `meshmakers.*/999.0.0` folders of the lane's package cache, forces a restore and builds every repository with its tests in build order. Use it after a fresh clone, a pull or a branch switch, and when restores fail with NU1101/NU1102 on a `999.0.0` package; use `Invoke-BuildRange` for everyday changes.
+- `-configuration` (string, default `Release`): **always pass `DebugL` for local development**
+- `-branch` (string): lane folder relative to `$rootPath`
 - `-excludeAdditional` (bool): Skip additional/optional repos — builds only the core dependency chain. **Must pass `$true` explicitly** (e.g., `-excludeAdditional $true`), not bare flag. **Not a time-saving shortcut:** it skips the service repos, so a changed contract package reaches `nuget/` while the services still consume the previous one and fail later at startup or runtime. Use it only when you deliberately want the libraries alone.
 - `-excludeFrontend` (bool): Skip Angular frontend builds — significant time savings for backend-only work. **Must pass `$true` explicitly** (e.g., `-excludeFrontend $true`), not bare flag.
 - **Safety:** Mutating (local) — modifies build outputs and NuGet cache
 - **Common patterns:**
   - Full build: `Invoke-BuildAll -configuration DebugL`
-  - Backend only (the only sanctioned way to shorten a build): `Invoke-BuildAll -configuration DebugL -excludeFrontend $true`
+  - Backend only: `Invoke-BuildAll -configuration DebugL -excludeFrontend $true`
+- Also: `-DryRun` (plan only, nothing killed, deleted or built), `-laneIsolation`, `-msbuildProperties`, `-msbuildPropertiesPerRepo`, `-skipCkSync`, `-skipKill`, `-Json`
 
 ### `Invoke-Build`
-Build a single repository. **Does NOT handle NuGet package propagation between repos** — unlike `Invoke-BuildAll`, which does. Anything this repo publishes stays invisible to its consumers, which keep building and running against the previous package version. Only use for isolated changes within a single service repo where no NuGet packages are affected. If changes affect NuGet packages or touch library repos, use `Invoke-BuildAll` with exclusion flags instead.
+Build a single repository. **Does NOT handle NuGet package propagation between repos** — unlike `Invoke-BuildRange` and `Invoke-BuildAll`. Anything this repo publishes stays invisible to its consumers, which keep building and running against the previous package version. Only use for isolated changes within a single service repo where no NuGet packages are affected. If changes affect packages or touch library repos, use `Invoke-BuildRange` over the repository and its consumers.
 - `-configuration` (string): Build configuration (`DebugL`, `Debug`, `Release`)
 - `-repositoryPath` (string): Path to the repository to build (e.g., `./octo-asset-repo-services`)
 - **Safety:** Mutating (local)
-- **WARNING:** Never manually chain `Invoke-Build` + `Copy-NuGetPackages` — use `Invoke-BuildAll` for multi-repo builds
+- **WARNING:** Never manually chain `Invoke-Build` + `Copy-NuGetPackages` — use `Invoke-BuildRange` for multi-repo builds
 
-### `Invoke-BuildFrontend`
-Build Angular frontend applications.
-- `-configuration` (string): Build configuration
+### `Invoke-OctoTestRun`
+The test runner: `dotnet test` (or `ng test` for an Angular workspace) per test project of one repository, without a full rebuild; Docker-heavy projects run under a machine-wide test lock. The build cmdlets never run tests.
+- `-env` (string) or `-branch` (string): the feature environment or lane
+- `-repo` (string): the repository
+- `-project` (string[]): only these test projects; `-filter` (string): a test filter in the runner's language
+- `-rerunFailed` (switch): only the tests that failed in the last run
+- `-WhatIf` (plan only), `-Json`
+- Results: `<lane>/logFiles/test-results/<repo>/<project>/`
 - **Safety:** Mutating (local)
+
+### `Get-OctoTestLock` / `Remove-OctoTestLock`
+Show who holds the machine-wide test lock / remove it when its owner process is gone (a live owner is refused).
 
 ### `Invoke-Publish`
 Publish a .NET project for deployment.
@@ -249,6 +278,11 @@ Sync all git submodules.
 - No parameters
 - **Safety:** Mutating
 
+### `Sync-Submodule`
+Run `git submodule update --init --remote --merge --recursive` in one repository.
+- `-repositoryPath` (default `.\`), `-Json`
+- **Safety:** Mutating
+
 ### `Invoke-CleanAllGitRepos`
 Clean all git repos (removes untracked files).
 - No parameters
@@ -379,55 +413,50 @@ Delete all `bin/` and `obj/` folders recursively.
 
 ## Authentication / Context (octo-cli)
 
-The login cmdlets create a named octo-cli context (via `octo-cli -c AddContext`), activate it (`UseContext`), then run an interactive `Login -i`. Context names follow `{installation}_{tenantId}` (e.g. `local_meshtest`), so each environment+tenant keeps its tokens independently.
+`Register-OctoCliContext` creates a named octo-cli context (via `octo-cli -c AddContext`), activate it (`UseContext`), then run an interactive `Login -i`. Context names follow `{installation}[_{uriSuffix}]_{tenantId}` (e.g. `local_meshtest`), so each environment+tenant keeps its tokens independently.
 
 > **Parallel safety:** the `UseContext` step mutates the single global active context, so a concurrent session (or a `_train`/CI job) inherits the switch. For agent/scripted work, register with `-NoSwitch` and target the context per-command with `octo-cli ... --context <ctx>` (or `export OCTO_CLI_CONTEXT=<ctx>` for the shell) — this runs against `<ctx>` without changing the active context.
 
 ### `Register-OctoCliContext` (recommended)
-Unified replacement for the per-environment `Invoke-OctoCliLogin*` cmdlets. Builds the service URIs for the chosen installation, registers the context, optionally switches to it and triggers an interactive login.
+The login cmdlet for every installation (it replaced the removed per-environment login helpers). Looks the installation up in your octo-tools config (`~/.config/octo-tools/installations.json`, schema in octo-tools `docs/installations-config.md`), builds the service URIs from its URL templates, registers the context, optionally switches to it and triggers an interactive login.
 > **Hostnames are placeholders.** The concrete domains of the shared environments (`<test-2-domain>`, `<staging-domain>`, `<prod-1-domain>`, `<prod-2-domain>`, `<legacy-domain>`, `<registry>`, `<rancher-url>`) are internal. If the plugin `octo-claude-pm` is installed, see its `agent-operating-rules/references/environments.md`; otherwise ask a colleague.
-- `-Installation` (string, **Mandatory**): one of `local`, `test-2`, `staging-1`, `prod-1`, `prod-2`. Domain mapping: `local` → localhost; `test-2` → `*.<test-2-domain>`; `staging-1` → `*.<staging-domain>`; `prod-1` → `*.<prod-1-domain>`; `prod-2` → `*.<prod-2-domain>`
-- `-TenantId` (string, **Mandatory**): tenant id to bind the context to
-- `-UriSuffix` (string, optional): for test-2 PR sub-environments (e.g. `pr123` → `assets-pr123.<test-2-domain>`); also appended to the context name
+- `-Installation` (string, **Mandatory**): the name of an installation in your octo-tools config (typically `local` plus your test, staging and production installations, e.g. `test-2` → `*.<test-2-domain>`)
+- `-TenantId` (string[], **Mandatory**): tenant id to bind the context to; a list `a,b,c` registers one context per tenant and never switches the active context
+- `-UriSuffix` (string, optional): substituted for `{0}` in the installation's URL templates, for PR sub-environments (e.g. `pr123` → `assets-pr123.<test-2-domain>`); also appended to the context name
 - `-IncludeReporting` (switch): also register the reporting service URI (`-rsu`)
 - `-IncludeAi` (switch): also register the AI service URI (`-aisu`)
 - `-NoSwitch` (switch): skip `UseContext` (leave the active context unchanged) — recommended for parallel-safe agent use; then pass `--context <ctx>` on octo-cli commands
 - `-NoLogin` (switch): skip the interactive `Login -i` (for CI / client-credentials flow)
+- `-Json` (switch): one JSON document
 - **Safety:** Mutating
 - **Examples:**
-  - `Register-OctoCliContext -Installation staging-1 -TenantId meshtest`
   - `Register-OctoCliContext -Installation local -TenantId meshtest -IncludeAi`
+  - `Register-OctoCliContext -Installation test-2 -TenantId tenant-a,tenant-b -NoSwitch`
 
-### `Invoke-OctoCliLoginLocal`
-Register + log in to the local environment.
-- `-tenantId` (string, default `meshtest`): controls the context name (`local_<tenantId>`)
-- `-includeReporting` (bool, default `$false`): also register the reporting service URI
-- **Safety:** Mutating
+### `Get-OctoToolsConfig` / `Get-OctoInstallation`
+Read your octo-tools config (`Get-OctoToolsConfigPath` names the file): the installations and the addresses of registry, Rancher, Vault and Semaphore. `Get-OctoInstallation -Name <name>` returns one installation. Personal tokens are not in this file but in your private profile — never print either into a shared log.
+- **Safety:** Read-only
 
-### `Invoke-OctoCliLoginTest2`
-Register + log in to the test-2 environment.
-- **Safety:** Mutating
+### `Invoke-OctoTenantSweep`
+Runs one octo-cli command across many tenants, one context per tenant (`<installation>_<tenant>`) or one context with `{tenant}` in the arguments; octo-cli does the per-tenant authentication. Never reads, prints or writes a token and never changes the active context.
+- `-CliArguments` (string[], **Mandatory**): e.g. `'-c','GetTenantFeatures'`
+- `-Installation` | `-ContextTemplate` | `-Context`: where the contexts come from
+- `-Tenant` (string[]) | `-AllTenants`; `-Exclude` (string[])
+- `-ShowOutput`, `-IncludeOutput` (scrubbed output in the result), `-UriSuffix`, `-Json`
+- **Safety:** as the command it runs; a denied tenant does not stop the sweep
 
-### `Invoke-OctoCliLoginStaging` (legacy)
-Register + log in to staging. **Legacy** — points at the old `*.<legacy-domain>` domains. Prefer `Register-OctoCliContext -Installation staging-1`.
-- **Safety:** Mutating
-
-### `Invoke-OctoCliLoginProduction` (legacy)
-Register + log in to production. **Legacy** — points at the old `*.<legacy-domain>` domains. Prefer `Register-OctoCliContext -Installation prod-1` or `prod-2`.
+### `Invoke-IdentityOverlay`
+Applies a local-dev URI overlay file to the blueprint-managed identity clients (`octo-cli -c ApplyClientOverlay` per client, idempotent; default file `overlays/identity-local-dev.yaml` in octo-tools). Uses the active octo-cli context — log in with `Register-OctoCliContext -Installation local` first.
+- `-OverlayFile` (string), `-OverlayName` (string), `-OctoCli` (string), `-DryRun` (print the invocations), `-Json`
 - **Safety:** Mutating
 
 ### `Invoke-OctoCliReconfigureLogLevel`
-Reconfigure log levels for all services (Identity, AssetRepository, Bot, CommunicationController, AdminPanel) via octo-cli. All three parameters are **Mandatory** — calling without them fails.
+Reconfigure log levels for the services Identity, AssetRepository, Bot, CommunicationController and PlatformServices via octo-cli `ReconfigureLogLevel`. All three parameters are **Mandatory** — calling without them fails. The cmdlet currently passes the logger name `*` to octo-cli whatever `-loggerName` says.
 - `-loggerName` (string, **Mandatory**)
 - `-minLogLevel` (string, **Mandatory**)
 - `-maxLogLevel` (string, **Mandatory**)
 - **Safety:** Mutating
 - **Example:** `Invoke-OctoCliReconfigureLogLevel -loggerName "*" -minLogLevel Debug -maxLogLevel Fatal`
-
-### `Invoke-SetDebugConfiguration`
-Register the Admin Panel debug OAuth client (`octo-admin-panel-debug`) and its scopes via octo-cli. Run after logging in to local identity services (`Invoke-OctoCliLoginLocal`).
-- No parameters
-- **Safety:** Mutating
 
 ### `Register-AiBastion`
 Register an Anthropic subscription token on an OctoMesh tenant. Drives the Anthropic device-code OAuth flow on the terminal, then POSTs the access/refresh token pair to the AI Adapter's `POST /{tenantId}/v1/credentials/register`. Plaintext token material is held in memory only and zeroed in a `finally` block.
@@ -485,6 +514,18 @@ Forward the MongoDB port from a Kubernetes cluster for direct DB access.
 - No parameters
 - **Safety:** Mutating
 
+### `Get-RancherKubeConfig`
+Routine, read-only cluster access: fetches a kubeconfig through the Rancher API with your personal API token and merges it into `~/.kube/config`; the context has the permissions of the token's user.
+- `-Cluster` (string): cluster name; `-ContextName` (string); `-Json` (metadata only: cluster, context — never the kubeconfig or token)
+- Needs the Rancher address from your octo-tools config and the token from your private profile (`-RancherUrl` / `-RancherApiToken` override; avoid the token on the command line)
+- **Safety:** Mutating (local kubeconfig)
+
+### `Request-BreakGlassKubeConfig`
+Write access for incidents: triggers the audited break-glass playbook that issues a short-lived cluster-admin token (audit in the playbook runner, the secret store, the Kubernetes audit log and the operations chat). The token expires by itself.
+- `-Cluster` (string), `-Reason` (string), `-DurationHours` (1-4), `-Json` (metadata only)
+- Needs the playbook-runner and secret-store addresses from your octo-tools config
+- **Safety:** Mutating (remote, audited) — incidents only; never print the resulting kubeconfig or token
+
 ## Diagnostics & Comparison
 
 ### `Compare-CkVersions`
@@ -503,6 +544,16 @@ Compare local pipeline YAML files against their deployed versions in a remote Oc
 List all `octo-*` and `mm-*` repos where a given branch exists on the remote (origin).
 - `-targetBranch` (string, **Mandatory**): branch to search for
 - `-Fetch` (switch): fetch from origin before checking
+- **Safety:** Read-only
+
+### `Test-OctoEncryption`
+Smoke test after `Start-Octo`: the instance-key environment variables of the AI and communication services are set and equal, and the SECRET attribute key ring variables agree with the instance key. Reports set/equal only.
+- `-Json`
+- **Safety:** Read-only
+
+### `Get-CiWasteReport`
+Read-only report of duplicate CI work in Azure DevOps (runs per definition, same-commit duplicates, wasted agent minutes, queue wait). GET requests only, token from `az account get-access-token`, never printed.
+- `-Hours` (default 24), `-AsOf`, `-Json`
 - **Safety:** Read-only
 
 ## Versioning & Templates
