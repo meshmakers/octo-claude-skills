@@ -11,6 +11,11 @@ All notable changes to the octo-claude-skills plugin. Format loosely follows [Ke
 - **`octo-operator`** — `references/operator-internals.md` points to `AGENTS.md` of `octo-communication-controller-services` (its `CLAUDE.md` is now a shim) (AB#6353).
 - **Name inventory** — `inventory/names.json` refreshed against the private repositories (2026-11-27, AB#6353).
 - **`octo-devtools`, `octo-mcp`, `refinery-studio`** — no machine-local `C:\dev\...` paths any more: the kind runbooks are named as `kubernetes/README.md` and `kubernetes/QUICKSTART.md` in the `octo-tools` repository, the other paths relative to their repository (AB#9800); the path-conversion comment in `octo-devtools/scripts/run_pwsh.sh` uses placeholders (AB#6353). The six drift-baseline entries of AB#9800 are removed from `inventory/allowlist.json`.
+## [Unreleased]
+
+### Fixed
+
+- **`octo-app-builder`, `pipeline-expert`** — builder page findings of the guided test-2 session (AB#8493): the draft loop checks with `get_adapters` that the target adapter is deployed and `Online` before `validate_pipeline_definition` and otherwise asks the developer (the builder never changes adapters); a new tenant needs its deployment site deployed (`DeployDeploymentSite`) before its adapter (`DeployWorkload`), named as a developer action in the loop, the prerequisite checks and the deployment workflow; `import_runtime_model` takes only an uploaded file (`prepare_file_upload` plus an HTTP `PUT`), so a builder without an HTTP client hands the runtime model to the developer for `octo-cli -c ImportRt -f <file> -w`; every type attribute is required unless marked `isOptional: true`, and no validation tool reports a required attribute a pipeline leaves out; `attributeName` in entity updates is the camelCase name `get_type_schema` lists (`name: DueDate` → `dueDate`) — HTTP API patterns 1 and 3, the blueprint type example, the `CreateUpdateInfo@1` reference, the DataContext guide, the pipeline examples and the method-handler example now use it consistently; the HTTP route dry run carries a known-limitation line (AB#10015).
 
 ## [0.28.23] — 2026-11-27
 

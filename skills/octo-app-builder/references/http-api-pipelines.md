@@ -119,7 +119,7 @@ transformations:
         targetValueWriteMode: Append
         targetValueKind: Array
         attributeUpdates:
-          - attributeName: Name
+          - attributeName: name
             attributeValueType: String
             valuePath: $.body.name
       - type: ApplyChanges@2
@@ -202,13 +202,13 @@ transformations:
     targetValueWriteMode: Append
     targetValueKind: Array
     attributeUpdates:
-      - attributeName: Name                # CK attribute name as declared in the type
+      - attributeName: name                # the type's attribute name in camelCase (get_type_schema)
         attributeValueType: String
         valuePath: $.body.name
-      - attributeName: Secret
+      - attributeName: secret
         attributeValueType: String
         valuePath: $.body.secret
-      - attributeName: Redeemed
+      - attributeName: redeemed
         attributeValueType: Boolean
         value: false                       # constant value (no valuePath)
 
@@ -226,6 +226,10 @@ transformations:
       - path: $.ticketId
         inclusion: true
 ```
+
+The insert sets every required attribute of `Ticket` (`name`, `secret`, `redeemed`); only `redeemedAt` is
+`isOptional: true` in the type (`blueprint-authoring.md` §CK model source). An insert without a required attribute
+passes `validate_pipeline_definition`, so check it against the type.
 
 ## Pattern 2 — list entities, omitting sensitive fields (`GET /tickets`)
 
@@ -352,13 +356,13 @@ transformations:
             targetValueWriteMode: Append
             targetValueKind: Array
             attributeUpdates:
-              - attributeName: Redeemed
+              - attributeName: redeemed
                 attributeValueType: Boolean
                 value: true
-              - attributeName: RedeemedAt
+              - attributeName: redeemedAt
                 attributeValueType: DateTime
                 valuePath: $.now
-              - attributeName: Secret      # clear the stored value, don't just flag it
+              - attributeName: secret      # clear the stored value, don't just flag it
                 attributeValueType: String
                 value: ""
           - type: ApplyChanges@2

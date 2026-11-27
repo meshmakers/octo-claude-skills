@@ -53,6 +53,12 @@ octo-cli -c AuthStatus                      # valid token, correct environment
 octo-cli -c GetAdapters --json              # Mesh Adapter Online? note its rtId
 ```
 
+A new tenant starts with its deployment site and Mesh Adapter `Undeployed`. Deploy the
+site first (`DeployDeploymentSite -id <site rtId>`), then the adapter
+(`DeployWorkload -id <adapter rtId>`), until the adapter is `Online`; pipelines are
+validated and deployed against a running adapter only. Both are developer actions: a
+builder agent asks the developer instead of changing adapters or sites.
+
 On every communication-enabled tenant the service-managed System.Communication
 blueprint seeds fixed rtIds your seed will associate to:
 Pool `670000000000000000000001`, Mesh Adapter `670000000000000000000002`,
@@ -121,7 +127,8 @@ YAML. Three rules that are not obvious and break things silently:
 2. **`SetPrimitiveValue@1` fails the whole pipeline on a missing source path** —
    guard copies of optional attributes with `If@1` on a discriminator field.
 3. **Result sets are PascalCase** (`$.lookup.TotalCount`, `$.lookup.Items[0].Attributes.X`);
-   `attributeName` in `CreateUpdateInfo@1` is the CK attribute name as declared.
+   `attributeName` in `CreateUpdateInfo@1` is the type's attribute name in camelCase, as `get_type_schema` lists it
+   (`name: DueDate` → `dueDate`).
 
 Iterate with a **scratch dataflow**: temp rtIds and temp paths (e.g. `/myapp-test-*`)
 in a throwaway ImportRt file, `ImportRt -f ... -w` + `DeployDataFlow`, curl, fix,
