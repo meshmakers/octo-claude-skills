@@ -10,7 +10,7 @@ All notable changes to the octo-claude-skills plugin. Format loosely follows [Ke
 - **`octo-devtools`** — `references/workflows.md` sections 2a (inner loop) and 12 (release preparation) name the lane the same way on every step (`-branch branches/main`), with a note for a profile loaded inside the main checkout (AB#6353). `references/command-reference.md` documents the `Start-Octo` parameters `-httpActivatorWorkloadAddressTemplate` and `-TenantDatabasePrefix` (AB#6353). New: the read-only build doctor `Test-OctoBuildChain` (command reference, and the NU1101/NU1102 mapping in `SKILL.md` runs it before a full `Invoke-BuildAll`) (AB#6353).
 - **`octo-operator`** — `references/operator-internals.md` points to `AGENTS.md` of `octo-communication-controller-services` (its `CLAUDE.md` is now a shim) (AB#6353).
 - **Name inventory** — `inventory/names.json` refreshed against the private repositories (2026-11-27, AB#6353).
-- **`octo-devtools`, `octo-mcp`, `refinery-studio`** — no machine-local `C:\dev\...` paths any more: the kind runbooks are named as `kubernetes/README.md` and `kubernetes/QUICKSTART.md` in the `octo-tools` repository, the other paths relative to their repository (AB#9800). The six drift-baseline entries of AB#9800 are removed from `inventory/allowlist.json`.
+- **`octo-devtools`, `octo-mcp`, `refinery-studio`** — no machine-local `C:\dev\...` paths any more: the kind runbooks are named as `kubernetes/README.md` and `kubernetes/QUICKSTART.md` in the `octo-tools` repository, the other paths relative to their repository (AB#9800); the path-conversion comment in `octo-devtools/scripts/run_pwsh.sh` uses placeholders (AB#6353). The six drift-baseline entries of AB#9800 are removed from `inventory/allowlist.json`.
 
 ## [0.28.23] — 2026-11-27
 
