@@ -13,22 +13,18 @@ All services target **`net10.0`** (build output lands in `bin/DebugL/net10.0/`).
 
 ## Build Dependency Chain
 
-The `Invoke-BuildAll` script enforces this strict order. Each repo's NuGet packages are copied to `./nuget/` after building, making them available to downstream repos:
+`Invoke-BuildAll` (full chain) and `Invoke-BuildRange` (partial chain) build the repositories of a lane in one dependency order. Each repo's NuGet packages are copied to the lane's `nuget/` folder after building, making them available to downstream repos. **The order is defined only in `octo-tools/modules/OctoBuildOrder.psm1`** — the skill copies no list, because a copied list goes stale (it already missed `octo-communication-sdk` once). Read the current order of a lane instead of guessing:
 
-```
-1. mm-common                          → Meshmakers.Common.* packages
-2. octo-distributedEventHub           → Meshmakers.Octo.Common.DistributionEventHub(.MongoDB)
-3. octo-construction-kit-engine       → Meshmakers.Octo.ConstructionKit.*, Runtime.*, Models.System, Models.StreamData
-4. octo-sdk                           → Meshmakers.Octo.Sdk.*, Communication.Contracts
-5. octo-construction-kit-engine-mongodb → Meshmakers.Octo.Runtime.*.MongoDb, Runtime.Engine.CrateDb
-6. octo-common-services               → Meshmakers.Octo.Services.*
-7. octo-mesh-adapter                  → Meshmakers.Octo.MeshAdapter.*, Sdk.MeshAdapter
-8. octo-bot-services                  → Meshmakers.Octo.ConstructionKit.Models.System.Bot
-9. octo-communication-controller-services → Meshmakers.Octo.ConstructionKit.Models.System.Communication
-10. All remaining repos (services, tools, frontends) — alphabetical
+```powershell
+Get-OctoBuildOrder -branchRootPath (Join-Path $rootPath 'branches/main') | Format-Table Name, Group   # the whole lane, in build order
+Get-OctoPinnedBuildOrder                                                                               # only the pinned core chain
+Invoke-BuildRange -branch branches/main -from <first> -to <last> -WhatIf                               # what a range would build
 ```
 
-**Step 9 matters:** `octo-communication-controller-services` produces `System.Communication`, which `octo-ai-services` consumes. It has an explicit slot before the alphabetical fallback because `a < c` would otherwise build `octo-ai-services` first and break its restore. When selectively building anything in the AI services chain, build comm-controller first.
+The phases, in order (`Group` column): `common` (every `mm-*` repo), `ordered` (the pinned core chain — NuGet producers that the alphabetical fallback would build after their consumers), `additional-ordered` (additional repos that other additional repos consume), `additional` (every remaining `octo-*` repo, alphabetical), and in a feature environment only `app` (consumer apps of its manifest). The comments on each entry in `OctoBuildOrder.psm1` say why a repo has its slot. Two slots that matter in diagnosis:
+
+- **`octo-communication-sdk`** holds the adapter/pipeline framework and builds after `octo-sdk` but before `octo-mesh-adapter` and the other adapter consumers. A range that starts after it leaves the mesh adapter restoring a stale `999.0.0` package.
+- **`octo-communication-controller-services`** produces `System.Communication`, which `octo-ai-services` consumes. Without its pinned slot the alphabetical fallback would build `octo-ai-services` first (`a < c`) and break its restore. When selectively building anything in the AI services chain, build comm-controller first.
 
 ### Key Packages Per Repo
 

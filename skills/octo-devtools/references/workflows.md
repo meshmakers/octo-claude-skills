@@ -52,12 +52,14 @@ A human working interactively in a terminal can instead build + start in one ste
 
 ## 2a. Inner loop after a change in the build chain
 
+Written for the workspace-root profile (see *Which lane* above): every step names the lane with `-branch branches/main`. From a profile loaded inside the main checkout, `-branch main` works the same on every step that resolves `-branch` like `Invoke-BuildAll` (`Invoke-BuildRange`, `Invoke-OctoTestRun`: a value equal to the leaf folder of `$rootPath` means `$rootPath` itself); omit it for `Start-Octo`. `Invoke-OctoTestRun` always needs `-branch` or `-env`.
+
 ```
-1. Invoke-BuildRange -from octo-construction-kit-engine -to octo-common-services -include octo-asset-repo-services -WhatIf   # the plan
-2. Invoke-BuildRange -from octo-construction-kit-engine -to octo-common-services -include octo-asset-repo-services -stopServices
-3. Start-Octo -nonInteractive $true -configuration DebugL                                                                    # verify
-4. Invoke-BuildRange -from octo-construction-kit-engine -to octo-common-services -include octo-asset-repo-services -verifyTests # tests compile
-5. Invoke-OctoTestRun -branch branches/main -repo octo-construction-kit-engine                                              # run the tests
+1. Invoke-BuildRange -branch branches/main -from octo-construction-kit-engine -to octo-common-services -include octo-asset-repo-services -WhatIf      # the plan
+2. Invoke-BuildRange -branch branches/main -from octo-construction-kit-engine -to octo-common-services -include octo-asset-repo-services -stopServices
+3. Start-Octo -branch branches/main -nonInteractive $true -configuration DebugL                                                                       # verify
+4. Invoke-BuildRange -branch branches/main -from octo-construction-kit-engine -to octo-common-services -include octo-asset-repo-services -verifyTests # tests compile
+5. Invoke-OctoTestRun -branch branches/main -repo octo-construction-kit-engine                                                                       # run the tests
 ```
 
 Restores fail with NU1101/NU1102 on a `999.0.0` package: the chain is out of sync — `Invoke-BuildAll -configuration DebugL -excludeFrontend $true`. `-purgeStaleCache` removes cache folders that hold another build of a `999.0.0` package.
@@ -236,11 +238,13 @@ Invoke-BuildAll -configuration DebugL -excludeFrontend $true
 
 ## 12. Release Preparation
 
+Same layout as section 2a: `-branch branches/main` on every step.
+
 ```
-1. Get-AllGitRepStatus                             # Ensure clean state
-2. Sync-AllGitRepos                                # Pull latest
-3. Invoke-BuildAll -configuration DebugL           # Full build
-4. Invoke-OctoTestRun -branch branches/main -repo <repo>   # per repository
-5. Update-MeshmakerVersion                         # Bump version numbers
-6. Sync-YamlTemplates                              # Sync CI/CD templates
+1. Get-AllGitRepStatus -branch branches/main                       # Ensure clean state
+2. Sync-AllGitRepos -branch branches/main                          # Pull latest
+3. Invoke-BuildAll -branch branches/main -configuration DebugL     # Full build
+4. Invoke-OctoTestRun -branch branches/main -repo <repo>           # per repository
+5. Update-MeshmakerVersion -branch branches/main                   # Bump version numbers
+6. Sync-YamlTemplates -branch branches/main                        # Sync CI/CD templates
 ```

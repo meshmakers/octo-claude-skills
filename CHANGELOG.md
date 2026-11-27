@@ -2,6 +2,13 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Changed
+
+- **`octo-agent`** — new sections in `references/ck-model-internals.md` (AB#6357): "CK Language 2 and range retention" (`ckLanguage: 2`, range retention as compiler default with `OCTO-CK300`, `minEngineVersion` and message 126, catalog roots `ck-models/v2`/`v3`, version-less `RtCkId` and analyzer OM1005, the shared-environment gate; each row points to its octo-construction-kit-engine `docs/` file, no version numbers copied) and "Import guard and re-validation" (embedded-import guard decisions, missing-dependency retry, `ResolveFailed` re-validation and explicit `ImportCk` downgrade with their INFO/WARN/DEBUG lines, checked against the octo-construction-kit-engine-mongodb source; pointer to its `docs/ck-model-import.md`). Example versions are marked as examples and the skill names where the current ones are read. `references/build-system.md` no longer copies the build order (it missed `octo-communication-sdk` and `octo-plug-dilos`): it points to `OctoBuildOrder.psm1` with `Get-OctoBuildOrder`/`Get-OctoPinnedBuildOrder` and keeps only the reasons for the two slots that matter in diagnosis.
+- **`octo-devtools`** — `references/workflows.md` sections 2a (inner loop) and 12 (release preparation) name the lane the same way on every step (`-branch branches/main`), with a note for a profile loaded inside the main checkout (AB#6353).
+
 ## [0.28.23] — 2026-11-27
 
 ### Changed
