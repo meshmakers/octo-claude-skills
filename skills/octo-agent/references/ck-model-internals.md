@@ -75,7 +75,7 @@ This table maps each model to the binary/repo that **registers and loads** it at
 | `octo-bot-services` | `System.Bot` (`AddCkModelSystemBotV3`) |
 | `octo-communication-controller-services` | `System.Communication` (`AddCkModelSystemCommunicationV3`) |
 | `octo-report-services` | `System.Reporting` (`AddCkModelSystemReportingV2`) |
-| `octo-frontend-admin-panel` | `System.UI` (`AddCkModelSystemUIV2`) |
+| `octo-platform-services` | `System.UI` (`AddCkModelSystemUIV2`; formerly the retired admin panel) |
 | `octo-construction-kit` | `Basic`, `Industry.Basic`, `Industry.Energy`, `Industry.Fluid`, `Industry.Maintenance`, `Environment`, `EnergyCommunity`, `OctoSdkDemo` |
 
 (`octo-asset-repo-services` registers **no** CK model directly — it consumes them and sets the StreamData descriptor.) The `System` and `System.StreamData` CK YAML/source-gen both live as separate projects in `octo-construction-kit-engine` (`Models.System` / `Models.StreamData`), but `System.StreamData` is only wired into the runtime by the engine-mongodb layer.

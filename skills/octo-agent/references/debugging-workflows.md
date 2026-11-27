@@ -68,10 +68,10 @@ Invoke-Build -repositoryPath ./octo-asset-repo-services -configuration DebugL
 
 **Bug in a library repo (needs downstream rebuild):**
 ```powershell
-Invoke-BuildAll -configuration DebugL -excludeFrontend $true
+Invoke-BuildRange -from <library repo> -to <last repo before the service> -include <service repo> -WhatIf   # plan, then run without -WhatIf
 ```
 
-`Invoke-BuildAll` is required here, not merely convenient: `Invoke-Build` does not propagate NuGet packages, so rebuilding the library and the service directly leaves everything between them — `octo-sdk`, `octo-construction-kit-engine-mongodb` — on the previous version, and the service under test then reproduces the *old* behaviour. That looks exactly like "the fix did not work".
+Use `Invoke-BuildAll -configuration DebugL -excludeFrontend $true` instead when restores fail with NU1101/NU1102 on a `999.0.0` package. A range or full build is required here, not merely convenient: `Invoke-Build` does not propagate NuGet packages, so rebuilding the library and the service directly leaves everything between them — `octo-sdk`, `octo-construction-kit-engine-mongodb` — on the previous version, and the service under test then reproduces the *old* behaviour. That looks exactly like "the fix did not work".
 
 ### Step 3: Start Minimal Services
 
