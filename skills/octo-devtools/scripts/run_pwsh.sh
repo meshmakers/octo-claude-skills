@@ -44,7 +44,7 @@ if [ ! -f "$PROFILE_UNIX" ]; then
 fi
 
 # Convert MSYS2/Git Bash path to Windows path for PowerShell.
-# /c/dev/meshmakers/... → C:\dev\meshmakers\... (pwsh cannot resolve Unix-style paths)
+# /<drive>/<path>/... → <DRIVE>:\<path>\... (pwsh cannot resolve Unix-style paths)
 if command -v cygpath >/dev/null 2>&1; then
     PROFILE="$(cygpath -w "$PROFILE_UNIX")"
 else

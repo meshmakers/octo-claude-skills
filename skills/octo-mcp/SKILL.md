@@ -7,7 +7,7 @@ description: "Develop and extend the OctoMesh MCP server (octo-mcp-service) — 
 
 ## Purpose
 
-Guide for developing and extending **`octo-mcp-service`** (`C:\dev\meshmakers\octo-mcp-service`), the OctoMesh **Model Context Protocol** server. It exposes **~177 tools** (181 distinct `[McpServerTool]` methods today) that mirror the full `octo-cli` command surface plus generic CK-type CRUD and aggregation/stream-data queries. AI assistants connect over HTTP and administer tenants — identity, blueprints, communication, time-series, reporting, file transfer — without invoking the CLI or writing GraphQL.
+Guide for developing and extending **`octo-mcp-service`** (repository `octo-mcp-service`), the OctoMesh **Model Context Protocol** server. It exposes **~177 tools** (181 distinct `[McpServerTool]` methods today) that mirror the full `octo-cli` command surface plus generic CK-type CRUD and aggregation/stream-data queries. AI assistants connect over HTTP and administer tenants — identity, blueprints, communication, time-series, reporting, file transfer — without invoking the CLI or writing GraphQL.
 
 This skill is for **working on the server itself** (adding/changing tools), not for *using* it as a client. The single most valuable workflow is the **Adding a New Tool checklist** below.
 
@@ -154,7 +154,7 @@ public static async Task<MyResponse> DeleteThing(
 
 ## Adding a New Tool — Step-by-Step Checklist
 
-The core workflow. Files are under `C:\dev\meshmakers\octo-mcp-service`.
+The core workflow. Paths are relative to the `octo-mcp-service` repository root.
 
 1. **Find the source command.** For a Family-1 tool, locate the equivalent in `octo-cli/src/ManagementTool/Commands/Implementations/**`. Note the SDK method signature, required args, and whether it is destructive.
 2. **Pick the family / context.** Family 1 → choose the `*ClientContext` matching the SDK client the CLI uses. Family 2/3 → use `ITenantRepository` / `AggregationMapper` / `StreamDataContext`.

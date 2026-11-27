@@ -1,6 +1,6 @@
 # octo-mcp-service — Architecture Reference
 
-Exhaustive detail behind the SKILL.md overview. Verified against `C:\dev\meshmakers\octo-mcp-service` source. The repo's own `CLAUDE.md` remains the authoritative source — re-read it before any substantial change.
+Exhaustive detail behind the SKILL.md overview. Verified against the `octo-mcp-service` source. The repo's own `CLAUDE.md` remains the authoritative source — re-read it before any substantial change.
 
 ## Why Three Tool Families Coexist
 

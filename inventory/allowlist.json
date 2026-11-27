@@ -81,60 +81,6 @@
    "name": "Invoke-OctoCliLoginStaging",
    "reason": "baseline 2026-11-25: not in inventory",
    "workItem": 9797
-  },
-  {
-   "files": [
-    "skills/octo-devtools/SKILL.md"
-   ],
-   "kind": "machine-path",
-   "name": "C:\\dev",
-   "reason": "baseline 2026-11-25: machine-local path; use a placeholder",
-   "workItem": 9800
-  },
-  {
-   "files": [
-    "skills/octo-devtools/references/command-reference.md"
-   ],
-   "kind": "machine-path",
-   "name": "C:\\dev",
-   "reason": "baseline 2026-11-25: machine-local path; use a placeholder",
-   "workItem": 9800
-  },
-  {
-   "files": [
-    "skills/octo-devtools/references/workflows.md"
-   ],
-   "kind": "machine-path",
-   "name": "C:\\dev",
-   "reason": "baseline 2026-11-25: machine-local path; use a placeholder",
-   "workItem": 9800
-  },
-  {
-   "files": [
-    "skills/octo-mcp/SKILL.md"
-   ],
-   "kind": "machine-path",
-   "name": "C:\\dev",
-   "reason": "baseline 2026-11-25: machine-local path; use a placeholder",
-   "workItem": 9800
-  },
-  {
-   "files": [
-    "skills/octo-mcp/references/architecture.md"
-   ],
-   "kind": "machine-path",
-   "name": "C:\\dev",
-   "reason": "baseline 2026-11-25: machine-local path; use a placeholder",
-   "workItem": 9800
-  },
-  {
-   "files": [
-    "skills/refinery-studio/SKILL.md"
-   ],
-   "kind": "machine-path",
-   "name": "C:\\dev",
-   "reason": "baseline 2026-11-25: machine-local path; use a placeholder",
-   "workItem": 9800
   }
  ]
 }

@@ -84,7 +84,7 @@ For full backup/restore procedures, read `references/database-operations.md`.
 
 ## Selective Build Strategy
 
-Build only what's needed to minimize iteration time. The build order (`mm-*`, then a pinned core chain from `octo-distributedEventHub` through `octo-construction-kit-engine`, `octo-sdk`, `octo-construction-kit-engine-mongodb` and `octo-common-services` to the services, then the remaining `octo-*` repos alphabetically) is defined only in octo-tools `modules/OctoBuildOrder.psm1`; `Get-OctoBuildOrder -branchRootPath <lane>` prints the current one.
+Build only what's needed to minimize iteration time. The build order (`mm-*`, then a pinned core chain of NuGet producers, then the `additional-ordered` repos (e.g. `octo-plug-dilos`), then the remaining `octo-*` repos alphabetically) is defined only in octo-tools `modules/OctoBuildOrder.psm1`; `Get-OctoBuildOrder -branchRootPath <lane>` prints the current one, `Get-OctoPinnedBuildOrder` the pinned chain.
 
 **Key principle:** A change in a library repo needs everything downstream of it rebuilt too, with the packages propagated through `<lane>/nuget`. Two cmdlets do that:
 
@@ -105,7 +105,9 @@ CK (Construction Kit) models define the entity type system. Each tenant's `CkMod
 | 1 | Available | Healthy |
 | 2 | ResolveFailed | Dependency missing — investigate |
 
-**Common cause of ResolveFailed:** A base model (e.g., System) was version-bumped without recompiling all dependent models. The old version ID gets deleted, leaving orphaned references. A *multi-version* conflict (two incompatible versions of the same model resolved transitively) surfaces as fatal **error code 66** at compile time.
+**Common cause of ResolveFailed:** A base model (e.g., System) was version-bumped without recompiling its classic (exact-pinned) dependents. The old version ID gets deleted, leaving orphaned references. A *multi-version* conflict (two incompatible versions of the same model resolved transitively) surfaces as fatal **error code 66** at compile time. A `ResolveFailed` model is re-validated after every import and recovers by itself once its dependencies resolve again; a service older than the tenant's model never downgrades it (log "downgrade prevented" / "this service is too old for the tenant").
+
+**CK Language 2 and range retention** (`ckLanguage: 2`, `ck-models/v3/`, `minEngineVersion` and message 126, version-less `RtCkId`, and the rule that no v3-only model reaches a shared environment before every service there runs the CK v2 engine) and the **import guard / re-validation log lines** are explained in `references/ck-model-internals.md`, with pointers to the engine repositories' `docs/`. Versions named in this skill are examples; the current ones are in the model's `ckModel.yaml`, octo-construction-kit-engine `docs/system-ck-models.md`, or `LibraryStatus` for a tenant.
 
 **CK dependency diagnostics:**
 - `octo-cli -c LibraryStatus` (`-na`/`--needs-action` to filter) — lists installed CK models with catalog availability and which need action. Read-only.
@@ -172,6 +174,6 @@ For test framework details and fixture patterns, read `references/debugging-work
 Consult these for detailed procedures:
 
 - **`references/build-system.md`** — DebugL configuration, NuGet dependency chain, selective build strategies, service startup options
-- **`references/ck-model-internals.md`** — CK model YAML format, versioning, dependency resolution, source generation, migrations, MongoDB collections
+- **`references/ck-model-internals.md`** — CK model YAML format, versioning, CK Language 2 and range retention, import guard and re-validation log lines, dependency resolution, source generation, migrations, MongoDB collections
 - **`references/database-operations.md`** — Docker volume backup/restore, MongoDB diagnostic queries, multi-tenant data, service logs, health endpoints
 - **`references/debugging-workflows.md`** — Safe investigation protocol, bug isolation steps, common bug categories (incl. denial in a child tenant), test framework reference
