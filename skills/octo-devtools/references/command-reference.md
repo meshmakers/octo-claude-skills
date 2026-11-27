@@ -79,7 +79,7 @@ Build the Zenon plug-in project.
 ## Service Management
 
 ### `Start-Octo`
-Start OctoMesh services. Each service is controlled by its own **Boolean** parameter (there are NO `-noX` switches). Services run as background jobs. The .NET services need to be built first; the AI/MCP services only start if their repo directories exist locally.
+Start OctoMesh services. Each service is controlled by its own **Boolean** parameter (there are NO `-noX` switches). Services run as background jobs. The .NET services need to be built first; reporting, MCP and AI start only when their `bin/<configuration>` output exists in the lane. The parameter list and defaults below follow octo-tools `modules/Start-Octo.psm1` — check its param block when a flag is refused.
 
 **Service Boolean parameters** (default `$true` unless noted) — pass `$false` to skip a service:
 - `-identityService` (Boolean, default `$true`): Identity Service (ports 5002/5003)
@@ -87,21 +87,23 @@ Start OctoMesh services. Each service is controlled by its own **Boolean** param
 - `-meshAdapter` (Boolean, default `$true`): Mesh Adapter (ports 5020/5021)
 - `-communicationControllerService` (Boolean, default `$true`): Communication Controller (ports 5014/5015)
 - `-botService` (Boolean, default `$true`): Bot Service (ports 5008/5009)
-- `-adminPanel` (Boolean, default `$true`): Admin Panel (ports 5004/5005)
+- `-platformServices` (Boolean, default `$true`): Platform Services — System.UI and the `_configuration` document (ports 5024/5025); the retired admin panel has no flag any more
 - `-dataRefineryStudio` (Boolean, default `$true`): Data Refinery Studio dev server
 - `-frontendLibraries` (Boolean, default `$true`): Frontend Libraries dev server
-- `-mcpService` (Boolean, default `$true`): MCP Service (ports 5016/5017), only if `octo-mcp-service` exists
-- `-aiService` (Boolean, default `$true`): AI Service (ports 5018/5019), only if `octo-ai-services` exists
+- `-mcpService` (Boolean, default `$true`): MCP Service (ports 5016/5017), only if `octo-mcp-service` is built
+- `-aiService` (Boolean, default `$true`): AI Service (ports 5018/5019), only if `octo-ai-services` is built
 - `-aiWorker` (Boolean, default `$false`): standalone AI Worker (ports 5022/5023); off by default because the AI service's Subprocess mode does not need it
 - `-reportingService` (Boolean, **default `$false`**): Reporting Service (ports 5006/5007) — opt in explicitly
 - `-simulationAdapter` (Boolean, default `$false`): Simulation Adapter
+- `-s3Store` (Boolean, default `$true`): when the kind cluster's local S3 store is installed and answers, the Bot Service uses it as artifact store; otherwise (or with `$false`) the file system store
+- `-httpActivator` (Boolean, default `$false`): the Communication Controller's HTTP activator that wakes hibernated on-demand workloads (only useful with a kind cluster whose workload ingresses route to it)
 
 **Scope shortcuts** (Boolean, default `$false`):
 - `-identityOnly` (Boolean): start ONLY the Identity Service (forces all other services off)
 - `-identityAssetRepoOnly` (Boolean): start ONLY Identity + Asset Repo
 
 **Adapter targeting** (string):
-- `-meshAdapterTenantId` (default `meshtest`), `-meshAdapterId` (default `66004fda527ac79a03ecedd7`)
+- `-meshAdapterTenantId` (default `meshtest`), `-meshAdapterId` (default `670000000000000000000002`)
 - `-simulationAdapterTenantId` (default `meshtest`), `-simulationAdapterId` (default `65d5c447b420da3fb12381bc`)
 
 **Run control:**
