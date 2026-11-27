@@ -4,7 +4,7 @@ Multi-step workflows for typical development scenarios.
 
 > **Agent note:** Whenever Claude or a CI job starts services, ALWAYS use `Start-Octo -nonInteractive $true` and stop them with `Stop-Octo` from a separate invocation. Never use `Invoke-BuildAndStartOcto` from an agent session — it chains into the interactive `Start-Octo` and blocks indefinitely. The interactive `Start-Octo` (no `-nonInteractive`) is only for a human running it directly in a terminal.
 
-> **Which lane:** `-branch` is a lane folder relative to `$rootPath`. With the profile loaded from the `octo-tools` checkout at the workspace root (`$rootPath` = the workspace root - the setup feature environments need), pass `-branch branches/main` to build main; without `-branch` the cmdlets build `$rootPath` itself. With a profile loaded from inside the main checkout (`$rootPath` = `branches/main`) omit `-branch` and use `-path $rootPath` for `Remove-BinAndObjFolders` - `branches/main` would point at a nested folder there. The same applies to `Sync-AllGitRepos -branch` and `Invoke-BuildRange -branch`. The `Invoke-BuildAll` / `Sync-AllGitRepos` examples below omit it.
+> **Which lane:** `-branch` is a lane folder relative to `$rootPath`. With the profile loaded from the `octo-tools` checkout at the workspace root (`$rootPath` = the workspace root - the setup feature environments need), pass `-branch branches/main` to build main; without `-branch` the cmdlets build `$rootPath` itself. With a profile loaded from inside the main checkout (`$rootPath` = `branches/main`) omit `-branch` and use `-path $rootPath` for `Remove-BinAndObjFolders` - `branches/main` would point at a nested folder there. The same applies to `Sync-AllGitRepos -branch` and `Invoke-BuildRange -branch`. Sections 2a and 12 name the lane on every step (workspace-root profile); the other examples below omit it.
 
 ## 1. First-Time Setup
 
@@ -245,6 +245,6 @@ Same layout as section 2a: `-branch branches/main` on every step. From a profile
 2. Sync-AllGitRepos -branch branches/main                          # Pull latest
 3. Invoke-BuildAll -branch branches/main -configuration DebugL     # Full build
 4. Invoke-OctoTestRun -branch branches/main -repo <repo>           # per repository
-5. Update-MeshmakerVersion -branch branches/main                   # Bump version numbers
-6. Sync-YamlTemplates -branch branches/main                        # Sync CI/CD templates
+5. Update-MeshmakerVersion -branch branches/main -Version <x.y.z>  # Bump version numbers
+6. Sync-YamlTemplates -branch branches/main -sourceRepo <repo>     # Sync CI/CD templates from <repo>/devops-build
 ```

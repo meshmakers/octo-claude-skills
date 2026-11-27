@@ -84,7 +84,7 @@ For full backup/restore procedures, read `references/database-operations.md`.
 
 ## Selective Build Strategy
 
-Build only what's needed to minimize iteration time. The build order (`mm-*`, then a pinned core chain of NuGet producers, then the remaining `octo-*` repos alphabetically) is defined only in octo-tools `modules/OctoBuildOrder.psm1`; `Get-OctoBuildOrder -branchRootPath <lane>` prints the current one, `Get-OctoPinnedBuildOrder` the pinned chain.
+Build only what's needed to minimize iteration time. The build order (`mm-*`, then a pinned core chain of NuGet producers, then the `additional-ordered` repos (e.g. `octo-plug-dilos`), then the remaining `octo-*` repos alphabetically) is defined only in octo-tools `modules/OctoBuildOrder.psm1`; `Get-OctoBuildOrder -branchRootPath <lane>` prints the current one, `Get-OctoPinnedBuildOrder` the pinned chain.
 
 **Key principle:** A change in a library repo needs everything downstream of it rebuilt too, with the packages propagated through `<lane>/nuget`. Two cmdlets do that:
 

@@ -96,7 +96,7 @@ octo-construction-kit-engine-mongodb decides what happens when a service imports
 
 A skip is logged once per process (repeats are DEBUG); the suffix ` (installed concurrently by another service, detected under the import lock)` means a parallel service start won the race. A "downgrade prevented" line is normal when services of different builds share a tenant; "too old for the tenant" means that service must be upgraded. Its own exact-pinned service model then goes `ResolveFailed` until it is.
 
-**Missing dependencies** (WARN, the import is retried when the dependency arrives): `Skipping CK model '{CkModelId}' import for tenant '{TenantId}' due to missing dependencies: {Message}. This import will be retried when the dependent CK model becomes available.` — usual during a parallel stack start; a problem only when it does not clear.
+**Missing dependencies** (WARN, the import is retried when the dependency arrives): `Skipping CK model '{CkModelId}' import for tenant '{TenantId}' due to missing dependencies: {Message}. This import will be retried when the dependent CK model becomes available.` For the System model the line reads `Skipping System CK model update for tenant '{TenantId}' due to missing dependencies: {Message}. This update will be retried when the dependent CK model becomes available.` Both are usual during a parallel stack start; a problem only when it does not clear.
 
 **Re-validation after every import** (`DatabaseCkModelRepository`): `Available` and `ResolveFailed` models are re-resolved after each import, so a `ResolveFailed` model heals once its dependencies resolve again:
 
