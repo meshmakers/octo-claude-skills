@@ -11,8 +11,8 @@ PowerShell, JavaScript or any other language), no shell commands, no programs �
 once". It calls only the tools of that work: knowledge pages, CK type and schema reads, the validation tools, and after
 the developer's confirmation the import of the model, the creation and deployment of its pipelines and their dry run
 (with its debug points). It never calls
-tools outside that work: users, roles, groups, clients, identity providers, tenants, secrets, creating, changing or
-deleting adapters, deleting files or data. Reading the adapters (`get_adapters`) and deploying the confirmed pipelines
+tools outside that work: users, roles, groups, clients, identity providers, tenants, secrets, creating, changing,
+deploying or deleting adapters or deployment sites, deleting files or data. Reading the adapters (`get_adapters`) and deploying the confirmed pipelines
 to one are part of the work.
 
 When someone asks for code, answer with three parts and no code block:
@@ -40,14 +40,25 @@ the developer confirms.
    pipeline basics and the node reference pages. Read only: `get_type_schema` and `search_types` for types of
    dependencies, `get_pipeline_schema` and `get_adapters` for the adapter that will run the pipelines.
 2. **Draft.** The CK model source as the `ConstructionKit/` folder (`ckModel.yaml`, `attributes/`, `types/`, …) and
-   every pipeline as its own YAML definition. Nothing is written to the tenant.
+   every pipeline as its own YAML definition. Nothing is written to the tenant. Every attribute of a type is
+   **required unless the type marks it `isOptional: true`**: a pipeline that inserts the type sets every required
+   attribute (`attributeName` in camelCase, as `get_type_schema` lists it), or the type marks the attribute optional.
+   No validation tool catches a required attribute a pipeline leaves out, so check every insert against its type.
 3. **Validate, in this order:**
    1. `validate_ck_model` with the `ConstructionKit/` files inline (`files`: name/content pairs relative to
       `ConstructionKit/`). It compiles the source and checks it against the tenant's installed models; nothing is
       imported.
-   2. `validate_pipeline_definition` for every pipeline, against the adapter that will run it.
+   2. `validate_pipeline_definition` for every pipeline, against the adapter that will run it. It reads the node
+      schema from that adapter, so first check with `get_adapters` that the adapter is deployed and its
+      `communicationState` is `Online`. If it is not (a new tenant starts with its adapter `Undeployed`), stop and ask
+      the developer to deploy it: the mandate forbids you to change adapters. On a new tenant the developer deploys the
+      deployment site first (`get_deployment_sites` shows it `Undeployed`; octo-cli `DeployDeploymentSite -id <site rtId>`),
+      then the adapter (`DeployWorkload -id <adapter rtId>`), until `get_adapters` shows it `Online`. A missing adapter
+      is a precondition, not a draft error, and counts as no fix iteration.
    3. `dry_run_pipeline` with a sample input that matches the trigger (for example the request body of an HTTP route).
-      It runs a **deployed** pipeline, so it is the first step after the confirmed deployment (step 7).
+      It runs a **deployed** pipeline, so it is the first step after the confirmed deployment (step 7). Known
+      limitation: a dry run of a `FromHttpRequest@2` pipeline currently fails with `PIPELINE_EXECUTION_START_FAILED`
+      (AB#10015); report that result instead of retrying.
 4. **Fix from the error text.** Each finding names where it is (file relative to `ConstructionKit/`, element path, or
    the pipeline node path such as `/transformations/2`) and what is wrong. Change the draft exactly there, look the type
    or node up on its page instead of guessing, and validate again from the first failing step. One round of fixes plus
@@ -75,7 +86,11 @@ the developer confirms.
       the bearer token of the developer's own MCP connection) and a `Content-Type`. The slot takes one `PUT` and
       expires after about 30 minutes, the key after a few minutes and only once; never put the id or the key into a
       URL, a log or an answer. Then call `import_ck_model` with the `transferId` instead of `files`;
-   2. create the data flow and pipeline entities and deploy each pipeline (`deploy_pipeline`);
+   2. create the data flow and pipeline entities and deploy each pipeline (`deploy_pipeline`). `import_runtime_model`
+      takes **only an uploaded file**: the runtime model YAML (the DataFlow, and each Pipeline with its `ParentChild`
+      and `Executes` associations) through `prepare_file_upload` and an HTTP `PUT`, as for a large CK model above.
+      Without an HTTP client, give the developer that file and ask them to import it with their own login
+      (`octo-cli -c ImportRt -f <file> -w`), then deploy;
    3. run `dry_run_pipeline` with the sample input. It returns the execution id and the honoured load nodes; read what
       the pipeline would have written with `get_pipeline_debug_points` once the execution has finished. A dry run
       suppresses only the writes of honoured load nodes — among the nodes of an app `ApplyChanges@1`/`@2`,

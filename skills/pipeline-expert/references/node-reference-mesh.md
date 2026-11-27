@@ -507,7 +507,7 @@ The full contract (every property with default and errors, the result shape, the
 
 Create `EntityUpdateInfo` objects for database operations (Insert/Update/Delete).
 
-> **WARNING: Attribute Name Casing** — `attributeName` must match the CK model's exact casing (typically camelCase: `name`, `machineState`, `operatingHours`). Do NOT assume PascalCase. Look up the correct names with the MCP tool `get_type_schema`<!-- developer-machine --> (or `ck_explorer.py preflight <type>`)<!-- /developer-machine -->.
+> **WARNING: Attribute Name Casing** — `attributeName` is the attribute name in camelCase as `get_type_schema` lists it (`name`, `machineState`, `operatingHours`; a type's `name: DueDate` is `dueDate`). Do NOT assume PascalCase. An Insert sets every attribute the type does not mark `isOptional: true`; no validation tool reports a missing one. Look up the correct names with the MCP tool `get_type_schema`<!-- developer-machine --> (or `ck_explorer.py preflight <type>`)<!-- /developer-machine -->.
 
 > **Intended workflow:** Use `GetOrCreateRtEntitiesByType@1` or `GetRtEntitiesByWellKnownName@1` upstream to resolve/generate RtIds (via `rtIdTargetPath`), then pass the ID here via `rtIdPath`. This makes the RtId available for `CreateAssociationUpdate` path references downstream. `generateRtId: true` only fills an empty `rtIdPath` value inside the update item, never the path itself: a later node may read `<targetPath>.RtId`, never its `rtIdPath` (the `generateRtId` rule of the pipeline-expert skill).
 
@@ -544,13 +544,13 @@ Each `attributeUpdate`:
   ckTypeId: Industry.Manufacturing/ProductionOrder
   rtWellKnownNamePath: $.key.OrderNumber
   attributeUpdates:
-    - attributeName: OrderNumber
+    - attributeName: orderNumber
       attributeValueType: String
       valuePath: $.key.OrderNumber
-    - attributeName: Status
+    - attributeName: status
       attributeValueType: Enum
       value: 1
-    - attributeName: PlannedQuantity
+    - attributeName: plannedQuantity
       attributeValueType: Double
       valuePath: $.key.Quantity
 ```
@@ -565,14 +565,14 @@ Each `attributeUpdate`:
   ckTypeId: Loxone/Control
   rtIdPath: $.controlRtId
   recordArrayItemUpdates:
-    - attributeName: States            # RecordArray attribute of the entity
-      matchAttributeName: ExternalId   # record member that identifies the record (String/Integer/Integer64/Enum; not writable here)
+    - attributeName: states            # RecordArray attribute of the entity
+      matchAttributeName: externalId   # record member that identifies the record (String/Integer/Integer64/Enum; not writable here)
       updatesPath: $.states            # optional: one item update per element; match/value paths are relative to the element
       matchValuePath: $.pollUuid       # or matchValue: <static>
       attributeUpdates:                # scalar members of the matched record
-        - attributeName: CurrentValue
+        - attributeName: currentValue
           valuePath: $.value           # or value: <static>; =now() = UTC now as ISO-8601 text
-        - attributeName: LastUpdate
+        - attributeName: lastUpdate
           value: =now()
 - type: ApplyChanges@2
   entityUpdatesPath: $._updates

@@ -293,10 +293,10 @@ The `attributeUpdates` array in CreateUpdateInfo defines which entity attributes
 
 ```yaml
 attributeUpdates:
-  - attributeName: OrderNumber        # CK attribute name
+  - attributeName: orderNumber        # attribute name in camelCase (get_type_schema)
     attributeValueType: String        # Value type
     valuePath: $.key.OrderNumber      # Dynamic value from context
-  - attributeName: Status
+  - attributeName: status
     attributeValueType: Enum
     value: 1                          # Static value
 ```

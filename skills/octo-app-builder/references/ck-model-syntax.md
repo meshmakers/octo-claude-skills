@@ -5,6 +5,10 @@ CK model, how a type uses them, and what the multiplicities do at runtime. The m
 (`ckModel.yaml`, `attributes/`, `types/`) is in `blueprint-authoring.md` §CK model source. Validate every draft
 with `validate_ck_model` before anything is imported (`draft-and-validate.md`). Every example here passes it.
 
+Every attribute a type lists is **required unless it is marked `isOptional: true`** on the type. Pipelines and seeds
+that insert the type set every required attribute; mark an attribute optional when an insert may leave it out. No
+validation tool reports a required attribute a pipeline does not set.
+
 ## Enums: declare one and use it as an attribute type
 
 An enum lives in its own file under `enums/` (any file of the folder may hold the key `enums:`):

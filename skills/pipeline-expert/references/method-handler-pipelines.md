@@ -52,7 +52,7 @@ types:
         execution: { timeoutSeconds: 30, handler: pipeline }
 ```
 
-`attributeName` in `CreateUpdateInfo@1` must match the attribute id of the model exactly (here `SlotKey`). `CONCURRENT_CHANGE` is a declared method code, not a platform constant: the method must list it, or the controller answers `METHOD_HANDLER_FAILED` (`invalid-result`).
+`attributeName` in `CreateUpdateInfo@1` is the attribute name in camelCase as `get_type_schema` lists it (here `slotKey` for `name: SlotKey`). `CONCURRENT_CHANGE` is a declared method code, not a platform constant: the method must list it, or the controller answers `METHOD_HANDLER_FAILED` (`invalid-result`).
 
 **2. Handler: book = insert.** Deploy the pipeline with `rtWellKnownName` = `Sample.Booking/SlotBooking.Book-1`.
 
@@ -70,8 +70,8 @@ transformations:
     updateKind: INSERT
     ckTypeId: Sample.Booking/SlotBooking
     attributeUpdates:
-      - { attributeName: SlotKey, attributeValueType: String, valuePath: $.slotKey }
-      - { attributeName: BookedBy, attributeValueType: String, valuePath: $.parameters.bookedBy }
+      - { attributeName: slotKey, attributeValueType: String, valuePath: $.slotKey }
+      - { attributeName: bookedBy, attributeValueType: String, valuePath: $.parameters.bookedBy }
   - type: ApplyChanges@2
     entityUpdatesPath: $._inserts
     onDuplicateKey: Report
