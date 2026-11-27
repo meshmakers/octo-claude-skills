@@ -58,6 +58,9 @@
    "dryRun",
    "feed"
   ],
+  "Clear-OctoRestoreNoOpCache": [
+   "path"
+  ],
   "Clone-Repo": [
    "branch",
    "repositoryName"
@@ -275,6 +278,11 @@
    "Sentence",
    "Width"
   ],
+  "Format-OctoChainRangeCommand": [
+   "laneArgument",
+   "purgeStaleCache",
+   "range"
+  ],
   "Format-OctoDuration": [
    "duration"
   ],
@@ -438,6 +446,24 @@
    "commandLines",
    "process"
   ],
+  "Get-OctoChainLaneArgument": [
+   "branch",
+   "laneRoot",
+   "laneRootGiven"
+  ],
+  "Get-OctoChainPackageIndex": [
+   "repos"
+  ],
+  "Get-OctoChainRange": [
+   "consumer",
+   "consumers",
+   "index",
+   "order",
+   "producers"
+  ],
+  "Get-OctoChainRepoState": [
+   "repo"
+  ],
   "Get-OctoCkPublishDisabledWarning": [
    "repoNames"
   ],
@@ -581,7 +607,8 @@
   "Get-OctoEnvironmentFeedSnapshotReport": [
    "basePath",
    "env",
-   "manifest"
+   "manifest",
+   "noFetch"
   ],
   "Get-OctoEnvironmentManifestPath": [
    "environmentPath"
@@ -718,6 +745,13 @@
   "Get-OctoPackageScanFiles": [
    "path"
   ],
+  "Get-OctoPackageSourceCommit": [
+   "feeds",
+   "ids"
+  ],
+  "Get-OctoPesterTestProjects": [
+   "repositoryPath"
+  ],
   "Get-OctoPinnedBuildOrder": [],
   "Get-OctoProcessCommandLines": [],
   "Get-OctoProcessCwdRecords": [
@@ -814,6 +848,7 @@
    "path"
   ],
   "Get-OctoTestFilterCalls": [
+   "excludeCategories",
    "failedNames",
    "filter",
    "maxLength",
@@ -1220,6 +1255,10 @@
    "Json",
    "msbuildProperties"
   ],
+  "Invoke-OctoChainGit": [
+   "gitArguments",
+   "path"
+  ],
   "Invoke-OctoCkcRefresh": [
    "ckc"
   ],
@@ -1306,6 +1345,11 @@
    "source",
    "target"
   ],
+  "Invoke-OctoPesterTest": [
+   "directory",
+   "logFile",
+   "resultFile"
+  ],
   "Invoke-OctoS3Request": [
    "Credential",
    "Method",
@@ -1338,6 +1382,7 @@
    "EventsFile",
    "filter",
    "includePassed",
+   "includeSlow",
    "Json",
    "lockPath",
    "lockPollMilliseconds",
@@ -1348,7 +1393,8 @@
    "minDockerFreeMemoryGiB",
    "project",
    "repo",
-   "rerunFailed"
+   "rerunFailed",
+   "slowCategories"
   ],
   "Invoke-Publish": [
    "configuration",
@@ -1497,6 +1543,10 @@
   "Read-OctoBuildStamp": [
    "repo",
    "stampRoot"
+  ],
+  "Read-OctoChainBuildLog": [
+   "path",
+   "repoNames"
   ],
   "Read-OctoEnvironmentManifest": [
    "env"
@@ -2021,8 +2071,18 @@
    "Content"
   ],
   "Test-OctoBuildAllWindows": [],
+  "Test-OctoBuildChain": [
+   "branch",
+   "BuildLog",
+   "GlobalPackagesPath",
+   "Json",
+   "LaneRoot"
+  ],
   "Test-OctoCatalogPropertySet": [
    "properties"
+  ],
+  "Test-OctoChainRepoBuildable": [
+   "path"
   ],
   "Test-OctoCkPublishDisabled": [
    "properties"
@@ -2117,6 +2177,10 @@
   "Test-OctoPathInside": [
    "parent",
    "path"
+  ],
+  "Test-OctoPester5": [],
+  "Test-OctoPesterTestProject": [
+   "project"
   ],
   "Test-OctoRepoHasBuildOutput": [
    "configuration",
@@ -2365,7 +2429,7 @@
  "excludeRepos": [
   "octo-mesh-deployment"
  ],
- "generated": "2026-11-25",
+ "generated": "2026-11-27",
  "nodes": {
   "AggregateConsumptionRecord": [
    1
@@ -3041,8 +3105,10 @@
     "-id"
    ],
    "AddClientToRole": [
+    "--child-tenant-id",
     "--clientId",
     "--role",
+    "-ctid",
     "-id",
     "-r"
    ],
@@ -3066,6 +3132,7 @@
     "--botServicesUri",
     "--communicationServicesUri",
     "--identityServicesUri",
+    "--mcpServicesUri",
     "--name",
     "--reportingServicesUri",
     "--tenantId",
@@ -3074,6 +3141,7 @@
     "-bsu",
     "-csu",
     "-isu",
+    "-msu",
     "-n",
     "-rsu",
     "-tid"
@@ -3160,6 +3228,16 @@
     "-r",
     "-un"
    ],
+   "AdoptKnowledgePlatformUpdates": [
+    "--dryRun",
+    "--json",
+    "--runRef",
+    "--tenantId",
+    "-dr",
+    "-json",
+    "-rr",
+    "-tid"
+   ],
    "ApplyClientOverlay": [
     "--allowedCorsOrigins",
     "--clientId",
@@ -3233,6 +3311,7 @@
     "--botServicesUri",
     "--communicationServicesUri",
     "--identityServicesUri",
+    "--mcpServicesUri",
     "--reportingServicesUri",
     "--tenantId",
     "-aisu",
@@ -3240,6 +3319,7 @@
     "-bsu",
     "-csu",
     "-isu",
+    "-msu",
     "-rsu",
     "-tid"
    ],
@@ -3266,6 +3346,44 @@
     "-suid",
     "-sun",
     "-ttid"
+   ],
+   "CreateAgent": [
+    "--allowedCkType",
+    "--autonomyLevel",
+    "--changeBudgetPerRun",
+    "--disabled",
+    "--grant",
+    "--instructions",
+    "--instructionsFile",
+    "--json",
+    "--mandateRtId",
+    "--model",
+    "--name",
+    "--riskCeiling",
+    "--role",
+    "--runnerKind",
+    "--serviceAccountClientId",
+    "--sponsorUserId",
+    "--tenantId",
+    "--writeMode",
+    "-al",
+    "-cb",
+    "-cid",
+    "-ct",
+    "-d",
+    "-g",
+    "-i",
+    "-if",
+    "-json",
+    "-m",
+    "-mid",
+    "-n",
+    "-r",
+    "-rc",
+    "-rk",
+    "-su",
+    "-tid",
+    "-wm"
    ],
    "CreateApiResource": [
     "--description",
@@ -3500,6 +3618,14 @@
     "--tenantId",
     "-tid"
    ],
+   "DisableAgent": [
+    "--agent",
+    "--json",
+    "--tenantId",
+    "-a",
+    "-json",
+    "-tid"
+   ],
    "DisableAi": [],
    "DisableArchive": [
     "--identifier",
@@ -3526,6 +3652,14 @@
     "--tenantId",
     "-f",
     "-iad",
+    "-tid"
+   ],
+   "EnableAgent": [
+    "--agent",
+    "--json",
+    "--tenantId",
+    "-a",
+    "-json",
     "-tid"
    ],
    "EnableAi": [],
@@ -3616,7 +3750,19 @@
     "--targetTenantId",
     "-ttid"
    ],
+   "GetAgents": [
+    "--agent",
+    "--json",
+    "--tenantId",
+    "-a",
+    "-json",
+    "-tid"
+   ],
    "GetAiCredentialsStatus": [],
+   "GetAiSpend": [
+    "--tenantId",
+    "-t"
+   ],
    "GetApiResources": [],
    "GetApiScopes": [],
    "GetApiSecretsApiResource": [
@@ -3637,7 +3783,9 @@
     "-id"
    ],
    "GetClientRoles": [
+    "--child-tenant-id",
     "--clientId",
+    "-ctid",
     "-id"
    ],
    "GetClients": [],
@@ -3852,6 +4000,12 @@
     "-j",
     "-n"
    ],
+   "ListKnowledgePlatformUpdates": [
+    "--json",
+    "--tenantId",
+    "-json",
+    "-tid"
+   ],
    "ListOperations": [
     "--allOwners",
     "--json",
@@ -3995,9 +4149,11 @@
     "-id"
    ],
    "RemoveClientFromRole": [
+    "--child-tenant-id",
     "--clientId",
     "--role",
     "--yes",
+    "-ctid",
     "-id",
     "-r",
     "-y"
@@ -4156,6 +4312,16 @@
     "-j",
     "-tid"
    ],
+   "SetAiSpendCap": [
+    "--capMonthlyEur",
+    "--keySource",
+    "--reason",
+    "--tenantId",
+    "-c",
+    "-ks",
+    "-r",
+    "-t"
+   ],
    "SetClientAutoProvision": [
     "--clientId",
     "--enabled",
@@ -4256,6 +4422,50 @@
     "-ctid",
     "-id",
     "-y"
+   ],
+   "UpdateAgent": [
+    "--agent",
+    "--allowedCkType",
+    "--autonomyLevel",
+    "--changeBudgetPerRun",
+    "--clearCkTypes",
+    "--clearGrants",
+    "--clearModel",
+    "--clearRoles",
+    "--grant",
+    "--instructions",
+    "--instructionsFile",
+    "--json",
+    "--mandateRtId",
+    "--model",
+    "--name",
+    "--riskCeiling",
+    "--role",
+    "--runnerKind",
+    "--sponsorUserId",
+    "--tenantId",
+    "--writeMode",
+    "-a",
+    "-al",
+    "-cb",
+    "-cct",
+    "-cg",
+    "-cm",
+    "-cr",
+    "-ct",
+    "-g",
+    "-i",
+    "-if",
+    "-json",
+    "-m",
+    "-mid",
+    "-n",
+    "-r",
+    "-rc",
+    "-rk",
+    "-su",
+    "-tid",
+    "-wm"
    ],
    "UpdateApiResource": [
     "--description",
@@ -4564,7 +4774,6 @@
     "3d647e6d5fff7dae",
     "44812370998b4021",
     "48511234ac8c85b0",
-    "49d0f3e583fdb03e",
     "4fa674c868733622",
     "51e9254c073be7d9",
     "53564b8822221b7e",
@@ -4580,6 +4789,7 @@
     "792ea19f1c4664c4",
     "7a2374022190a71d",
     "81f250cfb17d93ae",
+    "841b5692d63c3606",
     "8559f9067c0da4dc",
     "8906efa44c81c0d6",
     "931d3ce8d6adf2dd",
@@ -4600,7 +4810,6 @@
     "e225b260e11f89b9",
     "e3ba9a49d89baa81",
     "e3e381dd20bfe987",
-    "ea73e6fce185a8eb",
     "f62a27309bd93e7b",
     "f7be1992598dd2d1"
    ]
@@ -4620,6 +4829,7 @@
     "583a8001fddcc519",
     "641fd4d07583b219",
     "72d9a117efefd169",
+    "807e38c41ac84483",
     "87bf28759c0c0a6f",
     "8da1bba76f8ced73",
     "9a35984481d32565",
@@ -4635,10 +4845,21 @@
    ]
   },
   "octo-bot-services": {
-   "agentsMd": false,
+   "agentsMd": true,
    "claudeMd": true,
    "docHashes": [
-    "265ccb06735b4224"
+    "117bfeb1fbb74d05",
+    "1bb043458c71bf95",
+    "2317ec282fef0b05",
+    "265ccb06735b4224",
+    "4d416e484bdfc75e",
+    "6eecc51bdef292af",
+    "8de485430a23a259",
+    "b02b1d0a4a5e483c",
+    "bfe819c5095cf457",
+    "d364513893ecfabe",
+    "ec2c5421acf6c040",
+    "fd21ddf45b4d6b06"
    ]
   },
   "octo-claude-biz": {
@@ -4708,7 +4929,7 @@
    ]
   },
   "octo-communication-controller-services": {
-   "agentsMd": false,
+   "agentsMd": true,
    "claudeMd": true,
    "docHashes": [
     "008bc06f1d307927",
@@ -4719,22 +4940,56 @@
     "121818e1802b2e6e",
     "16652dd8aca1c53b",
     "1a95edf069a4136e",
+    "20262c44111796a2",
+    "26ee7ddc6a1a7292",
+    "2c3eb387ac7d4689",
+    "30ac5819bc0f10cd",
+    "33a35aadae1ad922",
     "393587291335062a",
+    "3ae59820da517676",
     "3d5c6f7b96fc517c",
     "44d6a57c7d9d83a3",
+    "47afde67808dfe3f",
+    "4b7800679eed8517",
     "4f86a752fcbd5b8c",
+    "511d8969539460f9",
+    "54822d7037ee8930",
+    "5a6ea4907c1bc00d",
+    "6480a34522e25f1a",
+    "655c2ee8532993aa",
     "67c3b37ad2b398d7",
     "6c8e2e56acc5d71f",
+    "78021ccc907f1cd0",
+    "7b18c0794c154d8f",
     "7c9940c52b77b8d5",
+    "960875be43422b44",
+    "9bdac1a5a6f3060d",
+    "a5967056d9b16ae2",
     "a63970d71322f58f",
+    "a8548d3d933bd107",
     "a9ca3cec6a63ce05",
+    "b36a4a0d73ef4d2e",
     "b48e58c341166601",
+    "b67b3d308060be7f",
+    "bada2854c362ee27",
+    "c0aeeac20d9b81ab",
     "c532ba6f017d50ca",
+    "c539533d6fdccf12",
+    "c8aac7f0f4782904",
     "cc7aabab12650ed9",
+    "cfe984ebcae92245",
+    "d794cdb23f6dfb33",
     "d84917d2941587a1",
+    "d93d2910de777228",
     "e10c29d55dce5d9f",
+    "e72876dd53756b68",
+    "e7b565d22c2559b9",
+    "eb26371875d32389",
+    "ec151717a3ec3864",
+    "f4b7b2c20605c54e",
     "f6754a4a82aa0ea8",
-    "f8977922f9c59a43"
+    "f8977922f9c59a43",
+    "fc60062743c6516a"
    ]
   },
   "octo-communication-operator": {
@@ -4797,6 +5052,7 @@
     "53c4b1e21b3082c2",
     "5a1372dd257c299f",
     "5beaaad8fd82464f",
+    "6adb14c1d9de5f33",
     "6d0cc9b41cb0abd8",
     "6d1b3145bc9e54fa",
     "6f37d60a9f68bc97",
@@ -4875,8 +5131,8 @@
    "docHashes": []
   },
   "octo-frontend-libraries": {
-   "agentsMd": false,
-   "claudeMd": false,
+   "agentsMd": true,
+   "claudeMd": true,
    "docHashes": []
   },
   "octo-frontend-refinery-studio": {
@@ -4975,6 +5231,7 @@
     "078defc2d93da434",
     "12fbeac55a1c6fad",
     "159fa43010b619d3",
+    "3ddca5119bba8ec3",
     "571fb11f87f307fe",
     "70de428808a824a6",
     "831529206d29cb3f",
@@ -5011,7 +5268,8 @@
     "cf79bfb6f30e03c8",
     "d3cbf1006ce9987b",
     "d7a90e9d801f18ed",
-    "e6afa89c1ec775d8"
+    "e6afa89c1ec775d8",
+    "ed5a66744a5a8f5b"
    ]
   },
   "octo-office-integration": {
@@ -5101,9 +5359,17 @@
    ]
   },
   "octo-report-services": {
-   "agentsMd": false,
+   "agentsMd": true,
    "claudeMd": true,
-   "docHashes": []
+   "docHashes": [
+    "338e579a61d16b0f",
+    "b1707cad40407203",
+    "bbe4474435d1b400",
+    "cc6096df97543215",
+    "d8052c2b0f17bd11",
+    "d86ff44a58dc91da",
+    "ec2c5421acf6c040"
+   ]
   },
   "octo-sdk": {
    "agentsMd": true,
