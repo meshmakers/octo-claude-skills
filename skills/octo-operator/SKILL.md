@@ -231,7 +231,7 @@ The full kind bring-up is owned by **octo-tools** cmdlets — route to the `octo
 | `Get-OctoKubernetesStatus` | Shows pods, Helm releases, host-port reachability. | Read-only |
 | `Uninstall-OctoKubernetes` | Deletes the kind cluster and its data. | **Destructive** |
 
-In-repo helpers (run via PowerShell): `src/scripts/Create-KindTestCluster.ps1` (+ `Remove-KindTestCluster.ps1`), and `start-operator.ps1` at the repo root runs a locally-built operator in **central mode** on ports 5022/5023 (`ASPNETCORE_ENVIRONMENT=Development`). It is intentionally **not** named `octo-start.ps1` so `Start-Octo` does not auto-launch it.
+In-repo helpers (PowerShell scripts, not octo-tools cmdlets): the create and remove scripts for a bare kind test cluster in `src/scripts/` (with `kind-cluster.yaml`; `Install-OctoKubernetes` is the full dev setup), and `start-operator.ps1` at the repo root runs a locally-built operator in **central mode** on ports 5022/5023 (`ASPNETCORE_ENVIRONMENT=Development`). It is intentionally **not** named `octo-start.ps1` so `Start-Octo` does not auto-launch it.
 
 In DEBUG/DEBUGL builds the operator auto-picks the first non-loopback IPv4 for its dev webhook endpoint and logs it (`Dev webhook endpoint: https://192.168.x.y:6001`). Override with `Operator:DevWebhookHost`/`Port` in `appsettings.Development.json` or `OCTO_OPERATOR__DEVWEBHOOKHOST`/`PORT` (this bootstrap read uses the `OCTO_` prefix; all other options bind from plain `OPERATOR__*`).
 

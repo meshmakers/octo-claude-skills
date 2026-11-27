@@ -2,6 +2,16 @@
 
 All notable changes to the octo-claude-skills plugin. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.28.23] — 2026-11-27
+
+### Changed
+
+- **`octo-devtools`** — refreshed against octo-tools `main` (AB#6353): the removed per-environment login helpers, the admin-panel debug-client cmdlet and the frontend build cmdlet are gone; `Register-OctoCliContext` is the login (installations from `installations.json`, multi-tenant `-TenantId`, context `<installation>[_<suffix>]_<tenant>`). New build strategy: `Invoke-BuildRange` is the inner loop (`-WhatIf`, `-verifyTests`, `-include`/`-exclude`, `-stopServices`/`-ignoreRunningServices`, `-purgeStaleCache`, `-Json`), `Invoke-BuildAll` the full reset (NU1101/NU1102 on `999.0.0`, pull, branch switch), `Invoke-Build` one repo; the build order points to `OctoBuildOrder.psm1` only; tests through `Invoke-OctoTestRun`. New sections "When the octo-devstack MCP server is available" (cmdlet → `lane_*`/`stack_*`/`service_*` tools, shared-stack lease) and "Not covered here"; newly documented `Request-BreakGlassKubeConfig`, `Get-RancherKubeConfig`, `Test-OctoEncryption`, `Invoke-IdentityOverlay`, `Get-OctoToolsConfig`, `Sync-Submodule`, `Invoke-OctoTenantSweep`, `Get-CiWasteReport`. docker-compose infrastructure marked deprecated (kind is the supported local infrastructure); "publish my work" no longer maps to `Push-AllGitRepos`. Stale octo-devstack tool names (`env_create`, `build_start`, `env_remove`) replaced.
+- **`octo-agent`** — the build guidance uses `Invoke-BuildRange` (no more "only `Invoke-BuildAll` propagates packages"), the build order points to `OctoBuildOrder.psm1`, the default `Start-Octo` service list matches `Start-Octo.psm1` (platform services instead of the retired admin panel; port table adds platform services), CS8032/CS8785 with `dotnet build-server shutdown`, and an optional octo-devstack diagnosis route (AB#6357, partial).
+- **`octo-operator`** — the kind test-cluster scripts of the operator repository are named as scripts in `src/scripts/`, not as cmdlets (AB#9798).
+- **`octo-deploy`** — `references/test-2-environment.md` no longer names the removed test-2 login helper (AB#9799).
+- **Drift baseline** — the 22 allow-list entries of AB#6353, AB#9798 and AB#9799 are removed; the four skills pass the drift check without them.
+
 ## [0.28.22] — 2026-11-26
 
 ### Added

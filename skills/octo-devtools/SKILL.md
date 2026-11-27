@@ -1,6 +1,6 @@
 ---
 name: octo-devtools
-description: "Drives OctoMesh local development through the octo-tools PowerShell cmdlets — building repos in dependency order, starting and stopping services (always non-interactively for agents via Start-Octo -nonInteractive $true / Stop-Octo), managing Docker or local kind Kubernetes infrastructure, syncing and branching git repos, NuGet package propagation, certificates, and octo-cli context/auth setup. Use it for any OctoMesh dev-environment or DevOps task. Trigger on build, compile, feature environment, New-OctoEnvironment, Invoke-BuildEnvironment, lane isolation, dotnet build, start services, stop services, Start-Octo, Stop-Octo, Invoke-BuildAll, Invoke-Build, infrastructure, docker compose, kind, Kubernetes, Install-OctoKubernetes, Deploy-OctoOperator, git sync, pull repos, push repos, Get-AllGitRepStatus, branch management, test branch, NuGet packages, clean build, kill dotnet, certificates, clone repos, register context, login local/staging/production, infrastructure backup, or any OctoMesh PowerShell cmdlet name."
+description: "Drives OctoMesh local development through the octo-tools PowerShell cmdlets — building repos in dependency order, starting and stopping services (always non-interactively for agents via Start-Octo -nonInteractive $true / Stop-Octo), managing Docker or local kind Kubernetes infrastructure, syncing and branching git repos, NuGet package propagation, certificates, and octo-cli context/auth setup. Use it for any OctoMesh dev-environment or DevOps task. Trigger on build, compile, Invoke-BuildRange, inner loop, Invoke-OctoTestRun, run tests, Register-OctoCliContext, feature environment, New-OctoEnvironment, Invoke-BuildEnvironment, lane isolation, dotnet build, start services, stop services, Start-Octo, Stop-Octo, Invoke-BuildAll, Invoke-Build, infrastructure, docker compose, kind, Kubernetes, Install-OctoKubernetes, Deploy-OctoOperator, git sync, pull repos, push repos, Get-AllGitRepStatus, branch management, test branch, NuGet packages, clean build, kill dotnet, certificates, clone repos, register context, login local/staging/production, infrastructure backup, or any OctoMesh PowerShell cmdlet name."
 allowed-tools:
   - "Read(${CLAUDE_PLUGIN_ROOT}/skills/octo-devtools/references/*)"
   - "Bash(bash ${CLAUDE_PLUGIN_ROOT}/skills/octo-devtools/scripts/run_pwsh.sh:*)"
@@ -40,51 +40,63 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/octo-devtools/scripts/run_pwsh.sh" '<PowerShe
 
 ## Build Strategy — CRITICAL
 
-OctoMesh is a monorepo where repos produce NuGet packages consumed by downstream repos. The build system handles copying these NuGet packages between repos automatically — but ONLY when using `Invoke-BuildAll`.
+OctoMesh is a monorepo where repos produce NuGet packages (`999.0.0` in DebugL) consumed by downstream repos. Three cmdlets build; they differ in what they do with those packages:
 
-**The one difference that matters: `Invoke-Build` does NOT propagate NuGet packages between repos, `Invoke-BuildAll` does.** A repo built with `Invoke-Build` writes its package nowhere the other repos can see it, so every consumer keeps compiling and running against the previous version. That is why `Invoke-BuildAll` is the default and `Invoke-Build` is the narrow exception.
+| Cmdlet | What it does | Use it for |
+|---|---|---|
+| `Invoke-BuildRange -from <repo> [-to <repo>]` | Rebuilds only the slice of the build order between `-from` and `-to` (`src/` projects only), copies the changed packages into `<lane>/nuget` and purges exactly those from the lane's package cache | **The everyday inner loop** after a change in a library or service of the chain |
+| `Invoke-BuildAll` | Full reset: wipes `<lane>/nuget` and the `meshmakers.*/999.0.0` cache folders, forces a restore, builds every repo's whole solution in build order (test projects compiled, not run) | After a fresh clone, a pull or a branch switch; restores failing with NU1101/NU1102 on a `999.0.0` package (chain out of sync) |
+| `Invoke-Build -repositoryPath <repo>` | One repository, no package propagation | A change inside one service repo that produces no package another repo consumes |
+
+**The build order** is defined in one place only: octo-tools `modules/OctoBuildOrder.psm1` (`Get-OctoBuildOrder -branchRootPath <lane>` prints it). `Invoke-BuildAll` and `Invoke-BuildRange` share it — never chain `Invoke-Build` calls by hand or copy packages manually.
 
 **Which lane:** `-branch` is a lane folder relative to `$rootPath`. With the profile loaded from the `octo-tools` checkout at the workspace root (`$rootPath` = the workspace root - the setup feature environments need), pass `-branch branches/main` to build main; without `-branch` the cmdlets build `$rootPath` itself. With a profile loaded from inside the main checkout (`$rootPath` = `branches/main`) omit `-branch` and use `-path $rootPath` for `Remove-BinAndObjFolders` - `branches/main` would point at a nested folder there.
 
-**The only sanctioned way to make a build cheaper is `-excludeFrontend $true`.** Do not narrow the build any further to save time — see the warning under the examples below.
-
-### When to use `Invoke-BuildAll` (DEFAULT CHOICE)
-
-**Use `Invoke-BuildAll` whenever building after code changes that could affect NuGet packages, or when unsure.** This is the safe default. It builds repos in dependency order AND copies NuGet packages to the shared `nuget/` folder between each step.
+### Inner loop: `Invoke-BuildRange`
 
 ```
-# Full build (all repos including frontends)
-Invoke-BuildAll -branch branches/main -configuration DebugL
+# 1. See the plan: repositories, src/ projects, cache folders to purge, running services, stale cache
+Invoke-BuildRange -branch branches/main -from octo-construction-kit-engine -to octo-common-services -include octo-asset-repo-services -WhatIf
 
-# Backend only — skips Angular frontends (saves significant time)
-Invoke-BuildAll -branch branches/main -configuration DebugL -excludeFrontend $true
+# 2. Build. It refuses while services of the range run; -ignoreRunningServices builds anyway, -stopServices stops them first
+Invoke-BuildRange -branch branches/main -from octo-construction-kit-engine -to octo-common-services -include octo-asset-repo-services -stopServices
+
+# 3. Before handing the change on: also compile the test projects (they are not run)
+Invoke-BuildRange -branch branches/main -from octo-construction-kit-engine -to octo-common-services -include octo-asset-repo-services -verifyTests
 ```
 
-**Do NOT reach for `-excludeAdditional $true` to save time.** It stops after the core library chain and skips the service repos, so a changed contract lands in the shared `nuget/` folder while identity, asset-repo and the other services keep running against the old one. The failure surfaces later, at service startup or at runtime, far away from the build that caused it. The parameter is documented in `references/command-reference.md` because it exists — not because it is a recommended shortcut.
+| Parameter | Meaning |
+|---|---|
+| `-from` / `-to` | First / last repository of the range (inclusive; `-to` defaults to `-from`). Exact name, name without `octo-`, or a unique part |
+| `-include` / `-exclude` | Add repositories outside the range / skip repositories inside it (the build order is kept) |
+| `-verifyTests` | After each repo's `src/` build, compile its projects outside `src/` without running them. A plain run does **not** compile test projects - use this (or `-includeTests`, whole solutions) before every hand-off |
+| `-stopServices` / `-ignoreRunningServices` | Stop the services running from the range first / build anyway (it never kills dotnet processes itself) |
+| `-purgeStaleCache` | Delete cache `999.0.0` folders whose hash differs from `<lane>/nuget` before the first build (otherwise they are only reported) |
+| `-excludeFrontend` | Default `$true` (frontends produce no packages) |
+| `-WhatIf` / `-Json` | Print the plan only / emit one JSON document |
 
-**Use `Invoke-BuildAll` for:**
-- After pulling latest changes (`Sync-AllGitRepos`)
-- After switching branches
-- When changes touch repos in the explicit build order (mm-common, octo-distributedEventHub, octo-construction-kit-engine, octo-sdk, octo-construction-kit-engine-mongodb, octo-common-services, octo-mesh-adapter, octo-bot-services, octo-communication-controller-services) — these produce NuGet packages consumed downstream
-- When unsure whether changes affect NuGet packages
-- Clean builds after deleting bin/obj folders
-- First build after clone
+It stops at the first failing repository and prints its error lines. Repositories outside the range are not rebuilt; they pick up a rebuilt package on their next build. More parameters: `references/command-reference.md`.
 
-### When `Invoke-Build` is safe (SINGLE REPO, NO NUGET IMPACT)
-
-`Invoke-Build` builds one repo in isolation. It does NOT handle NuGet package propagation.
-
-**`Invoke-Build` is ONLY appropriate when:**
-- Making changes within a single service repo (e.g., `octo-asset-repo-services`, `octo-identity-services`)
-- The changes do NOT affect any NuGet package produced by that repo
-- All upstream NuGet dependencies are already up-to-date in the `nuget/` folder
+### Full reset: `Invoke-BuildAll`
 
 ```
-# Safe: editing a controller in asset repo services
+Invoke-BuildAll -branch branches/main -configuration DebugL -excludeFrontend $true   # backend only
+Invoke-BuildAll -branch branches/main -configuration DebugL                          # with the Angular frontends
+```
+
+Always pass `-configuration DebugL` (the cmdlet's own default is `Release`). `-DryRun` prints the plan without killing, deleting or building. **Do not use `-excludeAdditional $true`** to save time: it stops after the core library chain, so the service repos keep consuming the previous package and fail later at startup. Use `Invoke-BuildRange` for a narrower build.
+
+### Single repo: `Invoke-Build`
+
+```
 Invoke-Build -repositoryPath ./octo-asset-repo-services -configuration DebugL
 ```
 
-**NEVER use `Invoke-Build` to propagate NuGet changes.** Do not attempt to manually chain `Invoke-Build` + `Copy-NuGetPackages` to replicate what `Invoke-BuildAll` does — use `Invoke-BuildAll` instead (with `-excludeFrontend $true` when the frontends are not needed).
+Only when the change produces no package another repo consumes and all upstream packages in `<lane>/nuget` are current. A relative `-repositoryPath` follows the PowerShell location (`$PWD`).
+
+### Tests: `Invoke-OctoTestRun`
+
+The build cmdlets never run tests. `Invoke-OctoTestRun (-env <env> | -branch <lane>) -repo <name> [-project <names>] [-filter <filter>] [-rerunFailed] [-WhatIf] [-Json]` runs the test projects of one repository (no full rebuild; Docker-heavy projects run under a machine-wide test lock, `Get-OctoTestLock` shows its holder).
 
 ## Command Quick Reference
 
@@ -95,16 +107,19 @@ For common multi-step workflows, read `references/workflows.md` in this skill di
 
 | Cmdlet | Description | Safety |
 |---|---|---|
-| `Invoke-BuildAll` | Build repos in dependency order WITH NuGet propagation — **use this by default** | Mutating (local) |
-| `Invoke-Build` | Build a single repo WITHOUT NuGet handling — only for isolated service changes | Mutating (local) |
-| `Invoke-BuildFrontend` | Build Angular frontends | Mutating (local) |
+| `Invoke-BuildRange` | Rebuild a slice of the build order with package propagation — **the inner loop** | Mutating (local) |
+| `Invoke-BuildAll` | Full reset build of all repos in build order (frontends included unless `-excludeFrontend $true`) | Mutating (local) |
+| `Invoke-Build` | Build a single repo WITHOUT package propagation | Mutating (local) |
+| `Get-OctoBuildOrder` | Print the build order (`OctoBuildOrder.psm1`) | Read-only |
+| `Invoke-OctoTestRun` | Run the test projects of one repository in a lane or feature environment | Mutating (local) |
+| `Get-OctoTestLock` / `Remove-OctoTestLock` | Show the machine-wide test lock / remove it when its owner is gone | Read-only / Mutating |
 | `Invoke-Publish` | Publish a .NET project | Mutating (local) |
 | `Invoke-BuildAndStartOcto` | Build all + start services — chains into **interactive** `Start-Octo`. **Do NOT use from an agent session** (see safety rules) | **Interactive** |
 | `Invoke-BuildZenonPlug` | Build Zenon plug-in | Mutating (local) |
 
 ### Feature environments (one work item, isolated lane)
 
-A feature environment is the lane folder `<rootPath>/wt-<env>` of the octo-claude-pm lane `<env>`: worktrees of the changed repos, its own `nuget/` feed, `.nuget-packages/` cache, CK/blueprint catalogs and `.octo/environment.json`. **Do feature work here, never publish it into the base lane's `nuget/`.** Through octo-devstack the same is `env_create` / `build_start kind=env`. Details: octo-tools `readme.md`, "Feature environments".
+A feature environment is the lane folder `<rootPath>/wt-<env>` of the octo-claude-pm lane `<env>`: worktrees of the changed repos, its own `nuget/` feed, `.nuget-packages/` cache, CK/blueprint catalogs and `.octo/environment.json`. **Do feature work here, never publish it into the base lane's `nuget/`.** Through octo-devstack the same is `lane_create` / `lane_build` (see "When the octo-devstack MCP server is available"). Details: octo-tools `readme.md`, "Feature environments".
 
 **Base lane** (the folder holding the repositories, `nuget/` and `.octo/`): without `-base`, `New-OctoEnvironment` takes `$env:OCTO_ENVIRONMENT_BASE` if set, else `<rootPath>/branches/main` (lanes layout, profile loaded from the `octo-tools` next to `branches/`), else `$rootPath` itself (flat layout: repositories directly below `$rootPath`, profile loaded from `$rootPath/octo-tools`; the manifest records `base: "."` and `wt-<env>` lies next to the repositories). Neither fits: the error names both layouts, `-base` and `OCTO_ENVIRONMENT_BASE`. Claims live in the base lane's `.octo/claims/`.
 
@@ -119,7 +134,7 @@ A feature environment is the lane folder `<rootPath>/wt-<env>` of the octo-claud
 | `Sync-OctoEnvironment -env <slug>` | Take main's new packages and catalog entries (packages built in the environment keep winning) | Mutating (local) |
 | `Remove-OctoEnvironment -env <slug>` | Remove the environment; refuses dirty or unpushed worktrees, keeps branches, no `-force` | **Destructive** |
 
-**Before a build:** `Invoke-BuildEnvironment` clears the environment's kill scope (`wt-<env>` and every in-place worktree) - on Windows it stops the matching dotnet processes, e.g. a running service of the environment; `-skipKill` opts out. **Before removal:** stop the environment's services first, or use octo-devstack `env_remove` (stops the slot and releases the lease); `Remove-OctoEnvironment` does neither.
+**Before a build:** `Invoke-BuildEnvironment` clears the environment's kill scope (`wt-<env>` and every in-place worktree) - on Windows it stops the matching dotnet processes, e.g. a running service of the environment; `-skipKill` opts out. **Before removal:** stop the environment's services first; `Remove-OctoEnvironment` does not. For a lane made with octo-devstack use its `lane_remove` (it refuses while a process it did not start holds files in the lane).
 
 **In-place caveat:** an `-inPlace` worktree stays where it is. `Invoke-BuildEnvironment` builds it with the environment's feed, cache and catalog, but a plain `dotnet build` or Rider there is **not** isolated, and `Remove-OctoEnvironment` only unregisters it - it is never deleted.
 
@@ -129,10 +144,12 @@ A feature environment is the lane folder `<rootPath>/wt-<env>` of the octo-claud
 |---|---|---|
 | `Start-Octo` | Start OctoMesh services. **From an agent always pass `-nonInteractive $true`** | Mutating (interactive only when `-nonInteractive` is not set) |
 | `Stop-Octo` | Stop services started in non-interactive mode (writes a `.octo-stop` signal file) | Mutating |
-| `Start-OctoInfrastructure` | Start Docker containers (MongoDB, RabbitMQ, CrateDB) | Mutating |
-| `Stop-OctoInfrastructure` | Stop Docker containers | Mutating |
+| `Start-OctoInfrastructure` | Start the docker-compose containers (MongoDB, RabbitMQ, CrateDB) — deprecated, see below | Mutating |
+| `Stop-OctoInfrastructure` | Stop the docker-compose containers | Mutating |
 
-### Infrastructure
+### Infrastructure (docker-compose — deprecated)
+
+The local kind cluster (`Install-OctoKubernetes`, next section) is the supported local infrastructure; octo-tools deprecates the docker-compose setup and these cmdlets (removal planned for 2026-12-31). Use them only on a machine that still runs it.
 
 | Cmdlet | Description | Safety |
 |---|---|---|
@@ -164,13 +181,16 @@ An alternative to the docker-compose infra: MongoDB / RabbitMQ / CrateDB, the CR
 |---|---|---|
 | `Sync-AllGitRepos` | Pull all repos (rebase) | Mutating |
 | `Sync-GitRepo` | Pull a single repo | Mutating |
-| `Push-AllGitRepos` | Push all repos to remote | Mutating (remote) |
-| `Push-GitRepo` | Push a single repo | Mutating (remote) |
+| `Push-AllGitRepos` | Push the local commits of every `octo-*`/`mm-*` repo of the lane to origin — not the default way to publish work (see "Publishing work" below) | Mutating (remote) |
+| `Push-GitRepo` | Push one repo to origin | Mutating (remote) |
+| `Sync-Submodule [-repositoryPath <repo>]` | `git submodule update --init --remote --merge --recursive` in one repo | Mutating |
 | `Get-AllGitRepStatus` | Git status across all repos | Read-only |
 | `Find-AllGitRepos` | Discover all repos in workspace | Read-only |
 | `Invoke-CloneMainRepos` | Clone all main repos | Mutating |
 | `Sync-AllSubmodules` | Sync git submodules | Mutating |
 | `Invoke-CleanAllGitRepos` | Clean all repos (remove untracked) | **Destructive** |
+
+**Publishing work.** Changes reach `main` through pull requests from work branches, so a blanket `Push-AllGitRepos` is never the answer to "publish my work". When the `octo-claude-pm` plugin is installed, its `agent-operating-rules` decide how and when work is pushed; otherwise follow the repository's own contribution rules.
 
 ### Branch Management
 
@@ -205,13 +225,11 @@ An alternative to the docker-compose infra: MongoDB / RabbitMQ / CrateDB, the CR
 
 | Cmdlet | Description | Safety |
 |---|---|---|
-| `Register-OctoCliContext` | **Recommended** — register a named octo-cli context for any installation (`local`, `test-2`, `staging-1`, `prod-1`, `prod-2`) | Mutating |
-| `Invoke-OctoCliLoginLocal` | Log in to local environment (`-tenantId`, `-includeReporting`) | Mutating |
-| `Invoke-OctoCliLoginTest2` | Log in to test-2 environment | Mutating |
-| `Invoke-OctoCliLoginStaging` | **Legacy** — old `*.<legacy-domain>` domains; prefer `Register-OctoCliContext -Installation staging-1` | Mutating |
-| `Invoke-OctoCliLoginProduction` | **Legacy** — old `*.<legacy-domain>` domains; prefer `Register-OctoCliContext -Installation prod-1`/`prod-2` | Mutating |
+| `Register-OctoCliContext -Installation <name> -TenantId <tenant>[,<tenant>...]` | **The** login cmdlet: registers the octo-cli context `<installation>[_<suffix>]_<tenant>` for an installation of your octo-tools config (`installations.json`, e.g. `local`), switches to it (one tenant only; with several it never switches) and logs in; `-NoSwitch`, `-NoLogin`, `-IncludeReporting`, `-IncludeAi`, `-UriSuffix`, `-Json`. It replaced the removed per-environment login helpers | Mutating |
+| `Invoke-OctoTenantSweep -CliArguments '-c','<Command>',... (-Installation <i> \| -ContextTemplate <t> \| -Context <c>) (-Tenant a,b \| -AllTenants)` | Run one octo-cli command across many tenants (one context per tenant); never reads or prints a token; `-WhatIf` | Mutating (remote, as the command) |
+| `Get-OctoToolsConfig` / `Get-OctoInstallation -Name <name>` | Read your octo-tools config (installations, registry, Rancher/Vault/Semaphore addresses) — never print it into a shared log | Read-only |
+| `Invoke-IdentityOverlay [-OverlayFile <yaml>] [-DryRun]` | Add the local-dev redirect URIs of an overlay file to the blueprint-managed identity clients (`octo-cli -c ApplyClientOverlay`, idempotent); uses the active context | Mutating |
 | `Invoke-OctoCliReconfigureLogLevel` | Reconfigure service log levels (3 mandatory params) | Mutating |
-| `Invoke-SetDebugConfiguration` | Register the Admin Panel debug OAuth client + scopes (run after local login) | Mutating |
 | `Register-AiBastion` | Register an Anthropic subscription token on a tenant (device-code OAuth) | Mutating (remote) |
 | `Get-AiBastionStatus` | Read current AI Bastion lease metadata for a tenant | Read-only |
 
@@ -232,6 +250,10 @@ An alternative to the docker-compose infra: MongoDB / RabbitMQ / CrateDB, the CR
 | `Join-KubeConfigs` | Merge kubeconfig files | Mutating |
 | `Remove-KubeConfig` | Delete a named context/cluster/user from `~/.kube/config` (interactive prompt) | **Destructive** |
 | `Invoke-MongoPortForward` | Port-forward MongoDB from K8s | Mutating |
+| `Get-RancherKubeConfig -Cluster <name>` | Routine read-only cluster access: fetches a kubeconfig through the Rancher API with your personal token and merges it into `~/.kube/config` | Mutating (local) |
+| `Request-BreakGlassKubeConfig -Cluster <name> -Reason "<why>" -DurationHours <1-4>` | Incident write access: triggers the audited break-glass playbook that issues a short-lived cluster-admin token | Mutating (remote, audited) |
+
+Both cluster-access cmdlets read their addresses from your octo-tools config and their tokens from your private profile; under `-Json` they emit only metadata (cluster, context, expiry). Never print the resulting kubeconfig, the profile or the token. Break-glass is for incidents only.
 
 ### Diagnostics & Comparison
 
@@ -240,6 +262,8 @@ An alternative to the docker-compose infra: MongoDB / RabbitMQ / CrateDB, the CR
 | `Compare-CkVersions` | Diff CK model (`ckModel.yaml`) versions between two branch checkouts | Read-only |
 | `Compare-Pipelines` | Diff local pipeline YAML against the deployed versions in a tenant | Read-only |
 | `Get-BranchAvailability` | List repos where a given branch exists on remote | Read-only |
+| `Test-OctoEncryption` | Smoke test that the encryption environment variables the local services need are set and agree (instance key, SECRET key ring); reports set/equal, not the values | Read-only |
+| `Get-CiWasteReport [-Hours 24]` | Report duplicate CI work in Azure DevOps (GET requests only) | Read-only |
 
 ### Versioning & Templates
 
@@ -248,16 +272,36 @@ An alternative to the docker-compose infra: MongoDB / RabbitMQ / CrateDB, the CR
 | `Sync-YamlTemplates` | Sync CI/CD YAML templates | Mutating |
 | `Update-MeshmakerVersion` | Bump version numbers | Mutating |
 
+### Not covered here
+
+The profile loads further octo-tools modules this skill does not drive: the AGENTS.md tooling (`Initialize-OctoAgentDocs`, `Test-OctoAgentDocs`), the octo-devstack daemon management (`Start-OctoDevStackDaemon`, `Stop-OctoDevStackDaemon`, `Install-OctoDevStackDaemonService`, `Uninstall-OctoDevStackDaemonService`), `Invoke-StarOrgRepos` (GitHub stars), and cmdlets the build and install cmdlets call themselves (`Sync-OctoCkIntermediateVersions`, `Update-OctoCrateDb`, the local S3 store cmdlets of `Install-OctoKubernetes`). The remaining module files are internal helpers (JSON output, build stamps, catalog refresh, lane settings). The full, current list with parameters is octo-tools `CLAUDE.md` ("Common Development Commands") and `readme.md`.
+
+## When the octo-devstack MCP server is available
+
+octo-devstack is a local MCP daemon (it lives in octo-tools `devstack/`) that runs builds, test runs and the local stack for several Claude Code sessions on one machine. When its tools are available (`mcp__…octo-devstack__*`), they are an optional route that replaces the shell cmdlets below; without them the cmdlets of this skill stay the way, with `Start-Octo -nonInteractive $true` as the fallback for services.
+
+| Shell cmdlet | octo-devstack tool |
+|---|---|
+| `New-OctoEnvironment`, `Add-OctoEnvironmentRepo`, `Remove-OctoEnvironment` | `lane_create`, `lane_add_repo`, `lane_remove` (`lane_list` shows the lane's worktrees) |
+| `Invoke-BuildEnvironment`, `Invoke-BuildRange` in a lane | `lane_build` (returns a job; wait with `job_status`) |
+| `Invoke-OctoTestRun` | `lane_test` (`test_lock` shows the machine-wide test lock) |
+| `Sync-OctoEnvironment`, `Get-OctoAffectedRepos` | `lane_sync`, `lane_affected` |
+| `Invoke-BuildRange` / `Invoke-BuildAll` in the base lane | `base_build`, `base_test`; `build_plan` predicts what would be built |
+| `Start-Octo` / `Stop-Octo` | `stack_start` / `stack_stop` (a lane gets its own stack), `service_start`, `service_stop`, `service_restart` |
+| Checking services and logs | `stack_status`, `stack_verify`, `stack_attention`, `service_logs` |
+
+Rules of the route: a lane holds its own stack; any change to the **shared** stack (start, stop, restart of its services, builds that stop services) needs its lease first (`lease_status`, `lease_acquire`, `lease_release`). Pass the same `owner` and `session` in every changing call. Base-lane builds that publish into the shared `nuget/` and the `admin_*` tools change the machine for every session - leave them to the person who runs the machine.
+
 ## Safety Rules
 
 ### Read-only (execute directly, no confirmation)
-`Get-AllGitRepStatus`, `Get-OctoInfrastructureStatus`, `Get-OctoKubernetesStatus`, `Get-OctoInfrastructureBackup`, `Find-AllGitRepos`, `Compare-BranchStatus`, `Compare-CkVersions`, `Compare-Pipelines`, `Get-BranchAvailability`, `Test-AspNetDeveloperCertificate`, `Get-AiBastionStatus`
+`Get-AllGitRepStatus`, `Get-OctoInfrastructureStatus`, `Get-OctoKubernetesStatus`, `Get-OctoInfrastructureBackup`, `Find-AllGitRepos`, `Compare-BranchStatus`, `Compare-CkVersions`, `Compare-Pipelines`, `Get-BranchAvailability`, `Test-AspNetDeveloperCertificate`, `Get-AiBastionStatus`, `Get-OctoBuildOrder`, `Get-OctoTestLock`, `Get-OctoEnvironment`, `Get-OctoAffectedRepos`, `Test-OctoEncryption`, `Get-CiWasteReport`, `Get-OctoToolsConfig`, `Get-OctoInstallation`, `Invoke-BuildRange -WhatIf`, `Invoke-BuildAll -DryRun`
 
 ### Mutating — local (execute with brief confirmation)
-`Invoke-BuildAll`, `Invoke-Build`, `Invoke-BuildFrontend`, `Invoke-Publish`, `Invoke-BuildZenonPlug`, `Start-OctoInfrastructure`, `Stop-OctoInfrastructure`, `Install-OctoInfrastructure`, `Backup-OctoInfrastructure`, `Install-OctoKubernetes`, `Deploy-OctoOperator`, `Import-OctoImageToKind`, `Add-OctoLocalCaTrust`, `Sync-AllGitRepos`, `Sync-GitRepo`, `Invoke-CloneMainRepos`, `Sync-AllSubmodules`, `New-TestBranch -NoPush`, `Sync-TestBranch -NoPush`, `Invoke-SwitchAllBranches` (without `-Push`), `Copy-AllNuGetPackages`, `Copy-NuGetPackages`, `Sync-NuGetPackages`, `Register-OctoCliContext`, `Invoke-OctoCliLogin*`, `Invoke-OctoCliReconfigureLogLevel`, `Invoke-SetDebugConfiguration`, `New-RootCertificate`, `New-ServerCertificate`, `New-AspNetDeveloperCertificate`, `Join-KubeConfigs`, `Invoke-MongoPortForward`, `Sync-YamlTemplates`, `Update-MeshmakerVersion`, `Invoke-KillDotnet`, `Stop-Octo`
+`Invoke-BuildRange`, `Invoke-BuildAll`, `Invoke-Build`, `Invoke-OctoTestRun`, `Invoke-BuildEnvironment`, `Invoke-Publish`, `Invoke-BuildZenonPlug`, `Start-OctoInfrastructure`, `Stop-OctoInfrastructure`, `Install-OctoInfrastructure`, `Backup-OctoInfrastructure`, `Install-OctoKubernetes`, `Deploy-OctoOperator`, `Import-OctoImageToKind`, `Add-OctoLocalCaTrust`, `Sync-AllGitRepos`, `Sync-GitRepo`, `Invoke-CloneMainRepos`, `Sync-AllSubmodules`, `Sync-Submodule`, `New-TestBranch -NoPush`, `Sync-TestBranch -NoPush`, `Invoke-SwitchAllBranches` (without `-Push`), `Copy-AllNuGetPackages`, `Copy-NuGetPackages`, `Sync-NuGetPackages`, `Register-OctoCliContext`, `Invoke-IdentityOverlay`, `Get-RancherKubeConfig`, `Invoke-OctoCliReconfigureLogLevel`, `New-RootCertificate`, `New-ServerCertificate`, `New-AspNetDeveloperCertificate`, `Join-KubeConfigs`, `Invoke-MongoPortForward`, `Sync-YamlTemplates`, `Update-MeshmakerVersion`, `Invoke-KillDotnet`, `Stop-Octo`
 
 ### Mutating — remote (confirm with emphasis)
-`Push-AllGitRepos`, `Push-GitRepo`, `New-TestBranch` and `Sync-TestBranch` without `-NoPush` (push to origin), `Invoke-SwitchAllBranches -Push`, `Register-AiBastion` (writes a token to a remote tenant — see note below)
+`Push-AllGitRepos`, `Push-GitRepo`, `New-TestBranch` and `Sync-TestBranch` without `-NoPush` (push to origin), `Invoke-SwitchAllBranches -Push`, `Invoke-OctoTenantSweep` (runs its command on every listed tenant — `-WhatIf` first), `Request-BreakGlassKubeConfig` (audited cluster-admin access, incidents only), `Register-AiBastion` (writes a token to a remote tenant — see note below)
 
 ### Destructive (explicit confirmation + warning)
 `Remove-BinAndObjFolders`, `Remove-GlobalNuGetPackages`, `Invoke-CleanAllGitRepos`, `Uninstall-OctoInfrastructure`, `Restore-OctoInfrastructure`, `Remove-OctoInfrastructureBackup`, `Uninstall-OctoKubernetes`, `Remove-KubeConfig`, `Remove-TestBranch`, `Invoke-CleanupInfraContainerDisks`, `Remove-AspNetDeveloperCertificate`, `Remove-OctoLocalCaTrust`
@@ -278,7 +322,7 @@ Stop-Octo
 
 `Stop-Octo` is a standalone cmdlet that writes the `.octo-stop` signal file (it has a `-branch` parameter mirroring `Start-Octo`/`Install-OctoKubernetes`). This non-interactive start + `Stop-Octo` pair is a firm repo convention — never start services interactively from an agent session.
 
-**NEVER use `Invoke-BuildAndStartOcto` from an agent session** — it chains into the interactive `Start-Octo` (no `-nonInteractive` pass-through) and will block the session indefinitely. Build with `Invoke-BuildAll`, then start with `Start-Octo -nonInteractive $true` instead.
+**NEVER use `Invoke-BuildAndStartOcto` from an agent session** — it chains into the interactive `Start-Octo` (no `-nonInteractive` pass-through) and will block the session indefinitely. Build with `Invoke-BuildRange` or `Invoke-BuildAll`, then start with `Start-Octo -nonInteractive $true` instead.
 
 ### Interactive (only when a human runs it directly)
 Interactive blocking applies to `Start-Octo` (without `-nonInteractive $true`) and `Invoke-BuildAndStartOcto`. If a human explicitly asks for an interactive foreground run, warn first:
@@ -291,13 +335,16 @@ Interactive blocking applies to `Start-Octo` (without `-nonInteractive $true`) a
 ## Smart Behaviors
 
 ### Natural language mapping
-- "build everything" / "build all" → `Invoke-BuildAll -branch branches/main -configuration DebugL`
+- "rebuild after my change" / "build the engine and what uses it" → `Invoke-BuildRange -branch branches/main -from <changed repo> -to <last consumer> -WhatIf`, then without `-WhatIf`, then `-verifyTests` before hand-off
+- "why does the build fail with NU1101/NU1102 on 999.0.0" → the chain is out of sync: `Invoke-BuildAll -branch branches/main -configuration DebugL -excludeFrontend $true`
+- "run the tests of X" → `Invoke-OctoTestRun -branch branches/main -repo <X>` (`-rerunFailed` to repeat only failures)
+- "build everything" / "build all" / "full reset" → `Invoke-BuildAll -branch branches/main -configuration DebugL`
 - "build without frontend" / "build backend" → `Invoke-BuildAll -branch branches/main -configuration DebugL -excludeFrontend $true`
 - "build asset repo" → `Invoke-Build -repositoryPath ./octo-asset-repo-services -configuration DebugL` (only if no NuGet changes!)
-- "rebuild after pull" / "sync and build" → `Sync-AllGitRepos -branch branches/main` then `Invoke-BuildAll -branch branches/main -configuration DebugL`
+- "rebuild after pull" / "sync and build" → `Sync-AllGitRepos -branch branches/main` then `Invoke-BuildAll -branch branches/main -configuration DebugL -excludeFrontend $true`
 - "git status" / "repo status" → `Get-AllGitRepStatus`
 - "pull latest" / "sync repos" → `Sync-AllGitRepos -branch branches/main`
-- "push everything" → `Push-AllGitRepos` (confirm first!)
+- "push everything" / "publish my work" → not `Push-AllGitRepos` (see "Publishing work"); with `octo-claude-pm` installed its `agent-operating-rules` decide
 - "start services" / "start octo" → `Start-Octo -nonInteractive $true -configuration DebugL` (agent default; never block the session)
 - "stop services" / "stop octo" → `Stop-Octo`
 - "start infra" / "start docker" → `Start-OctoInfrastructure`
@@ -311,10 +358,12 @@ Interactive blocking applies to `Start-Octo` (without `-nonInteractive $true`) a
 - "tear down kind" / "uninstall kubernetes" → `Uninstall-OctoKubernetes` (destructive — confirm)
 - "clean build" → confirm, then `Remove-BinAndObjFolders -path (Join-Path $rootPath 'branches/main')` (main-checkout profile: `-path $rootPath`; it defaults to the current folder - never run it at the workspace root, it would hit every lane and feature environment) + `Invoke-BuildAll -branch branches/main -configuration DebugL`
 - "clean everything" → confirm each destructive step separately
-- "switch to local" / "login local" → `Invoke-OctoCliLoginLocal` (or `Register-OctoCliContext -Installation local -TenantId <tenant>`)
-- "register context for staging" / "add context for production" → `Register-OctoCliContext -Installation staging-1|prod-1|prod-2 -TenantId <tenant>`
+- "switch to local" / "login local" → `Register-OctoCliContext -Installation local -TenantId <tenant>`
+- "register context for <installation>" → `Register-OctoCliContext -Installation <name from your installations.json> -TenantId <tenant>`
+- "run this octo-cli command on all tenants" → `Invoke-OctoTenantSweep -CliArguments '-c','<Command>' -Installation <name> -AllTenants -WhatIf`, then without `-WhatIf`
+- "cluster access" / "kubeconfig for <cluster>" → `Get-RancherKubeConfig -Cluster <name>` (read-only); incident write access → `Request-BreakGlassKubeConfig`
 - "compare CK versions" / "diff ck models between branches" → `Compare-CkVersions <otherBranch>`
-- "start work on AB#1234" / "feature worktree" / "work on a library change" → `New-OctoEnvironment -env ab1234-<desc> -repos <repo> -workItem AB#1234`, then `Invoke-BuildEnvironment -env ab1234-<desc> -verifyTests` (or octo-devstack `env_create` / `build_start kind=env`); never publish feature work into `branches/main/nuget`
+- "start work on AB#1234" / "feature worktree" / "work on a library change" → `New-OctoEnvironment -env ab1234-<desc> -repos <repo> -workItem AB#1234`, then `Invoke-BuildEnvironment -env ab1234-<desc> -verifyTests` (or octo-devstack `lane_create` / `lane_build`); never publish feature work into `branches/main/nuget`
 - "which repos does my change affect" → `Get-OctoAffectedRepos -env <env>`
 - "use my existing worktree" → `Add-OctoEnvironmentRepo -env <env> -path <worktree>` (`-inPlace`: see the in-place caveat)
 - "adopt a hand-made environment" (`wt-<lane>` with worktrees but no `.octo/environment.json`; its own name is refused) → `New-OctoEnvironment -env <new name> -workItem AB#..` (no `-repos`: empty), then `Add-OctoEnvironmentRepo -env <new name> -path <worktree> -inPlace` per worktree - only when no session works there
@@ -325,7 +374,7 @@ Interactive blocking applies to `Start-Octo` (without `-nonInteractive $true`) a
 Always use `-configuration DebugL` for build commands unless the user explicitly specifies a different configuration. This is the standard local development configuration.
 
 ### Build order awareness
-Feature work on a work item is built in its feature environment (`Invoke-BuildEnvironment`), not in `branches/main`. For main itself: when the user asks to build, default to `Invoke-BuildAll -branch branches/main` (see "Which lane" above), narrowing it at most with `-excludeFrontend $true` — do NOT attempt to manually orchestrate `Invoke-Build` calls in dependency order or manually copy NuGet packages. The `Invoke-BuildAll` script already handles the correct build order and NuGet propagation. Only use `Invoke-Build` for a single service repo where no NuGet packages are affected.
+Feature work on a work item is built in its feature environment (`Invoke-BuildEnvironment`), not in `branches/main`. For main itself: after a change use `Invoke-BuildRange` over the changed repository and its consumers (`-WhatIf` first); after a pull, a branch switch or NU1101/NU1102 on `999.0.0` use `Invoke-BuildAll` (see "Build Strategy"). Do NOT orchestrate `Invoke-Build` calls in dependency order or copy NuGet packages by hand — both cmdlets take the order from `OctoBuildOrder.psm1` and propagate the packages. Only use `Invoke-Build` for a single service repo where no package is affected.
 
 ### Workflow suggestions
 When the user describes a high-level goal (e.g., "set up a fresh dev environment"), suggest the appropriate multi-step workflow from `references/workflows.md` and offer to execute it step by step.

@@ -49,12 +49,14 @@ The `Invoke-BuildAll` script enforces this strict order. Each repo's NuGet packa
 For bug isolation, build only what is needed rather than the full chain:
 
 ### Change in a library repo (e.g., octo-construction-kit-engine)
-Use `Invoke-BuildAll` — it walks the dependency order and propagates the NuGet packages between repos for you:
+Use `Invoke-BuildRange` over the library and everything up to the service under test — it walks the build order and propagates the changed packages (`Copy-NuGetPackages -onlyChanged`, then a purge of exactly those `999.0.0` cache folders):
 ```powershell
-Invoke-BuildAll -configuration DebugL -excludeFrontend $true
+Invoke-BuildRange -from octo-construction-kit-engine -to octo-common-services -include octo-asset-repo-services -WhatIf       # plan
+Invoke-BuildRange -from octo-construction-kit-engine -to octo-common-services -include octo-asset-repo-services -verifyTests  # build + compile tests
 ```
+The full reset `Invoke-BuildAll -configuration DebugL -excludeFrontend $true` is for NU1101/NU1102 on a `999.0.0` package (chain out of sync) and after a pull or branch switch.
 
-**Do NOT hand-chain `Invoke-Build` + `Copy-NuGetPackages` down the dependency chain.** `Invoke-Build` does not propagate packages, so every repo you skip keeps consuming the previous version — and skipping one is easy, because the chain between an engine change and the service under test runs through `octo-sdk` and `octo-construction-kit-engine-mongodb`. The result is a service that builds cleanly against stale contracts and then fails at startup or at runtime, far from the change that caused it. The frontend exclusion is the only sanctioned way to shorten this build.
+**Do NOT hand-chain `Invoke-Build` + `Copy-NuGetPackages` down the dependency chain.** `Invoke-Build` does not propagate packages, so every repo you skip keeps consuming the previous version — and skipping one is easy, because the chain between an engine change and the service under test runs through `octo-sdk` and `octo-construction-kit-engine-mongodb`. The result is a service that builds cleanly against stale contracts and then fails at startup or at runtime, far from the change that caused it.
 
 ### Change in a service repo (e.g., octo-asset-repo-services)
 Only that service needs building:
@@ -118,7 +120,7 @@ Start-Octo -nonInteractive $true                     # Background mode (no keypr
 
 **CRITICAL:** there is **no** `-noBot` / `-noReporting` parameter — passing them is silently ignored. Disable a service with its real Boolean flag set to `$false` (`-botService $false`, `-reportingService $false`, `-meshAdapter $false`, etc.).
 
-Service flags and defaults: `botService`, `identityService`, `assetRepoService`, `meshAdapter`, `communicationControllerService`, `adminPanel`, `dataRefineryStudio`, `frontendLibraries`, `mcpService`, `aiService` all default `$true`; `reportingService`, `simulationAdapter`, `aiWorker` default `$false`. `Start-Octo` also auto-sets `OCTO_STREAMDATA__ENABLED=true`.
+Service flags and defaults (octo-tools `modules/Start-Octo.psm1`): `botService`, `identityService`, `assetRepoService`, `meshAdapter`, `communicationControllerService`, `platformServices`, `dataRefineryStudio`, `frontendLibraries`, `mcpService`, `aiService`, `s3Store` default `$true`; `reportingService`, `simulationAdapter`, `aiWorker`, `httpActivator` default `$false`. `Start-Octo` also auto-sets `OCTO_STREAMDATA__ENABLED=true`.
 
 Non-interactive mode is useful for automated testing — stop with `Stop-Octo` (a standalone module).
 

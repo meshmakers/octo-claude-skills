@@ -84,17 +84,14 @@ For full backup/restore procedures, read `references/database-operations.md`.
 
 ## Selective Build Strategy
 
-Build only what's needed to minimize iteration time. `Invoke-BuildAll` enforces this explicit order (each repo's packages are copied to `./nuget/` for downstream consumers):
+Build only what's needed to minimize iteration time. The build order (`mm-*`, then a pinned core chain from `octo-distributedEventHub` through `octo-construction-kit-engine`, `octo-sdk`, `octo-construction-kit-engine-mongodb` and `octo-common-services` to the services, then the remaining `octo-*` repos alphabetically) is defined only in octo-tools `modules/OctoBuildOrder.psm1`; `Get-OctoBuildOrder -branchRootPath <lane>` prints the current one.
 
-```
-mm-common → octo-distributedEventHub → octo-construction-kit-engine → octo-sdk
-  → octo-construction-kit-engine-mongodb → octo-common-services
-    → octo-mesh-adapter → octo-bot-services
-      → octo-communication-controller-services (System.Communication, consumed by octo-ai-services)
-        → [remaining service repos, alphabetical]
-```
+**Key principle:** A change in a library repo needs everything downstream of it rebuilt too, with the packages propagated through `<lane>/nuget`. Two cmdlets do that:
 
-**Key principle:** A change in a library repo needs everything downstream of it rebuilt too — and only `Invoke-BuildAll` propagates the NuGet packages that make that happen. Reserve `Invoke-Build` for a single service repo that publishes no package.
+- `Invoke-BuildRange -from <changed repo> -to <last consumer> [-include <service>]` — the fast slice: `-WhatIf` for the plan, then the build, then `-verifyTests` before you trust the result (a plain run compiles no test project); `-purgeStaleCache` when the cache holds another build of a `999.0.0` package.
+- `Invoke-BuildAll -configuration DebugL -excludeFrontend $true` — the full reset, only when restores fail with NU1101/NU1102 on a `999.0.0` package or after a pull or branch switch.
+
+Reserve `Invoke-Build` for a single service repo that publishes no package.
 
 For the full dependency chain, NuGet package mappings, and selective build commands, read `references/build-system.md`.
 
@@ -162,8 +159,13 @@ For test framework details and fixture patterns, read `references/debugging-work
 | MCP Service | `octo-mcp-service` | 5017/5016 |
 | AI Services | `octo-ai-services` | 5019/5018 |
 | AI Worker | `octo-ai-services` (AiWorker.dll) | 5023/5022 |
+| Platform Services | `octo-platform-services` | 5025/5024 |
 
-`Start-Octo` starts bot, identity, asset-repo, mesh-adapter, comm-controller, admin panel, MCP, and AI services **by default**. `reportingService` and `aiWorker` default to `$false` (off). MCP/AI start only if their repo directory exists locally.
+`Start-Octo` starts bot, identity, asset-repo, mesh-adapter, comm-controller, platform services (System.UI, `_configuration`), the Refinery Studio and frontend-libraries dev servers, MCP and AI services **by default**. `reportingService`, `aiWorker`, `simulationAdapter` and `httpActivator` default to `$false` (off). Reporting, MCP and AI start only when their `bin/<configuration>` output exists in the lane. Parameter defaults: octo-tools `modules/Start-Octo.psm1`.
+
+**Compiler errors CS8032 / CS8785 after a rebuild** (an analyzer or source generator "cannot be created" or "failed to generate"): a reused compiler or build server still holds an older `999.0.0` analyzer. Run `dotnet build-server shutdown` and build again; for a one-off build pass `-p:UseSharedCompilation=false`.
+
+**When the octo-devstack MCP server is available** (optional; see the `octo-devtools` skill): diagnose through it instead of restarting the shared stack — `stack_status` and `stack_attention` for what is down or failing, `service_logs` for one service, `stack_verify` for the health checks, and one lane per suspected regression (`lane_create` with the suspect repository, `lane_build`, `lane_test`, its own `stack_start`) so the shared stack and other sessions keep working.
 
 ## References
 
